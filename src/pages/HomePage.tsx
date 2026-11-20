@@ -1,13 +1,25 @@
 import React from 'react';
 import { useReducedMotion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
-import { DEFAULT_STOREFRONT_CONFIG, KIKI_JONES_IMAGES } from '../lib/catalogDefaults';
-import { BRAND_LINES, KJ_IMAGES, PRODUCT_CATEGORIES } from '../lib/navigationData';
+import { useLanguage } from '../context/LanguageContext';
+import { DEFAULT_STOREFRONT_CONFIG } from '../lib/catalogDefaults';
+import { KJ_IMAGES } from '../lib/navigationData';
+import {
+  getLocalizedBrands,
+  getLocalizedCategories,
+  getLocalizedCollections,
+} from '../lib/i18n';
 import { CustomHomepageSection } from '../types/commerce';
+import { ProductCard } from '../components/storefront/ProductCard';
 
 export function HomePage() {
-  const { storefrontConfig, navigate } = useStore();
+  const { storefrontConfig, products, getProductVariants, navigate } = useStore();
+  const { lang, tr } = useLanguage();
   const shouldReduceMotion = useReducedMotion();
+
+  const brands = getLocalizedBrands(lang);
+  const categories = getLocalizedCategories(lang);
+  const collections = getLocalizedCollections(lang);
 
   const renderCustomSection = (section: CustomHomepageSection, renderKey: string) => {
     if (section.layout === 'duo') {
@@ -129,7 +141,43 @@ export function HomePage() {
     );
   };
 
+  const renderProductGridSection = (
+    renderKey: string,
+    eyebrow: string,
+    heading: string,
+    ctaLabel: string,
+    ctaHref: string,
+    items: typeof products
+  ) => {
+    if (items.length === 0) return null;
+    return (
+      <section key={renderKey} className="w-full bg-white text-black py-10 md:py-14 border-b border-black/10">
+        <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">{eyebrow}</p>
+            <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black mt-0.5">
+              {heading}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(ctaHref)}
+            className="px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
+          >
+            {ctaLabel}
+          </button>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-4 px-4 sm:px-6 lg:px-10">
+          {items.slice(0, 4).map((p) => (
+            <ProductCard key={p.id} product={p} variants={getProductVariants(p.id)} />
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   const renderSection = (key: string, idx: number) => {
+    if (key.startsWith('hidden:')) return null;
     const renderKey = `${key}_${idx}`;
 
     if (key.startsWith('custom:')) {
@@ -139,9 +187,34 @@ export function HomePage() {
     }
 
     switch (key) {
-      // 1. NUDE PROJECT STYLE 50/50 FULL-BLEED SPLIT HERO (ZERO MARGINS, ROUNDED PILL BUTTONS)
       case 'hero_split':
-      case 'hero':
+      case 'hero': {
+        const headline =
+          lang === 'fr'
+            ? storefrontConfig.heroHeadline || 'NOUVELLE SAISON'
+            : storefrontConfig.heroHeadline === DEFAULT_STOREFRONT_CONFIG.heroHeadline
+              ? 'NEW SEASON DROP'
+              : storefrontConfig.heroHeadline || 'NEW SEASON DROP';
+        const subheadline =
+          lang === 'fr'
+            ? storefrontConfig.heroSubheadline ||
+              'Silhouettes contemporaines pour Kiki Men, Kiki Luxe, Kiki Sculpt, Kiki Curve et Kiki Kids.'
+            : storefrontConfig.heroSubheadline === DEFAULT_STOREFRONT_CONFIG.heroSubheadline
+              ? 'Contemporary silhouettes across Kiki Men, Kiki Luxe, Kiki Sculpt, Kiki Curve, and Kiki Kids.'
+              : storefrontConfig.heroSubheadline || '';
+        const primaryCta =
+          lang === 'fr'
+            ? storefrontConfig.heroCtaLabel || 'Nouveautés'
+            : storefrontConfig.heroCtaLabel === DEFAULT_STOREFRONT_CONFIG.heroCtaLabel
+              ? 'Shop New Arrivals'
+              : storefrontConfig.heroCtaLabel || 'Shop New Arrivals';
+        const secondaryCta =
+          lang === 'fr'
+            ? storefrontConfig.heroSecondaryCtaLabel || 'Par Marque'
+            : storefrontConfig.heroSecondaryCtaLabel === DEFAULT_STOREFRONT_CONFIG.heroSecondaryCtaLabel
+              ? 'Shop by Brand'
+              : storefrontConfig.heroSecondaryCtaLabel || 'Shop by Brand';
+
         return (
           <section
             key={renderKey}
@@ -150,8 +223,8 @@ export function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0 h-full w-full">
               <div className="relative h-full w-full overflow-hidden bg-black">
                 <img
-                  src={KJ_IMAGES.womenSatinEvening}
-                  alt="KIKI JONES Women Campaign"
+                  src={storefrontConfig.heroImageUrl || KJ_IMAGES.womenSatinEvening}
+                  alt={tr('Campagne Femme KIKI JONES', 'KIKI JONES Women Campaign')}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover object-top"
                 />
@@ -159,7 +232,7 @@ export function HomePage() {
               <div className="relative hidden md:block h-full w-full overflow-hidden bg-black">
                 <img
                   src={KJ_IMAGES.menEditorial}
-                  alt="KIKI JONES Men Campaign"
+                  alt={tr('Campagne Homme KIKI JONES', 'KIKI JONES Men Campaign')}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover object-top"
                 />
@@ -178,11 +251,10 @@ export function HomePage() {
 
             <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 md:right-10 z-20 max-w-xl space-y-3">
               <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold uppercase tracking-[-0.025em] text-white leading-[1.0]">
-                {storefrontConfig.heroHeadline || 'NEW SEASON DROP'}
+                {headline}
               </h1>
               <p className="text-xs sm:text-sm font-light text-white/85 leading-relaxed max-w-md">
-                {storefrontConfig.heroSubheadline ||
-                  'Contemporary silhouettes across Kiki Men, Kiki Luxe, Kiki Sculpt, Kiki Curve, and Kiki Kids.'}
+                {subheadline}
               </p>
               <div className="pt-1 flex flex-wrap items-center gap-3">
                 <button
@@ -190,21 +262,21 @@ export function HomePage() {
                   onClick={() => navigate(storefrontConfig.heroCtaHref || '/new-in')}
                   className="px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  {storefrontConfig.heroCtaLabel || 'Shop New Arrivals'}
+                  {primaryCta}
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate(storefrontConfig.heroSecondaryCtaHref || '/brands')}
                   className="px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  {storefrontConfig.heroSecondaryCtaLabel || 'Shop by Brand'}
+                  {secondaryCta}
                 </button>
               </div>
             </div>
           </section>
         );
+      }
 
-      // 2. FULL-BLEED 3-PANEL NEW ARRIVALS CAMPAIGN BANNER (100% REAL FASHION NOVA EDITORIAL SHOTS — ZERO PRODUCTS)
       case 'new_arrivals_banner':
       case 'new_arrivals':
       case 'new_drop':
@@ -218,7 +290,7 @@ export function HomePage() {
                 <div className="relative aspect-[3/4] md:aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
                     src={KJ_IMAGES.heroCampaign}
-                    alt="KIKI JONES New Arrivals Dress"
+                    alt={tr('Nouveautés Robes KIKI JONES', 'KIKI JONES New Arrivals Dress')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
@@ -226,7 +298,7 @@ export function HomePage() {
                 <div className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
                     src={KJ_IMAGES.jumpsuitsFeature}
-                    alt="KIKI JONES Tailored Romper"
+                    alt={tr('Combinaisons KIKI JONES', 'KIKI JONES Tailored Romper')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
@@ -234,7 +306,7 @@ export function HomePage() {
                 <div className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
                     src={KJ_IMAGES.womenResortSet}
-                    alt="KIKI JONES Matching Resort Set"
+                    alt={tr('Ensembles Resort KIKI JONES', 'KIKI JONES Matching Resort Set')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
@@ -243,10 +315,10 @@ export function HomePage() {
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
               <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-lg space-y-3">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-white/75">
-                  Just Landed &middot; Warm-Climate Drop
+                  {tr('Nouvel arrivage · Collection Soleil', 'Just Landed · Warm-Climate Drop')}
                 </p>
                 <h2 className="text-3xl sm:text-5xl font-bold uppercase tracking-[-0.025em] text-white leading-[1.02]">
-                  New Arrivals
+                  {tr('Nouveautés', 'New Arrivals')}
                 </h2>
                 <div className="pt-1 flex flex-wrap items-center gap-3">
                   <button
@@ -257,7 +329,7 @@ export function HomePage() {
                     }}
                     className="px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    Shop Now
+                    {tr('Découvrir', 'Shop Now')}
                   </button>
                   <button
                     type="button"
@@ -267,7 +339,7 @@ export function HomePage() {
                     }}
                     className="px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    Formal &amp; Occasion
+                    {tr('Soirée & Cérémonie', 'Formal & Occasion')}
                   </button>
                 </div>
               </div>
@@ -275,10 +347,9 @@ export function HomePage() {
           </section>
         );
 
-      // 3. 4-COLUMN EDGE-TO-EDGE SHOP BY CATEGORY STRIP (ZERO GAPS, UNDERLINED WHITE LABELS)
       case 'shop_by_category_strip':
       case 'categories': {
-        const featuredCats = PRODUCT_CATEGORIES.slice(0, 4);
+        const featuredCats = categories.slice(0, 4);
         return (
           <section key={renderKey} className="w-full bg-black">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
@@ -308,7 +379,6 @@ export function HomePage() {
         );
       }
 
-      // 4. 50/50 FULL-BLEED SPLIT CAMPAIGN: KIKI MEN (2 BLOCKS ON SAME ROW, ZERO GAPS)
       case 'kiki_men_split':
         return (
           <section key={renderKey} className="w-full bg-black">
@@ -320,7 +390,7 @@ export function HomePage() {
                 <div className="relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
                     src={KJ_IMAGES.menMeshShirt}
-                    alt="Kiki Men Night Out Shirts"
+                    alt={tr('Chemises de soirée Kiki Men', 'Kiki Men Night Out Shirts')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
@@ -328,7 +398,7 @@ export function HomePage() {
                 <div className="relative hidden md:block aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
                     src={KJ_IMAGES.menStreetDenim}
-                    alt="Kiki Men Stacked Flare Denim"
+                    alt={tr('Denim Stacked Kiki Men', 'Kiki Men Stacked Flare Denim')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
@@ -337,7 +407,7 @@ export function HomePage() {
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
               <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-lg space-y-3">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-white/75">
-                  Shop by Brand &middot; Menswear
+                  {tr('Par Marque · Mode Homme', 'Shop by Brand · Menswear')}
                 </p>
                 <h2 className="text-3xl sm:text-5xl font-bold uppercase tracking-[-0.025em] text-white leading-[1.02]">
                   Kiki Men
@@ -351,7 +421,7 @@ export function HomePage() {
                     }}
                     className="px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer"
                   >
-                    Shop Now
+                    {tr('Découvrir', 'Shop Now')}
                   </button>
                   <button
                     type="button"
@@ -361,7 +431,7 @@ export function HomePage() {
                     }}
                     className="px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer"
                   >
-                    Men&apos;s Footwear
+                    {tr('Chaussures Homme', "Men's Footwear")}
                   </button>
                 </div>
               </div>
@@ -369,7 +439,6 @@ export function HomePage() {
           </section>
         );
 
-      // 5. FULL-BLEED 3-COLUMN TRIPTYCH CAMPAIGN: KIKI SCULPT & KIKI CURVE (ZERO GAPS)
       case 'kiki_sculpt_triptych':
       case 'fashion_discovery':
         return (
@@ -393,7 +462,7 @@ export function HomePage() {
                 >
                   <img
                     src={KJ_IMAGES.sculptBodysuitFeature}
-                    alt="Kiki Sculpt Seamless Bodysuit"
+                    alt="Kiki Sculpt Bodysuit"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
@@ -404,7 +473,7 @@ export function HomePage() {
                 >
                   <img
                     src={KJ_IMAGES.curveFeature}
-                    alt="Kiki Curve Going Out Dress"
+                    alt="Kiki Curve"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
@@ -414,7 +483,7 @@ export function HomePage() {
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
               <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-lg space-y-3">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-white/75">
-                  Sculpted Fit &middot; Second-Skin Confidence
+                  {tr('Coupe Sculptée · Seconde Peau', 'Sculpted Fit · Second-Skin Confidence')}
                 </p>
                 <h2 className="text-3xl sm:text-5xl font-bold uppercase tracking-[-0.025em] text-white leading-[1.02]">
                   Kiki Sculpt &amp; Curve
@@ -425,14 +494,14 @@ export function HomePage() {
                     onClick={() => navigate('/brand/kiki-sculpt')}
                     className="px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer"
                   >
-                    Shop Kiki Sculpt
+                    {tr('Voir Kiki Sculpt', 'Shop Kiki Sculpt')}
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate('/brand/kiki-curve')}
                     className="px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer"
                   >
-                    Shop Kiki Curve
+                    {tr('Voir Kiki Curve', 'Shop Kiki Curve')}
                   </button>
                 </div>
               </div>
@@ -440,7 +509,6 @@ export function HomePage() {
           </section>
         );
 
-      // 6. FULL-BLEED 2-PANEL CAMPAIGN: KIKI LUXE & FORMAL OCCASION
       case 'women_exclusive_banner':
       case 'after_dark_banner':
       case 'trending':
@@ -455,7 +523,7 @@ export function HomePage() {
                 <div className="relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
                     src={KJ_IMAGES.formalFeature}
-                    alt="Kiki Luxe Embroidered Formal Gown"
+                    alt="Kiki Luxe"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
@@ -463,7 +531,7 @@ export function HomePage() {
                 <div className="relative hidden md:block aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
                     src={KJ_IMAGES.curveGownCampaign}
-                    alt="Kiki Curve Evening Gown"
+                    alt="Kiki Curve Evening"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
@@ -472,7 +540,7 @@ export function HomePage() {
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
               <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-lg space-y-3">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-white/75">
-                  Formal &middot; Evening &middot; Resort
+                  {tr('Gala · Soirée · Resort', 'Formal · Evening · Resort')}
                 </p>
                 <h2 className="text-3xl sm:text-5xl font-bold uppercase tracking-[-0.025em] text-white leading-[1.02]">
                   Kiki Luxe
@@ -486,7 +554,7 @@ export function HomePage() {
                     }}
                     className="px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer"
                   >
-                    Shop Now
+                    {tr('Découvrir', 'Shop Now')}
                   </button>
                   <button
                     type="button"
@@ -496,7 +564,7 @@ export function HomePage() {
                     }}
                     className="px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer"
                   >
-                    Shop Dresses
+                    {tr('Voir les robes', 'Shop Dresses')}
                   </button>
                 </div>
               </div>
@@ -504,13 +572,11 @@ export function HomePage() {
           </section>
         );
 
-      // 7. FULL-BLEED 50/50 DUAL INDEPENDENT BLOCKS SIDE-BY-SIDE (KIKI KIDS | KIKI SPORT)
       case 'dual_spotlight':
       case 'next_drop':
         return (
           <section key={renderKey} className="w-full bg-black">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-              {/* Left Block: Kiki Kids */}
               <div
                 onClick={() => navigate(storefrontConfig.nextDropLeftCtaHref || '/brand/kiki-kids')}
                 className="group relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black cursor-pointer border-r border-white/10"
@@ -524,7 +590,7 @@ export function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <div className="absolute bottom-8 left-6 right-6 md:bottom-12 md:left-10 space-y-3">
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">
-                    Girls &amp; Boys
+                    {tr('Filles & Garçons', 'Girls & Boys')}
                   </p>
                   <h2 className="text-3xl sm:text-4xl font-bold uppercase tracking-[-0.02em] text-white leading-tight">
                     {storefrontConfig.nextDropLeftTitle || 'Kiki Kids'}
@@ -538,13 +604,14 @@ export function HomePage() {
                       }}
                       className="px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer"
                     >
-                      {storefrontConfig.nextDropLeftCtaLabel || 'Shop Kids'}
+                      {lang === 'fr'
+                        ? storefrontConfig.nextDropLeftCtaLabel || 'Voir Enfants'
+                        : 'Shop Kids'}
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Right Block: Kiki Sport */}
               <div
                 onClick={() => navigate(storefrontConfig.nextDropRightCtaHref || '/brand/kiki-sport')}
                 className="group relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black cursor-pointer"
@@ -558,7 +625,7 @@ export function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <div className="absolute bottom-8 left-6 right-6 md:bottom-12 md:left-10 space-y-3">
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">
-                    Heat-Ready Activewear
+                    {tr('Activewear Respirant', 'Heat-Ready Activewear')}
                   </p>
                   <h2 className="text-3xl sm:text-4xl font-bold uppercase tracking-[-0.02em] text-white leading-tight">
                     {storefrontConfig.nextDropRightTitle || 'Kiki Sport'}
@@ -572,7 +639,7 @@ export function HomePage() {
                       }}
                       className="px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer"
                     >
-                      Shop Sport
+                      {tr('Voir Sport', 'Shop Sport')}
                     </button>
                     <button
                       type="button"
@@ -582,7 +649,7 @@ export function HomePage() {
                       }}
                       className="px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer"
                     >
-                      Biker Shorts
+                      {tr('Cyclistes', 'Biker Shorts')}
                     </button>
                   </div>
                 </div>
@@ -591,7 +658,6 @@ export function HomePage() {
           </section>
         );
 
-      // 8. BOTTOM SHOP BY BRAND EDITORIAL STRIP (ALL 6 SIGNATURE LABELS)
       case 'shop_by_brand_strip':
       case 'brand_intro':
       case 'mireza_world':
@@ -600,10 +666,10 @@ export function HomePage() {
             <div className="w-full px-4 sm:px-6 lg:px-10 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
-                  KIKI JONES &middot; House of Labels
+                  {tr('KIKI JONES · Nos Maisons', 'KIKI JONES · House of Labels')}
                 </p>
                 <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black">
-                  Shop by Brand
+                  {tr('Acheter par Marque', 'Shop by Brand')}
                 </h2>
               </div>
               <div className="flex items-center gap-2.5">
@@ -612,20 +678,20 @@ export function HomePage() {
                   onClick={() => navigate('/brands')}
                   className="px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
                 >
-                  All Brands
+                  {tr('Toutes les marques', 'All Brands')}
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/categories')}
                   className="px-5 py-2 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer"
                 >
-                  All Categories
+                  {tr('Toutes les catégories', 'All Categories')}
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 px-4 sm:px-6 lg:px-10">
-              {BRAND_LINES.map((brand) => (
+              {brands.map((brand) => (
                 <button
                   key={brand.slug}
                   type="button"
@@ -654,6 +720,89 @@ export function HomePage() {
           </section>
         );
 
+      case 'trending_now_grid': {
+        const list = products.filter((p) => p.isTrending || p.isFeatured);
+        return renderProductGridSection(
+          renderKey,
+          tr('Sélection tendance', 'Curated Edit'),
+          tr('Tendances actuelles', 'Trending Now'),
+          tr('Tout voir', 'View All'),
+          '/shop',
+          list.length > 0 ? list : products
+        );
+      }
+
+      case 'best_sellers_grid': {
+        const list = products.filter((p) => p.isBestSeller || p.isFeatured);
+        return renderProductGridSection(
+          renderKey,
+          tr('Pièces les plus demandées', 'Most Wanted'),
+          'Best-Sellers',
+          tr('Tout voir', 'View All'),
+          '/shop',
+          list.length > 0 ? list : products
+        );
+      }
+
+      case 'new_arrivals_grid': {
+        const list = products.filter((p) => p.isNewDrop);
+        return renderProductGridSection(
+          renderKey,
+          tr('Vient d’arriver', 'Just Landed'),
+          tr('Nouveautés', 'New Arrivals'),
+          tr('Voir les nouveautés', 'Shop New In'),
+          '/new-in',
+          list.length > 0 ? list : products
+        );
+      }
+
+      case 'featured_collections_grid':
+        return (
+          <section key={renderKey} className="w-full bg-white text-black py-10 md:py-14 border-b border-black/10">
+            <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
+                  {tr('Éditions saisonnières', 'Seasonal Capsules')}
+                </p>
+                <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black mt-0.5">
+                  {tr('Collections à la une', 'Featured Collections')}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/collections')}
+                className="px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
+              >
+                {tr('Toutes les collections', 'All Collections')}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 px-4 sm:px-6 lg:px-10">
+              {collections.slice(0, 3).map((col) => (
+                <button
+                  key={col.slug}
+                  type="button"
+                  onClick={() => navigate(`/collection/${col.slug}`)}
+                  className="group relative aspect-[4/5] w-full overflow-hidden bg-black text-left cursor-pointer"
+                >
+                  <img
+                    src={col.campaignImage}
+                    alt={col.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-6 left-5 right-5 text-white space-y-1">
+                    <p className="text-[9.5px] font-bold uppercase tracking-[0.2em] text-white/75">
+                      {col.seasonTag}
+                    </p>
+                    <p className="text-xl font-bold uppercase tracking-[-0.01em]">{col.title}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+
       default:
         return null;
     }
@@ -663,5 +812,14 @@ export function HomePage() {
     (s) => s !== 'newsletter'
   );
 
-  return <main className="bg-white">{order.map((sec, idx) => renderSection(sec, idx))}</main>;
+  return (
+    <main className="bg-white">
+      {storefrontConfig.campaignBannerEnabled && storefrontConfig.campaignBannerText && (
+        <div className="fixed top-[88px] lg:top-[96px] inset-x-0 z-30 bg-black text-white text-center py-1.5 px-4 text-[10.5px] font-medium uppercase tracking-[0.16em]">
+          {storefrontConfig.campaignBannerText}
+        </div>
+      )}
+      {order.map((sec, idx) => renderSection(sec, idx))}
+    </main>
+  );
 }

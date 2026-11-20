@@ -2,11 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, ArrowRight, Clock, TrendingUp } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { formatXOF } from '../../lib/format';
-import {
-  TRENDING_SEARCHES,
-  SUGGESTED_SEARCH_CATEGORIES,
-} from '../../lib/navigationData';
+import { getSuggestedSearchCategories, getTrendingSearches } from '../../lib/i18n';
 
 export function SearchOverlay() {
   const {
@@ -19,9 +17,13 @@ export function SearchOverlay() {
     removeRecentSearch,
     clearRecentSearches,
   } = useStore();
+  const { lang, tr } = useLanguage();
 
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const trendingSearches = useMemo(() => getTrendingSearches(lang), [lang]);
+  const suggestedCategories = useMemo(() => getSuggestedSearchCategories(lang), [lang]);
 
   useEffect(() => {
     if (searchOpen) {
@@ -98,7 +100,7 @@ export function SearchOverlay() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             role="dialog"
-            aria-label="Search KIKI JONES"
+            aria-label={tr('Rechercher sur KIKI JONES', 'Search KIKI JONES')}
             className="fixed top-0 inset-x-0 bg-white text-black z-50 border-b border-black/10 shadow-2xl max-h-[88vh] overflow-y-auto"
           >
             <div className="max-w-[1440px] mx-auto px-5 md:px-10 py-6 space-y-8">
@@ -110,15 +112,18 @@ export function SearchOverlay() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search clothing, matching sets, outerwear, accessories..."
-                  aria-label="Search KIKI JONES products"
+                  placeholder={tr(
+                    'Rechercher des robes, ensembles, chemises, chaussures, lunettes...',
+                    'Search dresses, matching sets, shirts, shoes, sunglasses...'
+                  )}
+                  aria-label={tr('Rechercher des produits KIKI JONES', 'Search KIKI JONES products')}
                   className="flex-1 bg-transparent text-base md:text-lg font-light text-black placeholder:text-black/40 focus:outline-none"
                 />
                 {query && (
                   <button
                     type="button"
                     onClick={() => setQuery('')}
-                    aria-label="Clear search query"
+                    aria-label={tr('Effacer la recherche', 'Clear search query')}
                     className="p-1 text-black/50 hover:text-black cursor-pointer"
                   >
                     <X className="w-4 h-4" />
@@ -127,14 +132,13 @@ export function SearchOverlay() {
                 <button
                   type="button"
                   onClick={() => setSearchOpen(false)}
-                  aria-label="Close search"
+                  aria-label={tr('Fermer la recherche', 'Close search')}
                   className="p-1.5 text-black/70 hover:text-black cursor-pointer"
                 >
                   <X className="w-5 h-5" strokeWidth={1.6} />
                 </button>
               </form>
 
-              {/* Empty Query State: Recent Searches, Trending Searches, Suggested Categories */}
               {!query.trim() ? (
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-4">
                   {/* Recent Searches */}
@@ -142,7 +146,7 @@ export function SearchOverlay() {
                     <div className="flex items-center justify-between">
                       <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5 text-black/50" />
-                        Recent Searches
+                        {tr('Recherches récentes', 'Recent Searches')}
                       </p>
                       {recentSearches.length > 0 && (
                         <button
@@ -150,13 +154,16 @@ export function SearchOverlay() {
                           onClick={clearRecentSearches}
                           className="text-[10px] font-bold uppercase tracking-[0.14em] text-black/45 hover:text-black cursor-pointer"
                         >
-                          Clear
+                          {tr('Effacer', 'Clear')}
                         </button>
                       )}
                     </div>
                     {recentSearches.length === 0 ? (
                       <p className="text-xs font-light text-black/45">
-                        Your recent searches will appear here.
+                        {tr(
+                          'Vos recherches récentes apparaîtront ici.',
+                          'Your recent searches will appear here.'
+                        )}
                       </p>
                     ) : (
                       <ul className="space-y-2">
@@ -172,7 +179,7 @@ export function SearchOverlay() {
                             <button
                               type="button"
                               onClick={() => removeRecentSearch(term)}
-                              aria-label={`Remove ${term}`}
+                              aria-label={tr(`Supprimer ${term}`, `Remove ${term}`)}
                               className="p-1 text-black/30 hover:text-black cursor-pointer"
                             >
                               <X className="w-3 h-3" />
@@ -187,10 +194,10 @@ export function SearchOverlay() {
                   <div className="md:col-span-4 space-y-3">
                     <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black flex items-center gap-2">
                       <TrendingUp className="w-3.5 h-3.5 text-black/50" />
-                      Trending Now
+                      {tr('Tendances actuelles', 'Trending Now')}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {TRENDING_SEARCHES.map((term) => (
+                      {trendingSearches.map((term) => (
                         <button
                           key={term}
                           type="button"
@@ -206,10 +213,10 @@ export function SearchOverlay() {
                   {/* Suggested Categories */}
                   <div className="md:col-span-4 space-y-3">
                     <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black">
-                      Suggested Categories
+                      {tr('Catégories suggérées', 'Suggested Categories')}
                     </p>
                     <div className="space-y-2">
-                      {SUGGESTED_SEARCH_CATEGORIES.map((cat) => (
+                      {suggestedCategories.map((cat) => (
                         <button
                           key={cat.href}
                           type="button"
@@ -227,18 +234,17 @@ export function SearchOverlay() {
                   </div>
                 </div>
               ) : (
-                /* Instant Product Results */
                 <div className="space-y-5 pb-4">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/60">
-                      Instant Results ({instantResults.length})
+                      {tr('Résultats instantanés', 'Instant Results')} ({instantResults.length})
                     </p>
                     <button
                       type="button"
                       onClick={() => runQuickSearch(query.trim())}
                       className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-black hover:underline underline-offset-4 cursor-pointer"
                     >
-                      View All Results
+                      {tr('Voir tous les résultats', 'View All Results')}
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -246,10 +252,13 @@ export function SearchOverlay() {
                   {instantResults.length === 0 ? (
                     <div className="py-10 text-center space-y-3">
                       <p className="font-editorial text-2xl text-black">
-                        No pieces matched &ldquo;{query}&rdquo;
+                        {tr(`Aucune pièce trouvée pour « ${query} »`, `No pieces matched "${query}"`)}
                       </p>
                       <p className="text-xs font-light text-black/60">
-                        Try searching for hoodies, blazers, matching sets, denim, or sunglasses.
+                        {tr(
+                          'Essayez de rechercher des robes, ensembles, chemises, jeans, chaussures ou lunettes.',
+                          'Try searching for dresses, matching sets, shirts, denim, shoes, or sunglasses.'
+                        )}
                       </p>
                     </div>
                   ) : (

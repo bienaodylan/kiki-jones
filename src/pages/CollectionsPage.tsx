@@ -1,14 +1,17 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { EDITORIAL_COLLECTIONS } from '../lib/navigationData';
+import { useLanguage } from '../context/LanguageContext';
+import { getLocalizedCollections, localizeAudienceLabel } from '../lib/i18n';
 import { ProductCard } from '../components/storefront/ProductCard';
 
 export function CollectionsPage() {
   const { products, getProductVariants, navigate } = useStore();
+  const { lang, tr } = useLanguage();
+  const collections = getLocalizedCollections(lang);
 
-  const leadCollection = EDITORIAL_COLLECTIONS[0];
-  const secondaryCollections = EDITORIAL_COLLECTIONS.slice(1);
+  const leadCollection = collections[0];
+  const secondaryCollections = collections.slice(1);
 
   return (
     <main className="pt-[88px] lg:pt-[96px] pb-10 bg-white text-black min-h-screen">
@@ -17,17 +20,20 @@ export function CollectionsPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">
-              KIKI JONES &middot; Archive &amp; Seasonal Capsules
+              {tr('KIKI JONES · Archives & Capsules Saisonnières', 'KIKI JONES · Archive & Seasonal Capsules')}
             </p>
             <h1 className="font-editorial text-3xl sm:text-5xl text-black leading-[1.02]">
               Collections
             </h1>
             <p className="text-sm font-light text-black/70 leading-relaxed pt-1">
-              Curated fashion capsules across Women, Men, Girls, and Boys. Designed to scale seamlessly season after season.
+              {tr(
+                'Des capsules mode sélectionnées pour Femme, Homme, Filles et Garçons, pensées pour chaque saison.',
+                'Curated fashion capsules across Women, Men, Girls, and Boys. Designed to scale seamlessly season after season.'
+              )}
             </p>
           </div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-black/50 tabular-nums">
-            {EDITORIAL_COLLECTIONS.length} Active Editions
+            {collections.length} {tr('Éditions actives', 'Active Editions')}
           </p>
         </div>
       </section>
@@ -46,7 +52,8 @@ export function CollectionsPage() {
             <div className="absolute inset-x-0 bottom-0 max-w-[1440px] mx-auto px-5 sm:px-8 xl:px-10 pb-8 md:pb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="max-w-xl space-y-2">
                 <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/75">
-                  {leadCollection.seasonTag} &middot; {leadCollection.audiences.join(' / ')}
+                  {leadCollection.seasonTag} &middot;{' '}
+                  {leadCollection.audiences.map((a) => localizeAudienceLabel(a, lang)).join(' / ')}
                 </p>
                 <h2 className="font-editorial text-3xl sm:text-5xl text-white leading-tight">
                   {leadCollection.title}
@@ -60,7 +67,7 @@ export function CollectionsPage() {
                 onClick={() => navigate(`/collection/${leadCollection.slug}`)}
                 className="px-7 py-3.5 bg-white text-black text-[11px] font-bold uppercase tracking-[0.18em] inline-flex items-center gap-2 hover:bg-white/85 transition-colors cursor-pointer self-start md:self-end shrink-0"
               >
-                <span>Shop Collection</span>
+                <span>{tr('Voir la collection', 'Shop Collection')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -105,7 +112,8 @@ export function CollectionsPage() {
                   }`}
                 >
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
-                    {String(idx + 2).padStart(2, '0')} &middot; {col.seasonTag} &middot; {col.audiences.join(' / ')}
+                    {String(idx + 2).padStart(2, '0')} &middot; {col.seasonTag} &middot;{' '}
+                    {col.audiences.map((a) => localizeAudienceLabel(a, lang)).join(' / ')}
                   </p>
                   <h2 className="font-editorial text-2xl sm:text-4xl text-black leading-tight">
                     {col.title}
@@ -122,7 +130,7 @@ export function CollectionsPage() {
                       onClick={() => navigate(`/collection/${col.slug}`)}
                       className="px-5 py-2.5 bg-black text-white text-[11px] font-bold uppercase tracking-[0.18em] inline-flex items-center gap-2 hover:bg-black/85 transition-colors cursor-pointer"
                     >
-                      <span>Shop {col.title}</span>
+                      <span>{tr(`Voir ${col.title}`, `Shop ${col.title}`)}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>

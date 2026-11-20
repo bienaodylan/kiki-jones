@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { subscribeNewsletter } from '../../lib/firestoreService';
 
 export function Footer() {
   const { navigate, storefrontConfig, toast } = useStore();
+  const { lang, tr } = useLanguage();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -13,7 +15,10 @@ export function Footer() {
     e.preventDefault();
     const clean = email.trim();
     if (!clean || !clean.includes('@')) {
-      toast('Please enter a valid email address.', 'error');
+      toast(
+        tr('Veuillez saisir une adresse e-mail valide.', 'Please enter a valid email address.'),
+        'error'
+      );
       return;
     }
     setSubmitting(true);
@@ -21,30 +26,47 @@ export function Footer() {
       await subscribeNewsletter(clean, 'footer');
       setSubscribed(true);
       setEmail('');
-      toast('Welcome to the KIKI JONES list.', 'success');
+      toast(tr('Bienvenue dans la liste KIKI JONES.', 'Welcome to the KIKI JONES list.'), 'success');
     } catch {
-      toast('Could not subscribe right now. Please try again.', 'error');
+      toast(
+        tr(
+          'Inscription impossible pour le moment. Veuillez réessayer.',
+          'Could not subscribe right now. Please try again.'
+        ),
+        'error'
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
+  const newsletterHeading =
+    lang === 'fr'
+      ? storefrontConfig.newsletterTitle || 'Rejoindre la liste KIKI JONES'
+      : 'Join the KIKI JONES List';
+  const newsletterBody =
+    lang === 'fr'
+      ? storefrontConfig.newsletterBody ||
+        'Accès anticipé aux nouveautés hebdomadaires et sorties exclusives Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Luxe et Kiki Kids.'
+      : 'Early access to weekly drops and exclusive releases across Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Luxe, and Kiki Kids.';
+
   return (
     <footer className="bg-white text-black border-t border-black/10 overflow-hidden">
-      {/* Main Columns matching Nude Project clean white editorial footer */}
       <div className="max-w-[1440px] mx-auto px-5 md:px-10 pt-14 pb-10 grid grid-cols-2 md:grid-cols-12 gap-x-8 gap-y-10">
         {/* Newsletter Column */}
         <div className="col-span-2 md:col-span-4 space-y-4 pr-0 md:pr-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black">
-            {storefrontConfig.newsletterTitle || 'Join the KIKI JONES List'}
+            {newsletterHeading}
           </p>
           <p className="text-xs font-light text-black/65 leading-relaxed max-w-sm">
-            {storefrontConfig.newsletterBody ||
-              'Early access to weekly drops, exclusive releases across Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Luxe, and Kiki Kids.'}
+            {newsletterBody}
           </p>
           {subscribed ? (
             <div className="px-4 py-3 rounded-full border border-black/20 bg-black/[0.03] text-xs font-medium text-black">
-              Thank you — you are on the KIKI JONES list.
+              {tr(
+                'Merci — vous êtes inscrit(e) à la liste KIKI JONES.',
+                'Thank you — you are on the KIKI JONES list.'
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubscribe} className="flex items-center gap-2 max-w-sm">
@@ -53,8 +75,8 @@ export function Footer() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email address"
-                aria-label="Email address for newsletter"
+                placeholder={tr('Adresse e-mail', 'Email address')}
+                aria-label={tr('Adresse e-mail pour la newsletter', 'Email address for newsletter')}
                 className="flex-1 bg-white border border-black/25 rounded-full px-4 py-2.5 text-xs font-light text-black placeholder:text-black/40 focus:outline-none focus:border-black"
               />
               <button
@@ -62,7 +84,9 @@ export function Footer() {
                 disabled={submitting}
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
               >
-                <span>{submitting ? 'Joining...' : 'Join'}</span>
+                <span>
+                  {submitting ? tr('Envoi...', 'Joining...') : tr("S'inscrire", 'Join')}
+                </span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </form>
@@ -76,12 +100,12 @@ export function Footer() {
         {/* Shop by Brand */}
         <div className="col-span-1 md:col-span-2 space-y-3">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black">
-            Shop by Brand
+            {tr('Par Marque', 'Shop by Brand')}
           </p>
           <ul className="space-y-2 text-xs font-light text-black/70">
             <li>
               <button onClick={() => navigate('/brands')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                All Brands
+                {tr('Toutes les marques', 'All Brands')}
               </button>
             </li>
             <li>
@@ -120,37 +144,37 @@ export function Footer() {
         {/* Shop by Category */}
         <div className="col-span-1 md:col-span-2 space-y-3">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black">
-            Shop by Category
+            {tr('Par Catégorie', 'Shop by Category')}
           </p>
           <ul className="space-y-2 text-xs font-light text-black/70">
             <li>
               <button onClick={() => navigate('/categories')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                All Categories
+                {tr('Toutes les catégories', 'All Categories')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/category/dresses')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Dresses &amp; Formal
+                {tr('Robes & Soirée', 'Dresses & Formal')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/category/matching-sets')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Matching Sets
+                {tr('Ensembles', 'Matching Sets')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/category/jumpsuits')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Jumpsuits &amp; Rompers
+                {tr('Combinaisons', 'Jumpsuits & Rompers')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/category/activewear')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Activewear &amp; Sport
+                {tr('Sport & Activewear', 'Activewear & Sport')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/category/shoes')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Shoes &amp; Sunglasses
+                {tr('Chaussures & Lunettes', 'Shoes & Sunglasses')}
               </button>
             </li>
           </ul>
@@ -159,42 +183,42 @@ export function Footer() {
         {/* Client Care */}
         <div className="col-span-1 md:col-span-2 space-y-3">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black">
-            Client Care
+            {tr('Service Client', 'Client Care')}
           </p>
           <ul className="space-y-2 text-xs font-light text-black/70">
             <li>
               <button onClick={() => navigate('/new-in')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                New Arrivals
+                {tr('Nouveautés', 'New Arrivals')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/sale')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Sale
+                {tr('Soldes', 'Sale')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/account')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Account &amp; Profile
+                {tr('Mon compte', 'Account & Profile')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/wishlist')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Wishlist
+                {tr('Favoris', 'Wishlist')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/orders')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Order History
+                {tr('Mes commandes', 'Order History')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/legal/shipping')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Shipping &amp; Delivery
+                {tr('Livraison & Expédition', 'Shipping & Delivery')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/legal/returns')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Returns &amp; Exchanges
+                {tr('Retours & Échanges', 'Returns & Exchanges')}
               </button>
             </li>
           </ul>
@@ -203,7 +227,7 @@ export function Footer() {
         {/* House & Legal */}
         <div className="col-span-1 md:col-span-2 space-y-3">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black">
-            House &amp; Legal
+            {tr('Maison & Légal', 'House & Legal')}
           </p>
           <ul className="space-y-2 text-xs font-light text-black/70">
             <li>
@@ -213,17 +237,17 @@ export function Footer() {
             </li>
             <li>
               <button onClick={() => navigate('/legal/privacy')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Privacy Policy
+                {tr('Confidentialité', 'Privacy Policy')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/legal/terms')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Terms of Sale
+                {tr('Conditions de vente', 'Terms of Sale')}
               </button>
             </li>
             <li>
               <button onClick={() => navigate('/admin')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Store Administration
+                {tr('Administration', 'Store Administration')}
               </button>
             </li>
           </ul>
@@ -233,12 +257,17 @@ export function Footer() {
       {/* Legal & Currency Bar */}
       <div className="border-t border-black/10">
         <div className="max-w-[1440px] mx-auto px-5 md:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-light text-black/55">
-          <p>&copy; {new Date().getFullYear()} KIKI JONES. All rights reserved.</p>
-          <p>West African CFA Franc (XOF) &middot; Wave &middot; Orange Money &middot; Visa &middot; Mastercard</p>
+          <p>
+            &copy; {new Date().getFullYear()} KIKI JONES.{' '}
+            {tr('Tous droits réservés.', 'All rights reserved.')}
+          </p>
+          <p>
+            {tr('Franc CFA (FCFA / XOF)', 'West African CFA Franc (XOF)')} &middot; Wave &middot; Orange Money &middot; Visa &middot; Mastercard
+          </p>
         </div>
       </div>
 
-      {/* Giant Full-Width Editorial Wordmark Footer Signature (Nude Project Style) */}
+      {/* Giant Full-Width Editorial Wordmark Footer Signature */}
       <div className="w-full px-3 md:px-6 pb-4 pt-2 select-none pointer-events-none">
         <div className="w-full text-center font-bold uppercase tracking-[-0.045em] leading-[0.82] text-[13.8vw] text-black whitespace-nowrap">
           KIKI JONES

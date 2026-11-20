@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
-import { ShoppingBag, User, Search, Heart, Menu } from 'lucide-react';
+import { ShoppingBag, User, Search, Heart, Menu, Globe } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   DivisionKey,
-  FLOATING_SUBNAV_BY_DIVISION,
   MegaMenuKey,
   PRIMARY_NAV_ITEMS,
 } from '../../lib/navigationData';
+import { getFloatingSubnav, getPrimaryNavLabel } from '../../lib/i18n';
 import { MegaMenu } from './MegaMenu';
 import { MobileMenuDrawer } from './MobileMenuDrawer';
 
@@ -20,8 +21,10 @@ export function Navbar() {
     setCartOpen,
     wishlistCount,
     setSearchOpen,
+    storefrontConfig,
   } = useStore();
   const { isAdmin } = useAuth();
+  const { lang, toggleLang, tr } = useLanguage();
   const shouldReduceMotion = useReducedMotion();
 
   const isHome = route.page === 'home';
@@ -71,7 +74,7 @@ export function Navbar() {
     };
   }, []);
 
-  // Derive active Fashion Nova–style division from current route
+  // Derive active division from current route
   const routeDivision: DivisionKey = useMemo(() => {
     if (route.page === 'audience') {
       if (route.audience === 'men') return 'men';
@@ -91,7 +94,36 @@ export function Navbar() {
   }, [route]);
 
   const activeDivision: DivisionKey = hoveredDivision ?? routeDivision;
-  const floatingItems = FLOATING_SUBNAV_BY_DIVISION[activeDivision] || FLOATING_SUBNAV_BY_DIVISION.women;
+  const floatingItems = useMemo(
+    () => getFloatingSubnav(activeDivision, lang),
+    [activeDivision, lang]
+  );
+
+  // Merge custom navigation items saved in storefront_config.galleryItems (tag === 'nav_item')
+  const primaryNavItems = useMemo(() => {
+    const customNavEntries = (storefrontConfig.galleryItems || []).filter(
+      (g) => g.tag === 'nav_item' || g.tag === 'nav_item_hidden'
+    );
+    if (customNavEntries.length > 0) {
+      return customNavEntries
+        .filter((g) => g.tag === 'nav_item')
+        .map((g) => {
+          const matchedDefault = PRIMARY_NAV_ITEMS.find(
+            (p) => p.href === g.imageUrl || p.key === g.id.replace(/^nav_/, '')
+          );
+          return {
+            key: matchedDefault ? matchedDefault.key : g.id,
+            label: lang === 'fr' ? g.title : g.caption || g.title,
+            href: g.imageUrl || '/',
+            hasMegaMenu: Boolean(matchedDefault?.hasMegaMenu),
+          };
+        });
+    }
+    return PRIMARY_NAV_ITEMS.map((item) => ({
+      ...item,
+      label: getPrimaryNavLabel(item.key, item.label, lang),
+    }));
+  }, [storefrontConfig.galleryItems, lang]);
 
   const openMegaMenu = (key: MegaMenuKey, division?: DivisionKey) => {
     if (closeTimerRef.current) {
@@ -173,21 +205,19 @@ export function Navbar() {
             : 'bg-transparent text-white'
         }`}
       >
-        {/* Subtle dark top scrim over hero at scroll 0 so white nav stays legible */}
         {!isSolid && (
           <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/30 to-transparent pointer-events-none" />
         )}
 
-        {/* ROW 1: Fashion Nova–Style Primary Division Header + Centered Wordmark + Utilities */}
+        {/* ROW 1: Primary Division Header + Centered Wordmark + Utilities + FR/EN Switcher */}
         <div className="relative max-w-[1440px] mx-auto px-3 sm:px-6 xl:px-10 h-[52px] lg:h-[56px] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 lg:gap-4">
           {/* LEFT ZONE: Mobile Controls (< lg) + Desktop Division Tabs (>= lg) */}
           <div className="flex items-center justify-start min-w-0">
-            {/* Mobile Left Icons: Menu + Search */}
             <div className="flex lg:hidden items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
-                aria-label="Open menu"
+                aria-label={tr('Ouvrir le menu', 'Open menu')}
                 className="p-2 -ml-1.5 inline-flex items-center justify-center hover:opacity-70 transition-opacity cursor-pointer"
               >
                 <Menu className="w-5 h-5" strokeWidth={1.65} />
@@ -195,19 +225,18 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
-                aria-label="Search"
+                aria-label={tr('Rechercher', 'Search')}
                 className="p-2 inline-flex items-center justify-center hover:opacity-70 transition-opacity cursor-pointer"
               >
                 <Search className="w-[18px] h-[18px]" strokeWidth={1.65} />
               </button>
             </div>
 
-            {/* Desktop Division Tabs (Women · Curve · Men · Sport · Kids · Brands · Categories) */}
             <nav
-              aria-label="Primary Divisions"
+              aria-label={tr('Navigation principale', 'Primary Divisions')}
               className="hidden lg:flex items-center justify-start gap-3 xl:gap-4 text-[10px] xl:text-[10.5px] font-bold uppercase tracking-[0.09em] xl:tracking-[0.12em]"
             >
-              {PRIMARY_NAV_ITEMS.map((item) => {
+              {primaryNavItems.map((item) => {
                 const active = isItemActive(item.key);
                 const megaKey: MegaMenuKey | null = item.hasMegaMenu
                   ? (item.key as MegaMenuKey)
@@ -219,7 +248,7 @@ export function Navbar() {
                   item.key === 'men' ||
                   item.key === 'sport' ||
                   item.key === 'kids'
-                    ? item.key
+                    ? (item.key as DivisionKey)
                     : undefined;
 
                 return (
@@ -261,7 +290,7 @@ export function Navbar() {
               <motion.button
                 type="button"
                 onClick={() => navigate('/')}
-                aria-label="KIKI JONES Home"
+                aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
                 style={{
                   y: logoY,
                   scale: logoScale,
@@ -276,7 +305,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                aria-label="KIKI JONES Home"
+                aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
                 className={`font-bold text-base sm:text-lg xl:text-xl tracking-[0.22em] sm:tracking-[0.26em] uppercase whitespace-nowrap shrink-0 leading-none cursor-pointer transition-colors ${
                   isSolid ? 'text-black' : 'text-white'
                 }`}
@@ -286,7 +315,7 @@ export function Navbar() {
             )}
           </div>
 
-          {/* RIGHT ZONE: Utility Icons (Search, Account, Wishlist, Shopping Bag) */}
+          {/* RIGHT ZONE: Language Selector + Utility Icons */}
           <div className="flex items-center justify-end gap-0.5 sm:gap-1.5 shrink-0">
             {isAdmin && (
               <button
@@ -302,10 +331,24 @@ export function Navbar() {
               </button>
             )}
 
+            {/* Top Header Language Switcher Icon (FR / EN) */}
+            <button
+              type="button"
+              onClick={toggleLang}
+              title={tr('Passer en anglais (EN)', 'Switch to French (FR)')}
+              aria-label={tr('Changer la langue en anglais', 'Switch language to French')}
+              className={`inline-flex items-center gap-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-opacity hover:opacity-70 cursor-pointer ${
+                isSolid ? 'text-black' : 'text-white'
+              }`}
+            >
+              <Globe className="w-[15px] h-[15px]" strokeWidth={1.65} />
+              <span className="leading-none">{lang.toUpperCase()}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              aria-label="Search"
+              aria-label={tr('Rechercher', 'Search')}
               className="hidden lg:inline-flex p-2 items-center justify-center hover:opacity-65 transition-opacity cursor-pointer"
             >
               <Search className="w-[17px] h-[17px]" strokeWidth={1.65} />
@@ -314,7 +357,7 @@ export function Navbar() {
             <button
               type="button"
               onClick={() => navigate('/account')}
-              aria-label="Account"
+              aria-label={tr('Mon compte', 'Account')}
               className="hidden lg:inline-flex p-2 items-center justify-center hover:opacity-65 transition-opacity cursor-pointer"
             >
               <User className="w-[17px] h-[17px]" strokeWidth={1.65} />
@@ -323,7 +366,7 @@ export function Navbar() {
             <button
               type="button"
               onClick={() => navigate('/wishlist')}
-              aria-label={`Wishlist (${wishlistCount})`}
+              aria-label={tr(`Favoris (${wishlistCount})`, `Wishlist (${wishlistCount})`)}
               className="relative p-2 inline-flex items-center justify-center hover:opacity-65 transition-opacity cursor-pointer"
             >
               <Heart className="w-[17px] h-[17px]" strokeWidth={1.65} />
@@ -341,7 +384,7 @@ export function Navbar() {
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              aria-label={`Shopping bag (${cartCount})`}
+              aria-label={tr(`Panier (${cartCount})`, `Shopping bag (${cartCount})`)}
               className="relative p-2 -mr-1 inline-flex items-center justify-center hover:opacity-65 transition-opacity cursor-pointer"
             >
               <ShoppingBag className="w-[17px] h-[17px]" strokeWidth={1.65} />
@@ -358,9 +401,9 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* ROW 2: Fashion Nova–Style Floating Warm-Climate Sub-Navigation Ribbon */}
+        {/* ROW 2: Floating Sub-Navigation Ribbon */}
         <nav
-          aria-label="Floating Collection Navigation"
+          aria-label={tr('Collections rapides', 'Floating Collection Navigation')}
           className={`relative border-t transition-colors duration-250 ${
             isSolid
               ? 'bg-white/98 backdrop-blur-md border-black/10 border-b border-b-black/10 text-black'
@@ -400,7 +443,6 @@ export function Navbar() {
         </nav>
       </header>
 
-      {/* Desktop Floating Mega Menu (triggered by both Row 1 divisions & Row 2 floating ribbon) */}
       <MegaMenu
         activeKey={activeMegaMenu}
         onClose={() => {
@@ -412,7 +454,6 @@ export function Navbar() {
         onMouseLeave={scheduleCloseMegaMenu}
       />
 
-      {/* Mobile Expandable Drawer with Fashion Nova Division Switcher */}
       <MobileMenuDrawer
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}

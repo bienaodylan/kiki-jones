@@ -2,60 +2,54 @@ import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import {
   LayoutDashboard,
+  ShoppingBag,
   Package,
-  Boxes,
-  ShoppingCart,
+  Layers,
   Users,
-  CreditCard,
-  Megaphone,
+  Tag,
   LayoutTemplate,
-  BarChart3,
   Settings,
-  FileSpreadsheet,
   ArrowLeft,
   LogOut,
   Menu,
   X,
+  Globe,
+  Sparkles,
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   AuditLog,
+  Category,
   ImportJob,
-  InventoryMovement,
-  InventoryReservation,
   Order,
-  PaymentRecord,
   Promotion,
   UserProfile,
 } from '../../types/commerce';
 import { AdminOverview } from './AdminOverview';
-import { AdminProducts } from './AdminProducts';
-import { AdminImportCenter } from './AdminImportCenter';
-import { AdminInventory } from './AdminInventory';
 import { AdminOrders } from './AdminOrders';
+import { AdminProducts } from './AdminProducts';
+import { AdminCollections } from './AdminCollections';
 import { AdminCustomers } from './AdminCustomers';
-import { AdminPayments } from './AdminPayments';
-import { AdminMarketing } from './AdminMarketing';
+import { AdminPromotions } from './AdminPromotions';
 import { AdminStorefront } from './AdminStorefront';
-import { AdminAnalytics, AdminSettings } from './AdminAnalyticsSettings';
+import { AdminSettings } from './AdminSettings';
+import { AdminAiAssistant } from '../../components/admin/AdminAiAssistant';
 
 type AdminTab =
   | 'overview'
-  | 'products'
-  | 'import'
-  | 'inventory'
   | 'orders'
+  | 'products'
+  | 'collections'
   | 'customers'
-  | 'payments'
-  | 'marketing'
+  | 'promotions'
   | 'storefront'
-  | 'analytics'
   | 'settings';
 
 export function AdminDashboard() {
-  const { user, authReady, isAdmin, adminVerifiedServer, loginWithGoogle, logout } = useAuth();
+  const { user, authReady, isAdmin, loginWithGoogle, logout } = useAuth();
   const {
     allProductsAdmin,
     variants,
@@ -65,15 +59,20 @@ export function AdminDashboard() {
     toast,
     initializeCatalog,
   } = useStore();
+  const { lang, toggleLang, tr } = useLanguage();
 
   const [tab, setTab] = useState<AdminTab>('overview');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+
+  // Deep-link states from Dashboard / Customers
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [openCreateProduct, setOpenCreateProduct] = useState(false);
+  const [openCreateCollection, setOpenCreateCollection] = useState(false);
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [movements, setMovements] = useState<InventoryMovement[]>([]);
-  const [reservations, setReservations] = useState<InventoryReservation[]>([]);
+  const [adminCategories, setAdminCategories] = useState<Category[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [importJobs, setImportJobs] = useState<ImportJob[]>([]);
@@ -89,29 +88,19 @@ export function AdminDashboard() {
         (e) => handleFirestoreError(e, OperationType.LIST, 'orders')
       ),
       onSnapshot(
-        collection(db, 'inventory_movements'),
+        collection(db, 'categories'),
         (s) =>
-          setMovements(
+          setAdminCategories(
             s.docs
               .map((d) => ({ id: d.id, ...(d.data() as any) }))
-              .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+              .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
           ),
-        (e) => handleFirestoreError(e, OperationType.LIST, 'inventory_movements')
-      ),
-      onSnapshot(
-        collection(db, 'inventory_reservations'),
-        (s) => setReservations(s.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))),
-        (e) => handleFirestoreError(e, OperationType.LIST, 'inventory_reservations')
+        (e) => handleFirestoreError(e, OperationType.LIST, 'categories')
       ),
       onSnapshot(
         collection(db, 'users'),
         (s) => setUsers(s.docs.map((d) => ({ ...(d.data() as any) }))),
         (e) => handleFirestoreError(e, OperationType.LIST, 'users')
-      ),
-      onSnapshot(
-        collection(db, 'payments'),
-        (s) => setPayments(s.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))),
-        (e) => handleFirestoreError(e, OperationType.LIST, 'payments')
       ),
       onSnapshot(
         collection(db, 'promotions'),
@@ -151,51 +140,61 @@ export function AdminDashboard() {
   if (!authReady) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-black/60">Verifying Session...</p>
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-black/50">
+          {tr('Vérification de la session...', 'Verifying session...')}
+        </p>
       </div>
     );
   }
 
   if (!user || !isAdmin) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full border border-black/20 bg-white p-8 md:p-10 space-y-6">
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
+        <div className="max-w-md w-full border border-[#E8E8E8] bg-white p-8 md:p-10 space-y-6">
           <div className="space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/60">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/45">
               KIKI JONES Administration
             </p>
-            <h1 className="font-editorial text-3xl text-black">Protected Console</h1>
-            <p className="text-xs font-light text-black/75 leading-relaxed">
+            <h1 className="text-2xl font-semibold tracking-tight text-black">
+              {tr('Accès protégé', 'Protected Console')}
+            </h1>
+            <p className="text-xs text-black/60 leading-relaxed">
               {user
-                ? `Signed in as ${user.email}, which does not have administrator privileges.`
-                : 'Sign in with your authorized KIKI JONES administrator Google account. Public admin registration is disabled.'}
+                ? tr(
+                    `Connecté en tant que ${user.email}, qui ne dispose pas des droits administrateur.`,
+                    `Signed in as ${user.email}, which does not have administrator privileges.`
+                  )
+                : tr(
+                    'Connectez-vous avec votre compte Google administrateur KIKI JONES autorisé.',
+                    'Sign in with your authorized KIKI JONES administrator Google account.'
+                  )}
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {!user ? (
               <button
                 type="button"
                 onClick={() => loginWithGoogle()}
-                className="w-full py-3.5 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
+                className="w-full py-3 bg-black text-white text-xs font-medium hover:bg-black/85 cursor-pointer"
               >
-                Sign In with Google
+                {tr('Se connecter avec Google', 'Sign in with Google')}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => logout()}
-                className="w-full py-3.5 border border-black text-black text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
+                className="w-full py-3 border border-black text-black text-xs font-medium cursor-pointer"
               >
-                Sign Out
+                {tr('Se déconnecter', 'Sign out')}
               </button>
             )}
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="w-full py-3 text-xs font-bold uppercase tracking-[0.16em] text-black/60 hover:text-black cursor-pointer"
+              className="w-full py-2.5 text-xs text-black/55 hover:text-black cursor-pointer"
             >
-              Return to Storefront
+              {tr('Retour à la boutique', 'Return to storefront')}
             </button>
           </div>
         </div>
@@ -203,24 +202,44 @@ export function AdminDashboard() {
     );
   }
 
-  const navItems: { id: AdminTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'inventory', label: 'Inventory', icon: Boxes },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart },
-    { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'marketing', label: 'Marketing', icon: Megaphone },
-    { id: 'storefront', label: 'Storefront', icon: LayoutTemplate },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'import', label: 'CSV Import', icon: FileSpreadsheet },
+  const pendingOrdersCount = orders.filter((o) => o.fulfillmentStatus === 'unfulfilled').length;
+
+  const navItems: {
+    id: AdminTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    count?: number;
+  }[] = [
+    { id: 'overview', label: tr('Tableau de bord', 'Dashboard'), icon: LayoutDashboard },
+    {
+      id: 'orders',
+      label: tr('Commandes', 'Orders'),
+      icon: ShoppingBag,
+      count: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
+    },
+    { id: 'products', label: tr('Produits', 'Products'), icon: Package },
+    { id: 'collections', label: tr('Collections', 'Collections'), icon: Layers },
+    { id: 'customers', label: tr('Clients', 'Customers'), icon: Users },
+    { id: 'promotions', label: tr('Promotions', 'Promotions'), icon: Tag },
+    { id: 'storefront', label: tr('Boutique', 'Store'), icon: LayoutTemplate },
+    { id: 'settings', label: tr('Paramètres', 'Settings'), icon: Settings },
   ];
 
   const actorEmail = user.email || 'admin';
+  const effectiveAdminCategories = adminCategories.length > 0 ? adminCategories : categories;
+
+  const handleNavigateFromOverview = (
+    targetTab: string,
+    options?: { openCreate?: boolean; orderId?: string }
+  ) => {
+    setTab(targetTab as AdminTab);
+    if (options?.orderId) setPendingOrderId(options.orderId);
+    if (options?.openCreate && targetTab === 'products') setOpenCreateProduct(true);
+    if (options?.openCreate && targetTab === 'collections') setOpenCreateCollection(true);
+  };
 
   const SidebarList = () => (
-    <nav className="space-y-1">
+    <nav className="space-y-0.5">
       {navItems.map((item) => {
         const Icon = item.icon;
         const active = tab === item.id;
@@ -232,154 +251,199 @@ export function AdminDashboard() {
               setTab(item.id);
               setMobileNavOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs tracking-wide transition-colors cursor-pointer ${
+            className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors cursor-pointer ${
               active
-                ? 'bg-black text-white font-bold'
-                : 'text-black/75 font-bold hover:bg-black/5'
+                ? 'bg-black text-white font-medium'
+                : 'text-black/70 hover:text-black hover:bg-[#F5F5F5]'
             }`}
           >
-            <Icon className="w-4 h-4 shrink-0" />
-            <span>{item.label}</span>
+            <span className="flex items-center gap-2.5">
+              <Icon className="w-4 h-4 shrink-0" />
+              <span>{item.label}</span>
+            </span>
+            {item.count !== undefined && (
+              <span
+                className={`text-[10.5px] tabular-nums px-1.5 py-0.5 ${
+                  active ? 'bg-white/20 text-white' : 'bg-[#EFEFEF] text-black/70'
+                }`}
+              >
+                {item.count}
+              </span>
+            )}
           </button>
         );
       })}
     </nav>
   );
 
+  const currentTabLabel = navItems.find((n) => n.id === tab)?.label || '';
+
   return (
-    <div className="min-h-screen bg-white text-black flex">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col justify-between bg-white p-5 sticky top-0 h-screen">
-        <div className="space-y-8">
-          <div className="pb-2">
-            <span className="font-bold text-xl tracking-[0.22em] uppercase text-black">
+    <div className="min-h-screen bg-[#F5F5F5] text-black flex">
+      {/* Desktop Sidebar (240px) */}
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col justify-between bg-white border-r border-[#E8E8E8] p-4 sticky top-0 h-screen">
+        <div className="space-y-6">
+          <div className="px-2 pt-1">
+            <span className="font-bold text-base tracking-[0.22em] uppercase text-black block">
               KIKI JONES
             </span>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-black/60 mt-0.5">
-              Admin Console
-            </p>
+            <span className="text-[10.5px] uppercase tracking-[0.14em] text-black/45">
+              {tr('Administration', 'Admin')}
+            </span>
           </div>
           <SidebarList />
         </div>
 
-        <div className="pt-4 space-y-2 text-xs">
-          <p className="truncate text-black font-bold">{actorEmail}</p>
-          <p className="text-[10px] font-light uppercase tracking-wider text-black/60">
-            {adminVerifiedServer ? 'Server Session Verified' : 'RBAC Active'}
-          </p>
+        <div className="pt-4 border-t border-[#E8E8E8] space-y-2 text-xs">
+          <p className="px-2 truncate text-black/75 font-medium">{actorEmail}</p>
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="w-full py-2 rounded-none bg-[#F7F7F7] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-black hover:text-white cursor-pointer"
+            className="w-full py-2 px-3 bg-[#F5F5F5] hover:bg-black hover:text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Storefront</span>
+            <span>{tr('Voir la boutique', 'View store')}</span>
           </button>
           <button
             type="button"
             onClick={() => logout()}
-            className="w-full py-2 rounded-none text-xs font-bold text-black/60 hover:text-black inline-flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-1.5 px-3 text-xs text-black/50 hover:text-black inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
+            <span>{tr('Déconnexion', 'Sign out')}</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 min-w-0 flex flex-col bg-black/[0.02]">
-        {/* Top Bar */}
-        <header className="h-16 bg-white px-5 md:px-8 flex items-center justify-between">
+      {/* Main Column */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Clean Top Header */}
+        <header className="h-14 bg-white border-b border-[#E8E8E8] px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setMobileNavOpen(true)}
-              className="lg:hidden p-2 -ml-2 cursor-pointer"
-              aria-label="Open admin menu"
+              className="lg:hidden p-1.5 -ml-1.5 text-black cursor-pointer"
+              aria-label={tr('Ouvrir le menu', 'Open menu')}
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-xs font-bold uppercase tracking-[0.16em] text-black/60">
-              KIKI JONES / {navItems.find((n) => n.id === tab)?.label}
-            </span>
+            <span className="text-xs font-medium text-black/45">KIKI JONES</span>
+            <span className="text-xs text-black/25">/</span>
+            <span className="text-xs font-semibold text-black">{currentTabLabel}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="px-4 py-2 border border-black/25 text-xs font-bold uppercase tracking-[0.14em] hover:border-black whitespace-nowrap cursor-pointer"
-          >
-            View Live Storefront
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Language Switcher */}
+            <button
+              type="button"
+              onClick={toggleLang}
+              aria-label={tr('Changer la langue', 'Switch language')}
+              className="px-2.5 py-1.5 border border-[#E8E8E8] hover:border-black bg-white text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{lang.toUpperCase()}</span>
+            </button>
+
+            {/* AI Store Assistant Launcher */}
+            <button
+              type="button"
+              onClick={() => setAiOpen(true)}
+              className="px-3 py-1.5 bg-black text-white text-xs font-medium hover:bg-black/85 inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{tr('Assistant IA', 'AI Assistant')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="hidden sm:inline-flex px-3 py-1.5 border border-[#E8E8E8] hover:border-black bg-white text-xs font-medium cursor-pointer"
+            >
+              {tr('Boutique', 'Storefront')}
+            </button>
+          </div>
         </header>
 
-        <main className="flex-1 p-5 md:p-8 max-w-[1400px] w-full mx-auto">
+        {/* Active Section Body */}
+        <main className="flex-1 p-5 md:p-8 max-w-[1360px] w-full mx-auto">
           {tab === 'overview' && (
             <AdminOverview
               products={allProductsAdmin}
               variants={variants}
               orders={orders}
+              users={users}
               onInitializeCatalog={initializeCatalog}
-              onNavigateTab={(t) => setTab(t as AdminTab)}
+              onNavigateTab={handleNavigateFromOverview}
+              onOpenAiAssistant={() => setAiOpen(true)}
             />
           )}
+
+          {tab === 'orders' && (
+            <AdminOrders
+              orders={orders}
+              actorEmail={actorEmail}
+              initialOrderId={pendingOrderId}
+              onClearInitialOrder={() => setPendingOrderId(null)}
+              onToast={toast}
+            />
+          )}
+
           {tab === 'products' && (
             <AdminProducts
               products={allProductsAdmin}
               variants={variants}
-              categories={categories}
-              actorEmail={actorEmail}
-              onOpenImport={() => setTab('import')}
-              onToast={toast}
-            />
-          )}
-          {tab === 'import' && (
-            <AdminImportCenter
-              products={allProductsAdmin}
-              variants={variants}
-              categories={categories}
+              categories={effectiveAdminCategories}
               importJobs={importJobs}
               actorEmail={actorEmail}
+              initialCreate={openCreateProduct}
+              onClearInitialCreate={() => setOpenCreateProduct(false)}
               onToast={toast}
             />
           )}
-          {tab === 'inventory' && (
-            <AdminInventory
+
+          {tab === 'collections' && (
+            <AdminCollections
+              categories={effectiveAdminCategories}
               products={allProductsAdmin}
-              variants={variants}
-              movements={movements}
-              reservations={reservations}
               actorEmail={actorEmail}
+              initialCreate={openCreateCollection}
+              onClearInitialCreate={() => setOpenCreateCollection(false)}
               onToast={toast}
             />
           )}
-          {tab === 'orders' && (
-            <AdminOrders orders={orders} actorEmail={actorEmail} onToast={toast} />
+
+          {tab === 'customers' && (
+            <AdminCustomers
+              users={users}
+              orders={orders}
+              onOpenOrder={(orderId) => {
+                setPendingOrderId(orderId);
+                setTab('orders');
+              }}
+            />
           )}
-          {tab === 'customers' && <AdminCustomers users={users} orders={orders} />}
-          {tab === 'payments' && <AdminPayments payments={payments} />}
-          {tab === 'marketing' && (
-            <AdminMarketing
+
+          {tab === 'promotions' && (
+            <AdminPromotions
               promotions={promotions}
               subscribers={subscribers}
               actorEmail={actorEmail}
               onToast={toast}
             />
           )}
+
           {tab === 'storefront' && (
             <AdminStorefront
               config={storefrontConfig}
-              categories={categories}
+              categories={effectiveAdminCategories}
               actorEmail={actorEmail}
+              onOpenAiAssistant={() => setAiOpen(true)}
+              onOpenLiveStore={() => navigate('/')}
               onToast={toast}
             />
           )}
-          {tab === 'analytics' && (
-            <AdminAnalytics
-              orders={orders}
-              products={allProductsAdmin}
-              variants={variants}
-            />
-          )}
+
           {tab === 'settings' && (
             <AdminSettings
               config={storefrontConfig}
@@ -391,39 +455,58 @@ export function AdminDashboard() {
         </main>
       </div>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Navigation Drawer */}
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setMobileNavOpen(false)}
-          />
-          <div className="relative w-72 bg-white h-full p-5 flex flex-col justify-between overflow-y-auto">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setMobileNavOpen(false)} />
+          <div className="relative w-64 bg-white h-full p-4 flex flex-col justify-between overflow-y-auto z-10 border-r border-[#E8E8E8]">
             <div className="space-y-6">
-              <div className="flex items-center justify-between pb-2">
-                <span className="font-bold text-lg tracking-[0.22em] uppercase text-black">
+              <div className="flex items-center justify-between px-2">
+                <span className="font-bold text-base tracking-[0.22em] uppercase text-black">
                   KIKI JONES
                 </span>
                 <button
                   type="button"
                   onClick={() => setMobileNavOpen(false)}
-                  className="p-2 cursor-pointer"
+                  className="p-1.5 cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <SidebarList />
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="mt-6 w-full py-2.5 rounded-none bg-[#F7F7F7] text-xs font-bold uppercase tracking-wider cursor-pointer"
-            >
-              Storefront
-            </button>
+
+            <div className="pt-4 border-t border-[#E8E8E8] space-y-2">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="w-full py-2 bg-[#F5F5F5] text-xs font-medium cursor-pointer"
+              >
+                {tr('Voir la boutique', 'View store')}
+              </button>
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="w-full py-1.5 text-xs text-black/55 cursor-pointer"
+              >
+                {tr('Déconnexion', 'Sign out')}
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Integrated AI Store Assistant Drawer */}
+      <AdminAiAssistant
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        config={storefrontConfig}
+        categories={effectiveAdminCategories}
+        products={allProductsAdmin}
+        promotions={promotions}
+        actorEmail={actorEmail}
+        onToast={toast}
+      />
     </div>
   );
 }

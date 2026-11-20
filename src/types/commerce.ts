@@ -234,6 +234,10 @@ export type BuiltinHomepageSectionKey =
   | 'women_exclusive_banner'
   | 'dual_spotlight'
   | 'shop_by_brand_strip'
+  | 'trending_now_grid'
+  | 'best_sellers_grid'
+  | 'new_arrivals_grid'
+  | 'featured_collections_grid'
   | 'new_arrivals'
   | 'categories'
   | 'next_drop'
@@ -271,6 +275,42 @@ export interface CustomHomepageSection {
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
   secondaryImageUrl?: string;
+}
+
+export interface StoreNavigationItem {
+  id: string;
+  labelFr: string;
+  labelEn: string;
+  href: string;
+  visible: boolean;
+}
+
+export interface AiStoreAction {
+  type:
+    | 'update_storefront'
+    | 'reorder_sections'
+    | 'add_section'
+    | 'remove_section'
+    | 'toggle_section'
+    | 'create_collection'
+    | 'update_collection'
+    | 'delete_collection'
+    | 'create_promotion'
+    | 'toggle_promotion'
+    | 'update_product'
+    | 'bulk_update_prices'
+    | 'delete_product'
+    | 'update_navigation';
+  description: string;
+  sensitive?: boolean;
+  payload: Record<string, any>;
+}
+
+export interface AiAssistantResponse {
+  reply: string;
+  requiresConfirmation: boolean;
+  summary: string[];
+  actions: AiStoreAction[];
 }
 
 export interface StorefrontConfig {

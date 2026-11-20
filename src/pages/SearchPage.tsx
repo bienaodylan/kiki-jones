@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useLanguage } from '../context/LanguageContext';
 import { ProductCard } from '../components/storefront/ProductCard';
-import { TRENDING_SEARCHES, SUGGESTED_SEARCH_CATEGORIES } from '../lib/navigationData';
+import { getSuggestedSearchCategories, getTrendingSearches } from '../lib/i18n';
 
 export function SearchPage({ initialQuery }: { initialQuery: string }) {
   const {
@@ -12,10 +13,14 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
     recentSearches,
     addRecentSearch,
   } = useStore();
+  const { lang, tr } = useLanguage();
 
   const [inputValue, setInputValue] = useState(initialQuery);
   const [audienceFilter, setAudienceFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recommended' | 'price-asc' | 'price-desc'>('recommended');
+
+  const trendingSearches = useMemo(() => getTrendingSearches(lang), [lang]);
+  const suggestedCategories = useMemo(() => getSuggestedSearchCategories(lang), [lang]);
 
   useEffect(() => {
     setInputValue(initialQuery);
@@ -31,6 +36,7 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
       const haystack = [
         p.name,
         p.categoryName,
+        p.brandName || '',
         p.audience || '',
         p.subCategory || '',
         p.description,
@@ -66,7 +72,7 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
       {/* Search Bar Header */}
       <div className="pt-4 pb-5 border-b border-black/10 space-y-4">
         <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-black/45">
-          Search KIKI JONES
+          {tr('Rechercher sur KIKI JONES', 'Search KIKI JONES')}
         </p>
         <form onSubmit={handleSubmit} className="flex items-center gap-3 border-b border-black pb-3 max-w-3xl">
           <Search className="w-5 h-5 text-black shrink-0" strokeWidth={1.6} />
@@ -74,8 +80,11 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Search pieces, categories, collections..."
-            aria-label="Search query"
+            placeholder={tr(
+              'Rechercher des pièces, catégories, collections...',
+              'Search pieces, categories, collections...'
+            )}
+            aria-label={tr('Recherche', 'Search query')}
             className="flex-1 bg-transparent text-xl sm:text-2xl font-light text-black placeholder:text-black/35 focus:outline-none"
           />
           {inputValue && (
@@ -85,7 +94,7 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
                 setInputValue('');
                 navigate('/search');
               }}
-              aria-label="Clear search"
+              aria-label={tr('Effacer', 'Clear search')}
               className="p-1 text-black/45 hover:text-black cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -97,12 +106,12 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
           <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
             <div className="flex items-center gap-4 overflow-x-auto no-scrollbar text-xs">
               {[
-                { id: 'all', label: 'All' },
-                { id: 'women', label: 'Women' },
-                { id: 'men', label: 'Men' },
-                { id: 'girls', label: 'Girls' },
-                { id: 'boys', label: 'Boys' },
-                { id: 'accessories', label: 'Accessories' },
+                { id: 'all', label: tr('Tout', 'All') },
+                { id: 'women', label: tr('Femme', 'Women') },
+                { id: 'men', label: tr('Homme', 'Men') },
+                { id: 'girls', label: tr('Filles', 'Girls') },
+                { id: 'boys', label: tr('Garçons', 'Boys') },
+                { id: 'accessories', label: tr('Accessoires', 'Accessories') },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -121,17 +130,18 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
 
             <div className="flex items-center gap-4 text-xs">
               <span className="text-black/50 tabular-nums">
-                {results.length} {results.length === 1 ? 'result' : 'results'}
+                {results.length}{' '}
+                {tr(results.length <= 1 ? 'résultat' : 'résultats', results.length === 1 ? 'result' : 'results')}
               </span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                aria-label="Sort search results"
+                aria-label={tr('Trier les résultats', 'Sort search results')}
                 className="bg-[#F5F5F5] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] focus:outline-none cursor-pointer"
               >
-                <option value="recommended">Recommended</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
+                <option value="recommended">{tr('Recommandés', 'Recommended')}</option>
+                <option value="price-asc">{tr('Prix croissant', 'Price: Low to High')}</option>
+                <option value="price-desc">{tr('Prix décroissant', 'Price: High to Low')}</option>
               </select>
             </div>
           </div>
@@ -143,10 +153,10 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
         <div className="py-12 grid grid-cols-1 md:grid-cols-3 gap-10">
           <div className="space-y-4">
             <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
-              Trending Searches
+              {tr('Recherches tendances', 'Trending Searches')}
             </h2>
             <div className="flex flex-wrap gap-2">
-              {TRENDING_SEARCHES.map((term) => (
+              {trendingSearches.map((term) => (
                 <button
                   key={term}
                   type="button"
@@ -165,10 +175,12 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
 
           <div className="space-y-4">
             <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
-              Recent Searches
+              {tr('Recherches récentes', 'Recent Searches')}
             </h2>
             {recentSearches.length === 0 ? (
-              <p className="text-xs font-light text-black/50">No recent searches yet.</p>
+              <p className="text-xs font-light text-black/50">
+                {tr('Aucune recherche récente.', 'No recent searches yet.')}
+              </p>
             ) : (
               <ul className="space-y-2">
                 {recentSearches.map((term) => (
@@ -191,10 +203,10 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
 
           <div className="space-y-4">
             <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
-              Browse Categories
+              {tr('Parcourir les catégories', 'Browse Categories')}
             </h2>
             <ul className="space-y-2.5">
-              {SUGGESTED_SEARCH_CATEGORIES.map((cat) => (
+              {suggestedCategories.map((cat) => (
                 <li key={cat.href}>
                   <button
                     type="button"
@@ -211,13 +223,16 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
       ) : results.length === 0 ? (
         <div className="py-16 text-center space-y-5">
           <h2 className="font-editorial text-3xl text-black">
-            No results for &ldquo;{activeQuery}&rdquo;
+            {tr(`Aucun résultat pour « ${activeQuery} »`, `No results for "${activeQuery}"`)}
           </h2>
           <p className="text-sm font-light text-black/65 max-w-md mx-auto">
-            Try another keyword or explore our curated collections across Women, Men, Girls, and Boys.
+            {tr(
+              'Essayez un autre mot-clé ou parcourez nos collections pour Femme, Homme, Filles et Garçons.',
+              'Try another keyword or explore our curated collections across Women, Men, Girls, and Boys.'
+            )}
           </p>
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            {TRENDING_SEARCHES.slice(0, 5).map((term) => (
+            {trendingSearches.slice(0, 5).map((term) => (
               <button
                 key={term}
                 type="button"

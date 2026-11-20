@@ -757,7 +757,7 @@ export async function saveStorefrontConfig(config: StorefrontConfig, actorEmail:
     for (const [k, v] of Object.entries(config)) {
       if (v !== undefined) cleanPayload[k] = v;
     }
-    cleanPayload.cmsVersion = 5;
+    cleanPayload.cmsVersion = 9;
     cleanPayload.standardShippingXof = Math.max(0, Math.round(Number(config.standardShippingXof) || 0));
     cleanPayload.expressShippingXof = Math.max(0, Math.round(Number(config.expressShippingXof) || 0));
     cleanPayload.freeShippingThresholdXof = Math.max(0, Math.round(Number(config.freeShippingThresholdXof) || 0));
@@ -791,6 +791,45 @@ export async function saveCategory(
   }
 }
 
+export async function deleteCategoryAdmin(categoryId: string, actorEmail: string) {
+  try {
+    await deleteDoc(doc(db, 'categories', categoryId));
+    await logAudit(actorEmail, 'DELETE_CATEGORY', 'category', categoryId, 'Deleted collection/category');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `categories/${categoryId}`);
+  }
+}
+
+export async function assignProductsToCategory(
+  productIds: string[],
+  categoryId: string,
+  categoryName: string,
+  actorEmail: string
+) {
+  if (productIds.length === 0) return;
+  try {
+    const ops: BatchOp[] = productIds.map((pid) => ({
+      type: 'update',
+      ref: doc(db, 'products', pid),
+      data: {
+        categoryId,
+        categoryName,
+        updatedAt: serverTimestamp(),
+      },
+    }));
+    await commitBatchOps(ops);
+    await logAudit(
+      actorEmail,
+      'ASSIGN_COLLECTION_PRODUCTS',
+      'category',
+      categoryId,
+      `Assigned ${productIds.length} products to ${categoryName}`
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `categories/${categoryId}`);
+  }
+}
+
 export async function savePromotion(
   promoId: string | null,
   data: Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>,
@@ -809,6 +848,15 @@ export async function savePromotion(
     return id;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `promotions/${id}`);
+  }
+}
+
+export async function deletePromotionAdmin(promoId: string, actorEmail: string) {
+  try {
+    await deleteDoc(doc(db, 'promotions', promoId));
+    await logAudit(actorEmail, 'DELETE_PROMO', 'promotion', promoId, 'Deleted promotion code');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `promotions/${promoId}`);
   }
 }
 
@@ -905,5 +953,83 @@ export async function deleteProductAdmin(productId: string, actorEmail: string) 
     await logAudit(actorEmail, 'DELETE_PRODUCT', 'product', productId, 'Deleted product and its variants');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `products/${productId}`);
+  }
+}
+
+export async function bulkUpdateProductStatus(
+  productIds: string[],
+  status: 'published' | 'draft' | 'archived',
+  actorEmail: string
+) {
+  if (productIds.length === 0) return;
+  try {
+    const ops: BatchOp[] = productIds.map((pid) => ({
+      type: 'update',
+      ref: doc(db, 'products', pid),
+      data: { status, updatedAt: serverTimestamp() },
+    }));
+    await commitBatchOps(ops);
+    await logAudit(actorEmail, 'BULK_STATUS_PRODUCTS', 'product', 'bulk', `Set ${productIds.length} products to ${status}`);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, 'products/bulk_status');
+  }
+}
+
+export async function bulkDeleteProducts(productIds: string[], actorEmail: string) {
+  for (const pid of productIds) {
+    await deleteProductAdmin(pid, actorEmail);
+  }
+}
+
+export async function updateProductFieldsAdmin(
+  productId: string,
+  updates: Record<string, any>,
+  actorEmail: string
+) {
+  try {
+    const clean: Record<string, any> = {};
+    for (const [k, v] of Object.entries(updates)) {
+      if (v !== undefined && !CLIENT_ONLY_PRODUCT_KEYS.has(k)) {
+        clean[k] = v;
+      }
+    }
+    await updateDoc(doc(db, 'products', productId), {
+      ...clean,
+      updatedAt: serverTimestamp(),
+    });
+    await logAudit(actorEmail, 'UPDATE_PRODUCT', 'product', productId, `Updated fields: ${Object.keys(clean).join(', ')}`);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `products/${productId}`);
+  }
+}
+
+export async function bulkUpdateProductPrices(
+  productsToUpdate: { id: string; regularPriceXof: number; promoPriceXof: number | null }[],
+  actorEmail: string
+) {
+  if (productsToUpdate.length === 0) return;
+  try {
+    const ops: BatchOp[] = [];
+    for (const item of productsToUpdate) {
+      ops.push({
+        type: 'update',
+        ref: doc(db, 'products', item.id),
+        data: {
+          regularPriceXof: Math.max(0, Math.round(item.regularPriceXof)),
+          promoPriceXof: item.promoPriceXof !== null ? Math.max(0, Math.round(item.promoPriceXof)) : null,
+          updatedAt: serverTimestamp(),
+        },
+      });
+    }
+    await commitBatchOps(ops);
+    await logAudit(
+      actorEmail,
+      'BULK_UPDATE_PRICES',
+      'product',
+      'bulk',
+      `Updated prices for ${productsToUpdate.length} products`
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, 'products/bulk_prices');
   }
 }

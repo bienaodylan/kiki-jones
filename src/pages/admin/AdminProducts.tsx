@@ -1,44 +1,84 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Copy, Trash2, Archive, Check, X, Upload } from 'lucide-react';
-import { Category, Product, ProductStatus, ProductVariant } from '../../types/commerce';
-import { formatXOF, getColorHex, sanitizeId, slugify, getProductTotalAvailable } from '../../lib/format';
-import { saveProductAndVariants, deleteProductAdmin } from '../../lib/firestoreService';
-import { KIKI_JONES_IMAGES } from '../../lib/catalogDefaults';
-import { uploadAdminImage } from '../../lib/imageUpload';
-import { detectDominantColorsFromImageUrl, DetectedColor } from '../../lib/colorDetector';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Plus,
+  Search,
+  Copy,
+  Trash2,
+  Edit3,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+  FileSpreadsheet,
+  X,
+  ArrowLeft,
+} from 'lucide-react';
+import { Category, ImportJob, Product, ProductStatus, ProductVariant } from '../../types/commerce';
+import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
+import { formatXOF, getAvailableStock, getColorHex, sanitizeId, slugify } from '../../lib/format';
+import {
+  bulkDeleteProducts,
+  bulkUpdateProductStatus,
+  deleteProductAdmin,
+  saveProductAndVariants,
+} from '../../lib/firestoreService';
+import { KJ_IMAGES } from '../../lib/navigationData';
+import { AdminImportCenter } from './AdminImportCenter';
 
 interface AdminProductsProps {
   products: Product[];
   variants: ProductVariant[];
   categories: Category[];
+  importJobs: ImportJob[];
   actorEmail: string;
-  onOpenImport: () => void;
+  initialCreate?: boolean;
+  onClearInitialCreate?: () => void;
   onToast: (msg: string, tone?: 'default' | 'error' | 'success') => void;
 }
 
-interface ColorEntry {
-  name: string;
-  hex: string;
-  imageIndex: number;
+interface EditableVariant {
+  id: string;
+  sku: string;
+  color: string;
+  colorHex: string;
+  size: string;
+  priceXof: number;
+  stockQty: number;
+  reservedQty: number;
+  lowStockThreshold: number;
+  isActive: boolean;
 }
+
+const PRESET_GALLERY = Array.from(new Set(Object.values(KJ_IMAGES))).slice(0, 12);
 
 export function AdminProducts({
   products,
   variants,
   categories,
+  importJobs,
   actorEmail,
-  onOpenImport,
+  initialCreate,
+  onClearInitialCreate,
   onToast,
 }: AdminProductsProps) {
+  const { tr } = useLanguage();
+  const { user, idToken } = useAuth();
+
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | ProductStatus>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'name' | 'price_asc' | 'price_desc' | 'stock_asc'>('newest');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
+
+  // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [colorEntries, setColorEntries] = useState<ColorEntry[]>([]);
-  const [newColorInput, setNewColorInput] = useState('');
-  const [scanningColors, setScanningColors] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [showImagePresets, setShowImagePresets] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -46,753 +86,526 @@ export function AdminProducts({
     description: '',
     categoryId: categories[0]?.id || 'cat_women',
     sku: '',
-    imagesText: KIKI_JONES_IMAGES.womenEditorial,
-    runwayModelImageUrl: '',
     regularPriceXof: 25000,
-    promoPriceXof: '',
+    promoPriceXof: '' as string | number,
     lowStockThreshold: 5,
     status: 'published' as ProductStatus,
     isNewDrop: false,
-    newDropOrder: 10,
     isFeatured: false,
-    featuredOrder: 10,
     isPreorder: false,
-    preorderLimit: '',
     preorderEstimateDate: '',
     seoTitle: '',
     seoDescription: '',
+    images: [] as string[],
   });
 
-  const [variantRows, setVariantRows] = useState<
-    { id: string; color: string; colorHex: string; size: string; sku: string; priceXof: number; stockQty: number; isActive: boolean }[]
-  >([]);
+  const [editVariants, setEditVariants] = useState<EditableVariant[]>([]);
 
-  const productImagesList = form.imagesText
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const syncVariantsFromColors = (
-    colors: ColorEntry[],
-    baseSku: string,
-    priceXof: number
-  ) => {
-    if (colors.length === 0) {
-      setVariantRows([]);
-      return;
-    }
-    setVariantRows((prev) => {
-      const existingSizes = Array.from(new Set(prev.map((r) => r.size).filter(Boolean)));
-      const sizesToUse = existingSizes.length > 0 ? existingSizes : ['S', 'M', 'L'];
-      const cleanSku = (baseSku || 'MRZ').trim();
-      const nextRows: typeof prev = [];
-      colors.forEach((c) => {
-        sizesToUse.forEach((sz) => {
-          const existingMatch = prev.find((r) => r.color === c.name && r.size === sz);
-          nextRows.push(
-            existingMatch
-              ? { ...existingMatch, colorHex: c.hex }
-              : {
-                  id: sanitizeId(`var_${cleanSku}_${c.name}_${sz}_${Date.now()}`),
-                  color: c.name,
-                  colorHex: c.hex,
-                  size: sz,
-                  sku: `${cleanSku}-${c.name.slice(0, 3).toUpperCase()}-${sz.toUpperCase()}`,
-                  priceXof: Number(priceXof) || 25000,
-                  stockQty: 8,
-                  isActive: true,
-                }
-          );
-        });
-      });
-      return nextRows;
-    });
-  };
-
-  // Detect dominant candidates automatically when creating a new product from its image
-  useEffect(() => {
-    if (!editorOpen || editingId) return;
-    const firstImg = productImagesList[0];
-    if (!firstImg) return;
-    let cancelled = false;
-    setScanningColors(true);
-    detectDominantColorsFromImageUrl(firstImg, 4).then((cols) => {
-      if (cancelled) return;
-      setScanningColors(false);
-      if (cols.length > 0) {
-        const entries: ColorEntry[] = cols.map((c, idx) => ({
-          name: c.name,
-          hex: c.hex,
-          imageIndex: idx < productImagesList.length ? idx : 0,
-        }));
-        setColorEntries(entries);
-        syncVariantsFromColors(entries, form.sku, form.regularPriceXof);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [editorOpen, editingId, form.imagesText]);
-
-  const handleScanImageColors = async () => {
-    const targetImg = productImagesList[0];
-    if (!targetImg) return;
-    setScanningColors(true);
-    const cols: DetectedColor[] = await detectDominantColorsFromImageUrl(targetImg, 4);
-    setScanningColors(false);
-    if (cols.length > 0) {
-      const entries: ColorEntry[] = cols.map((c, idx) => ({
-        name: c.name,
-        hex: c.hex,
-        imageIndex: idx < productImagesList.length ? idx : 0,
-      }));
-      setColorEntries(entries);
-      syncVariantsFromColors(entries, form.sku, form.regularPriceXof);
-    }
-  };
-
-  const handleRemoveColorEntry = (colorName: string) => {
-    const nextEntries = colorEntries.filter((c) => c.name !== colorName);
-    setColorEntries(nextEntries);
-    setVariantRows((prev) => prev.filter((v) => v.color !== colorName));
-  };
-
-  const handleRenameColorEntry = (idx: number, nextName: string) => {
-    const oldName = colorEntries[idx]?.name;
-    if (!oldName) return;
-    const nextHex = getColorHex(nextName);
-    setColorEntries((prev) =>
-      prev.map((c, i) => (i === idx ? { ...c, name: nextName, hex: nextHex } : c))
-    );
-    setVariantRows((prev) =>
-      prev.map((v) =>
-        v.color === oldName ? { ...v, color: nextName, colorHex: nextHex } : v
-      )
-    );
-  };
-
-  const handleAddManualColor = () => {
-    const clean = newColorInput.trim();
-    if (!clean) return;
-    if (colorEntries.some((c) => c.name.toLowerCase() === clean.toLowerCase())) {
-      setNewColorInput('');
-      return;
-    }
-    const nextEntry: ColorEntry = {
-      name: clean,
-      hex: getColorHex(clean),
-      imageIndex: Math.min(colorEntries.length, Math.max(0, productImagesList.length - 1)),
-    };
-    const nextEntries = [...colorEntries, nextEntry];
-    setColorEntries(nextEntries);
-    syncVariantsFromColors(nextEntries, form.sku, form.regularPriceXof);
-    setNewColorInput('');
-  };
-
-  const handleAssignColorImage = async (colorIdx: number, file: File) => {
-    setUploadingImage(true);
-    try {
-      const url = await uploadAdminImage(file);
-      const imgs = [...productImagesList];
-      while (imgs.length <= colorIdx) {
-        imgs.push(url);
-      }
-      imgs[colorIdx] = url;
-      setForm((prev) => ({ ...prev, imagesText: imgs.join('\n') }));
-      setColorEntries((prev) =>
-        prev.map((c, i) => (i === colorIdx ? { ...c, imageIndex: colorIdx } : c))
-      );
-      onToast('Photo associée à la couleur.', 'success');
-    } catch (err: any) {
-      onToast(err?.message || 'Unable to upload photo.', 'error');
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const openCreate = () => {
-    setEditingId(null);
+  const openCreateEditor = () => {
     const defaultCat = categories[0];
-    const generatedSku = `KJ-${String(Date.now()).slice(-4)}`;
+    const baseSku = `KJ-${Date.now().toString().slice(-5)}`;
+    setEditingId(null);
+    setShowAdvanced(false);
+    setShowImagePresets(false);
+    setNewImageUrl('');
     setForm({
       name: '',
       slug: '',
       description: '',
       categoryId: defaultCat?.id || 'cat_women',
-      sku: generatedSku,
-      imagesText: KIKI_JONES_IMAGES.womenEditorial,
-      runwayModelImageUrl: '',
-      regularPriceXof: 28000,
+      sku: baseSku,
+      regularPriceXof: 25000,
       promoPriceXof: '',
       lowStockThreshold: 5,
       status: 'published',
-      isNewDrop: false,
-      newDropOrder: 7,
+      isNewDrop: true,
       isFeatured: false,
-      featuredOrder: 5,
       isPreorder: false,
-      preorderLimit: '',
       preorderEstimateDate: '',
       seoTitle: '',
       seoDescription: '',
+      images: [KJ_IMAGES.heroCampaign],
     });
-    setColorEntries([]);
-    setVariantRows([]);
-    setNewColorInput('');
-    setEditorOpen(true);
-  };
-
-  const openEdit = (prod: Product) => {
-    setEditingId(prod.id);
-    setForm({
-      name: prod.name,
-      slug: prod.slug,
-      description: prod.description,
-      categoryId: prod.categoryId,
-      sku: prod.sku,
-      imagesText: (prod.images || []).join('\n'),
-      runwayModelImageUrl: prod.runwayModelImageUrl || '',
-      regularPriceXof: prod.regularPriceXof,
-      promoPriceXof: prod.promoPriceXof ? String(prod.promoPriceXof) : '',
-      lowStockThreshold: prod.lowStockThreshold ?? 5,
-      status: prod.status,
-      isNewDrop: Boolean(prod.isNewDrop),
-      newDropOrder: prod.newDropOrder ?? 99,
-      isFeatured: Boolean(prod.isFeatured),
-      featuredOrder: prod.featuredOrder ?? 99,
-      isPreorder: Boolean(prod.isPreorder),
-      preorderLimit: prod.preorderLimit ? String(prod.preorderLimit) : '',
-      preorderEstimateDate: prod.preorderEstimateDate || '',
-      seoTitle: prod.seoTitle || '',
-      seoDescription: prod.seoDescription || '',
-    });
-    const pVars = variants.filter((v) => v.productId === prod.id);
-    setVariantRows(
-      pVars.map((v) => ({
-        id: v.id,
-        color: v.color,
-        colorHex: v.colorHex || getColorHex(v.color),
-        size: v.size,
-        sku: v.sku,
-        priceXof: v.priceXof,
-        stockQty: v.stockQty,
-        isActive: v.isActive,
-      }))
-    );
-    const uniqueColors = Array.from(
-      new Map(pVars.map((v) => [v.color, v.colorHex || getColorHex(v.color)])).entries()
-    );
-    setColorEntries(
-      uniqueColors.map(([name, hex], idx) => ({
-        name,
-        hex,
-        imageIndex: idx < (prod.images?.length || 0) ? idx : 0,
-      }))
-    );
-    setNewColorInput('');
-    setEditorOpen(true);
-  };
-
-  const handleDuplicate = async (prod: Product) => {
-    const pVars = variants.filter((v) => v.productId === prod.id);
-    const newSlug = `${prod.slug}-copy-${String(Date.now()).slice(-3)}`;
-    const newSku = `${prod.sku}-CPY`;
-    await saveProductAndVariants(
-      null,
+    setEditVariants([
       {
-        ...prod,
-        name: `${prod.name} (Copy)`,
-        slug: newSlug,
-        sku: newSku,
-        status: 'draft',
-        isNewDrop: false,
-        isFeatured: false,
+        id: sanitizeId(`var_${baseSku}_NOIR_S`),
+        sku: `${baseSku}-NOI-S`,
+        color: 'Noir',
+        colorHex: '#111111',
+        size: 'S',
+        priceXof: 25000,
+        stockQty: 10,
+        reservedQty: 0,
+        lowStockThreshold: 5,
+        isActive: true,
       },
-      pVars.map((v, idx) => ({
-        id: sanitizeId(`var_${newSku}_${idx}_${Date.now()}`),
+      {
+        id: sanitizeId(`var_${baseSku}_NOIR_M`),
+        sku: `${baseSku}-NOI-M`,
+        color: 'Noir',
+        colorHex: '#111111',
+        size: 'M',
+        priceXof: 25000,
+        stockQty: 10,
+        reservedQty: 0,
+        lowStockThreshold: 5,
+        isActive: true,
+      },
+      {
+        id: sanitizeId(`var_${baseSku}_NOIR_L`),
+        sku: `${baseSku}-NOI-L`,
+        color: 'Noir',
+        colorHex: '#111111',
+        size: 'L',
+        priceXof: 25000,
+        stockQty: 10,
+        reservedQty: 0,
+        lowStockThreshold: 5,
+        isActive: true,
+      },
+    ]);
+    setEditorOpen(true);
+  };
+
+  useEffect(() => {
+    if (initialCreate) {
+      openCreateEditor();
+      onClearInitialCreate?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCreate]);
+
+  const openEditEditor = (product: Product) => {
+    const pVars = variants.filter((v) => v.productId === product.id);
+    setEditingId(product.id);
+    setShowAdvanced(false);
+    setShowImagePresets(false);
+    setNewImageUrl('');
+    setForm({
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      categoryId: product.categoryId,
+      sku: product.sku,
+      regularPriceXof: product.regularPriceXof,
+      promoPriceXof: product.promoPriceXof ?? '',
+      lowStockThreshold: product.lowStockThreshold ?? 5,
+      status: product.status,
+      isNewDrop: Boolean(product.isNewDrop),
+      isFeatured: Boolean(product.isFeatured),
+      isPreorder: Boolean(product.isPreorder),
+      preorderEstimateDate: product.preorderEstimateDate || '',
+      seoTitle: product.seoTitle || '',
+      seoDescription: product.seoDescription || '',
+      images: product.images || [],
+    });
+    setEditVariants(
+      pVars.length > 0
+        ? pVars.map((v) => ({
+            id: v.id,
+            sku: v.sku,
+            color: v.color,
+            colorHex: v.colorHex,
+            size: v.size,
+            priceXof: v.priceXof,
+            stockQty: v.stockQty,
+            reservedQty: v.reservedQty || 0,
+            lowStockThreshold: v.lowStockThreshold ?? 5,
+            isActive: v.isActive,
+          }))
+        : [
+            {
+              id: sanitizeId(`var_${product.sku}_STD_OS`),
+              sku: `${product.sku}-OS`,
+              color: product.colors?.[0] || 'Noir',
+              colorHex: getColorHex(product.colors?.[0] || 'Noir'),
+              size: product.sizes?.[0] || 'M',
+              priceXof: product.promoPriceXof ?? product.regularPriceXof,
+              stockQty: 5,
+              reservedQty: 0,
+              lowStockThreshold: 5,
+              isActive: true,
+            },
+          ]
+    );
+    setEditorOpen(true);
+  };
+
+  const productStockMap = useMemo(() => {
+    const map = new Map<string, number>();
+    variants.forEach((v) => {
+      if (!v.isActive) return;
+      map.set(v.productId, (map.get(v.productId) || 0) + getAvailableStock(v));
+    });
+    return map;
+  }, [variants]);
+
+  const filteredProducts = useMemo(() => {
+    const list = products.filter((p) => {
+      if (categoryFilter !== 'all' && p.categoryId !== categoryFilter) return false;
+      if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          p.categoryName.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'price_asc') return (a.promoPriceXof ?? a.regularPriceXof) - (b.promoPriceXof ?? b.regularPriceXof);
+      if (sortBy === 'price_desc') return (b.promoPriceXof ?? b.regularPriceXof) - (a.promoPriceXof ?? a.regularPriceXof);
+      if (sortBy === 'stock_asc') return (productStockMap.get(a.id) || 0) - (productStockMap.get(b.id) || 0);
+      const ta = a.createdAt?.toMillis?.() || 0;
+      const tb = b.createdAt?.toMillis?.() || 0;
+      return tb - ta;
+    });
+  }, [products, categoryFilter, statusFilter, search, sortBy, productStockMap]);
+
+  const allSelected =
+    filteredProducts.length > 0 && filteredProducts.every((p) => selectedIds.includes(p.id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredProducts.map((p) => p.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkStatus = async (status: ProductStatus) => {
+    if (selectedIds.length === 0) return;
+    try {
+      await bulkUpdateProductStatus(selectedIds, status, actorEmail);
+      onToast(
+        tr(`${selectedIds.length} produit(s) mis à jour.`, `${selectedIds.length} product(s) updated.`),
+        'success'
+      );
+      setSelectedIds([]);
+    } catch (err: any) {
+      onToast(err?.message || tr('Erreur lors de la mise à jour.', 'Bulk update failed.'), 'error');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await bulkDeleteProducts(selectedIds, actorEmail);
+      onToast(
+        tr(`${selectedIds.length} produit(s) supprimé(s).`, `${selectedIds.length} product(s) deleted.`),
+        'success'
+      );
+      setSelectedIds([]);
+    } catch (err: any) {
+      onToast(err?.message || tr('Suppression impossible.', 'Delete failed.'), 'error');
+    }
+  };
+
+  const handleDuplicate = async (product: Product) => {
+    try {
+      const suffix = Date.now().toString().slice(-4);
+      const newSku = `${product.sku}-COPY-${suffix}`.slice(0, 60);
+      const pVars = variants.filter((v) => v.productId === product.id);
+      const copyVars = pVars.map((v, idx) => ({
+        id: sanitizeId(`var_${newSku}_${idx}`),
         productId: '',
-        sku: `${v.sku}-CPY`,
+        sku: `${newSku}-${v.size}-${idx}`.slice(0, 75),
         color: v.color,
-        colorHex: getColorHex(v.color),
+        colorHex: v.colorHex,
         size: v.size,
         priceXof: v.priceXof,
         compareAtPriceXof: v.compareAtPriceXof ?? null,
         stockQty: v.stockQty,
         reservedQty: 0,
-        lowStockThreshold: v.lowStockThreshold,
+        lowStockThreshold: v.lowStockThreshold ?? 5,
         weightGrams: v.weightGrams ?? 250,
         isActive: v.isActive,
-      })),
-      actorEmail
-    );
-    onToast(`Duplicated ${prod.name} as draft.`, 'success');
+      }));
+      await saveProductAndVariants(
+        null,
+        {
+          name: `${product.name} (${tr('Copie', 'Copy')})`,
+          slug: `${product.slug}-copy-${suffix}`,
+          description: product.description,
+          categoryId: product.categoryId,
+          categoryName: product.categoryName,
+          sku: newSku,
+          externalShopifyHandle: `${product.slug}-copy-${suffix}`,
+          images: product.images,
+          runwayModelImageUrl: product.runwayModelImageUrl ?? null,
+          colors: product.colors,
+          sizes: product.sizes,
+          regularPriceXof: product.regularPriceXof,
+          promoPriceXof: product.promoPriceXof ?? null,
+          lowStockThreshold: product.lowStockThreshold ?? 5,
+          status: 'draft',
+          isNewDrop: false,
+          newDropOrder: 99,
+          isFeatured: false,
+          featuredOrder: 99,
+          isPreorder: product.isPreorder,
+          preorderLimit: product.preorderLimit ?? null,
+          preorderEstimateDate: product.preorderEstimateDate ?? null,
+          seoTitle: product.seoTitle ?? null,
+          seoDescription: product.seoDescription ?? null,
+        },
+        copyVars,
+        actorEmail
+      );
+      onToast(tr('Produit dupliqué en brouillon.', 'Product duplicated as draft.'), 'success');
+    } catch (err: any) {
+      onToast(err?.message || tr('Duplication impossible.', 'Failed to duplicate.'), 'error');
+    }
   };
 
-  const handleQuickStatus = async (prod: Product, nextStatus: ProductStatus) => {
-    const pVars = variants.filter((v) => v.productId === prod.id);
-    await saveProductAndVariants(
-      prod.id,
-      { ...prod, status: nextStatus },
-      pVars,
-      actorEmail
-    );
-    onToast(`${prod.name} marked ${nextStatus}.`, 'success');
+  const handleDeleteSingle = async (product: Product) => {
+    try {
+      await deleteProductAdmin(product.id, actorEmail);
+      onToast(tr(`"${product.name}" supprimé.`, `"${product.name}" deleted.`), 'success');
+    } catch (err: any) {
+      onToast(err?.message || tr('Suppression impossible.', 'Delete failed.'), 'error');
+    }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleUploadImageFile = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Read error'));
+        reader.readAsDataURL(file);
+      });
+      const token = user ? await user.getIdToken() : idToken;
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dataUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Upload error');
+      setForm((prev) => ({ ...prev, images: [...prev.images, data.url].slice(0, 12) }));
+      onToast(tr('Image importée.', 'Image uploaded.'), 'success');
+    } catch (err: any) {
+      onToast(err?.message || tr('Échec de l’import d’image.', 'Image upload failed.'), 'error');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleSaveEditor = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      onToast(tr('Le nom du produit est requis.', 'Product name is required.'), 'error');
+      return;
+    }
     setSaving(true);
     try {
-      const cat = categories.find((c) => c.id === form.categoryId);
-      const images = form.imagesText
-        .split('\n')
-        .map((s: string) => s.trim())
-        .filter(Boolean);
+      const cat = categories.find((c) => c.id === form.categoryId) || categories[0];
+      const regularPrice = Math.max(0, Math.round(Number(form.regularPriceXof) || 0));
+      const promoNum =
+        form.promoPriceXof !== '' && Number(form.promoPriceXof) > 0
+          ? Math.round(Number(form.promoPriceXof))
+          : null;
+      const cleanSlug = slugify(form.slug || form.name) || `product-${Date.now()}`;
+      const cleanSku = (form.sku.trim() || `KJ-${Date.now().toString().slice(-5)}`).slice(0, 60);
 
-      // Reorder leading images to match colorEntries order if multiple colors & images exist
-      const orderedImages = [...images];
-      colorEntries.forEach((ce, idx) => {
-        const srcUrl = images[ce.imageIndex];
-        if (srcUrl && idx < orderedImages.length && orderedImages[idx] !== srcUrl) {
-          const currentPos = orderedImages.indexOf(srcUrl);
-          if (currentPos >= 0) {
-            const tmp = orderedImages[idx];
-            orderedImages[idx] = orderedImages[currentPos];
-            orderedImages[currentPos] = tmp;
-          }
-        }
-      });
+      const finalVars = editVariants.map((v, idx) => ({
+        id: v.id || sanitizeId(`var_${cleanSku}_${idx}`),
+        productId: editingId || '',
+        sku: (v.sku.trim() || `${cleanSku}-${idx + 1}`).slice(0, 75),
+        color: v.color.trim() || 'Noir',
+        colorHex: v.colorHex || getColorHex(v.color),
+        size: v.size.trim() || 'M',
+        priceXof: Math.max(0, Math.round(Number(v.priceXof) || promoNum || regularPrice)),
+        compareAtPriceXof: promoNum ? regularPrice : null,
+        stockQty: Math.max(0, Math.round(Number(v.stockQty) || 0)),
+        reservedQty: v.reservedQty || 0,
+        lowStockThreshold: Math.max(0, Math.round(Number(form.lowStockThreshold) || 5)),
+        weightGrams: 250,
+        isActive: v.isActive,
+      }));
 
-      const colors = Array.from(new Set(variantRows.map((v) => v.color)));
-      const sizes = Array.from(new Set(variantRows.map((v) => v.size)));
-      const promoNum = form.promoPriceXof ? Math.round(Number(form.promoPriceXof)) : null;
+      const colors = Array.from(new Set(finalVars.map((v) => v.color))).slice(0, 12);
+      const sizes = Array.from(new Set(finalVars.map((v) => v.size))).slice(0, 12);
 
       await saveProductAndVariants(
         editingId,
         {
-          name: form.name.trim(),
-          slug: slugify(form.slug || form.name),
-          description: form.description.trim(),
-          categoryId: form.categoryId,
-          categoryName: cat?.name || 'Clothing',
-          sku: form.sku.trim(),
-          images: orderedImages,
-          runwayModelImageUrl: form.runwayModelImageUrl.trim() || null,
+          name: form.name.trim().slice(0, 155),
+          slug: cleanSlug,
+          description: (form.description.trim() || form.name.trim()).slice(0, 3900),
+          categoryId: cat?.id || 'cat_women',
+          categoryName: cat?.name || 'Femme',
+          sku: cleanSku,
+          externalShopifyHandle: cleanSlug,
+          images: form.images.length > 0 ? form.images : [KJ_IMAGES.heroCampaign],
+          runwayModelImageUrl: form.images[1] || form.images[0] || null,
           colors,
           sizes,
-          regularPriceXof: Math.round(Number(form.regularPriceXof)),
+          regularPriceXof: regularPrice,
           promoPriceXof: promoNum,
-          lowStockThreshold: Math.round(Number(form.lowStockThreshold)),
+          lowStockThreshold: Math.max(0, Math.round(Number(form.lowStockThreshold) || 5)),
           status: form.status,
           isNewDrop: form.isNewDrop,
-          newDropOrder: Math.round(Number(form.newDropOrder)),
+          newDropOrder: 10,
           isFeatured: form.isFeatured,
-          featuredOrder: Math.round(Number(form.featuredOrder)),
+          featuredOrder: 10,
           isPreorder: form.isPreorder,
-          preorderLimit: form.preorderLimit ? Math.round(Number(form.preorderLimit)) : null,
-          preorderEstimateDate: form.preorderEstimateDate || null,
-          seoTitle: form.seoTitle || `${form.name.trim()} — KIKI JONES`,
-          seoDescription: form.seoDescription || form.description.slice(0, 155),
+          preorderLimit: null,
+          preorderEstimateDate: form.isPreorder && form.preorderEstimateDate ? form.preorderEstimateDate : null,
+          seoTitle: form.seoTitle.trim() || `${form.name.trim()} — KIKI JONES`,
+          seoDescription: (form.seoDescription.trim() || form.description.trim()).slice(0, 300),
         },
-        variantRows.map((v) => ({
-          id: v.id,
-          productId: editingId || '',
-          sku: v.sku,
-          color: v.color,
-          colorHex: v.colorHex || getColorHex(v.color),
-          size: v.size,
-          priceXof: Math.round(Number(v.priceXof)),
-          compareAtPriceXof: promoNum ? Math.round(Number(form.regularPriceXof)) : null,
-          stockQty: Math.round(Number(v.stockQty)),
-          reservedQty: 0,
-          lowStockThreshold: Math.round(Number(form.lowStockThreshold)),
-          weightGrams: 250,
-          isActive: v.isActive,
-        })),
+        finalVars,
         actorEmail
       );
+
+      onToast(
+        editingId
+          ? tr('Produit mis à jour.', 'Product updated.')
+          : tr('Produit créé avec succès.', 'Product created.'),
+        'success'
+      );
       setEditorOpen(false);
-      onToast('Product & variants saved to Firestore.', 'success');
     } catch (err: any) {
-      onToast(err?.message || 'Error saving product.', 'error');
+      onToast(err?.message || tr('Erreur lors de l’enregistrement.', 'Failed to save product.'), 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const filtered = products.filter((p) => {
-    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return (
-        p.name.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        p.categoryName.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const statusLabel = (s: ProductStatus) => {
+    if (s === 'published') return tr('Publié', 'Published');
+    if (s === 'draft') return tr('Brouillon', 'Draft');
+    return tr('Archivé', 'Archived');
+  };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-editorial text-3xl text-black">Product Catalog</h1>
-          <p className="text-xs font-light text-black/60 mt-0.5">
-            Manage products, New Drop assignments, Featured placement, variants, and XOF pricing.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onOpenImport}
-            className="px-4 py-2.5 rounded-none bg-white text-black text-xs font-bold uppercase tracking-[0.14em] inline-flex items-center gap-2 hover:bg-black hover:text-white cursor-pointer"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>CSV Import Center</span>
-          </button>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="px-5 py-2.5 rounded-none bg-black text-white text-xs font-bold uppercase tracking-[0.16em] inline-flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Product</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters — Strictly Square */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <input
-          type="search"
-          placeholder="Search product name, SKU, or category..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="sm:w-80 rounded-none bg-white px-4 py-2 text-xs font-light focus:outline-none"
-        />
-        <div className="flex gap-1 bg-white p-1">
-          {['all', 'published', 'draft', 'archived'].map((st) => (
+  // Focused Product Editor View
+  if (editorOpen) {
+    return (
+      <form onSubmit={handleSaveEditor} className="space-y-6 max-w-4xl">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <button
-              key={st}
               type="button"
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-none text-xs uppercase tracking-[0.12em] cursor-pointer ${
-                statusFilter === st ? 'bg-black text-white font-bold' : 'text-black/60 font-light'
-              }`}
+              onClick={() => setEditorOpen(false)}
+              className="p-2 border border-[#E8E8E8] bg-white hover:border-black cursor-pointer"
             >
-              {st}
+              <ArrowLeft className="w-4 h-4" />
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Frameless Table with Adaptive Image Frames */}
-      <div className="bg-white overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="text-left text-[11px] font-bold uppercase tracking-[0.14em] text-black/60 bg-black/[0.03]">
-              <th className="py-3 px-4">Product</th>
-              <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Price</th>
-              <th className="py-3 px-4 text-right">Available</th>
-              <th className="py-3 px-4">Collections</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p, idx) => {
-              const pVars = variants.filter((v) => v.productId === p.id);
-              const stock = getProductTotalAvailable(pVars);
-              return (
-                <tr
-                  key={p.id}
-                  className={`hover:bg-black/[0.04] ${idx % 2 === 1 ? 'bg-black/[0.015]' : ''}`}
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-14 bg-[#F7F7F7] rounded-none shrink-0 overflow-hidden">
-                        {p.images?.[0] && (
-                          <img
-                            src={p.images[0]}
-                            alt={p.name}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-auto block"
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(p)}
-                          className="font-bold text-black hover:underline text-left cursor-pointer"
-                        >
-                          {p.name}
-                        </button>
-                        <div className="text-[11px] font-light text-black/60">{p.sku}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 font-light">{p.categoryName}</td>
-                  <td className="py-3 px-4 font-bold tabular-nums">
-                    {formatXOF(p.promoPriceXof || p.regularPriceXof)}
-                  </td>
-                  <td className="py-3 px-4 text-right tabular-nums">
-                    {stock} ({pVars.length} vars)
-                  </td>
-                  <td className="py-3 px-4 text-[11px] font-light text-black/60">
-                    {[
-                      p.isNewDrop ? `New Drop #${p.newDropOrder}` : '',
-                      p.isFeatured ? `Featured #${p.featuredOrder}` : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || '—'}
-                  </td>
-                  <td className="py-3 px-4 uppercase font-bold text-[11px]">{p.status}</td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(p)}
-                        className="px-2.5 py-1 rounded-none bg-[#F7F7F7] font-bold hover:bg-black hover:text-white cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        title="Duplicate"
-                        onClick={() => handleDuplicate(p)}
-                        className="p-1.5 rounded-none text-black/60 hover:text-black cursor-pointer"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                      {p.status !== 'published' ? (
-                        <button
-                          type="button"
-                          title="Publish"
-                          onClick={() => handleQuickStatus(p, 'published')}
-                          className="p-1.5 rounded-none text-black/60 hover:text-black cursor-pointer"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          title="Archive"
-                          onClick={() => handleQuickStatus(p, 'archived')}
-                          className="p-1.5 rounded-none text-black/60 hover:text-black cursor-pointer"
-                        >
-                          <Archive className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        title="Delete"
-                        onClick={() => deleteProductAdmin(p.id, actorEmail)}
-                        className="p-1.5 rounded-none text-black/60 hover:text-black cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Product Editor Drawer — Strictly Square, Zero Frames & Demarcation Lines */}
-      {editorOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setEditorOpen(false)} />
-          <form
-            onSubmit={handleSave}
-            className="relative w-full max-w-3xl bg-white h-full overflow-y-auto p-6 md:p-8 space-y-6 rounded-none"
-          >
-            <div className="flex items-center justify-between pb-2">
-              <h2 className="font-editorial text-2xl text-black">
-                {editingId ? 'Edit Product' : 'Create New Product'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setEditorOpen(false)}
-                className="p-2 rounded-none cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div>
+              <h1 className="text-lg font-semibold text-black">
+                {editingId ? tr('Modifier le produit', 'Edit product') : tr('Nouveau produit', 'Add product')}
+              </h1>
+              <p className="text-[11px] text-black/50">
+                {tr('Champs essentiels affichés en priorité.', 'Essential fields shown upfront.')}
+              </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Name *</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setEditorOpen(false)}
+              className="px-4 py-2 border border-[#E8E8E8] bg-white hover:border-black text-xs cursor-pointer"
+            >
+              {tr('Annuler', 'Cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2 bg-black text-white text-xs font-medium hover:bg-black/85 disabled:opacity-50 cursor-pointer"
+            >
+              {saving ? tr('Enregistrement...', 'Saving...') : tr('Enregistrer', 'Save')}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Title & Description */}
+            <div className="bg-white border border-[#E8E8E8] p-5 space-y-4 text-xs">
+              <label className="block space-y-1.5">
+                <span className="font-medium text-black">{tr('Titre du produit', 'Title')}</span>
                 <input
+                  type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 focus:outline-none"
+                  placeholder={tr('Ex : Robe Midi Drapée Noir', 'e.g. Draped Midi Dress Black')}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
                 />
               </label>
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Slug</span>
-                <input
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  placeholder="auto-generated-from-name"
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Base SKU *</span>
-                <input
-                  required
-                  value={form.sku}
-                  onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Category</span>
-                <select
-                  value={form.categoryId}
-                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 focus:outline-none"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Regular Price (XOF)</span>
-                <input
-                  type="number"
-                  required
-                  value={form.regularPriceXof}
-                  onChange={(e) => setForm({ ...form, regularPriceXof: Number(e.target.value) })}
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 tabular-nums focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Promo Price (XOF)</span>
-                <input
-                  type="number"
-                  value={form.promoPriceXof}
-                  onChange={(e) => setForm({ ...form, promoPriceXof: e.target.value })}
-                  placeholder="Optional"
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 tabular-nums focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Publication Status</span>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as ProductStatus })}
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 focus:outline-none"
-                >
-                  <option value="published">Published</option>
-                  <option value="draft">Draft</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </label>
-              <label className="block space-y-1">
-                <span className="font-bold uppercase tracking-wider text-black/60">Low-Stock Threshold</span>
-                <input
-                  type="number"
-                  value={form.lowStockThreshold}
-                  onChange={(e) => setForm({ ...form, lowStockThreshold: Number(e.target.value) })}
-                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 tabular-nums focus:outline-none"
+
+              <label className="block space-y-1.5">
+                <span className="font-medium text-black">{tr('Description', 'Description')}</span>
+                <textarea
+                  rows={4}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder={tr('Coupe, matière et détails essentiels...', 'Fit, fabric, and key styling details...')}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none resize-none"
                 />
               </label>
             </div>
 
-            <label className="block space-y-1 text-xs">
-              <span className="font-bold uppercase tracking-wider text-black/60">Description</span>
-              <textarea
-                rows={3}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 font-light focus:outline-none"
-              />
-            </label>
-
-            {/* Images Section — Adaptive Previews */}
-            <div className="space-y-3 text-xs">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-bold uppercase tracking-wider text-black/60">
-                  Images ({productImagesList.length})
-                </span>
-                <label className="px-3 py-1.5 rounded-none bg-black text-white font-bold uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer hover:bg-black/85">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{uploadingImage ? 'Uploading...' : 'Upload Photo'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    disabled={uploadingImage}
-                    onChange={async (e) => {
-                      const files = Array.from(e.target.files || []);
-                      if (files.length === 0) return;
-                      setUploadingImage(true);
-                      try {
-                        const uploadedUrls: string[] = [];
-                        for (const f of files) {
-                          const url = await uploadAdminImage(f);
-                          uploadedUrls.push(url);
-                        }
-                        const nextImages = [...uploadedUrls, ...productImagesList];
-                        setForm((prev) => ({
-                          ...prev,
-                          imagesText: nextImages.join('\n'),
-                        }));
-                        setScanningColors(true);
-                        const detected = await detectDominantColorsFromImageUrl(uploadedUrls[0], 4);
-                        setScanningColors(false);
-                        if (detected.length > 0) {
-                          const entries: ColorEntry[] = detected.map((c, idx) => ({
-                            name: c.name,
-                            hex: c.hex,
-                            imageIndex: idx < nextImages.length ? idx : 0,
-                          }));
-                          setColorEntries(entries);
-                          syncVariantsFromColors(entries, form.sku, form.regularPriceXof);
-                        }
-                        onToast(`${uploadedUrls.length} photo(s) ajoutée(s).`, 'success');
-                      } catch (err: any) {
-                        onToast(err?.message || 'Unable to upload product photo.', 'error');
-                      } finally {
-                        setUploadingImage(false);
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                </label>
+            {/* Media */}
+            <div className="bg-white border border-[#E8E8E8] p-5 space-y-4 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-black">{tr('Images', 'Media')}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowImagePresets((v) => !v)}
+                    className="text-[11px] text-black/60 hover:text-black underline cursor-pointer"
+                  >
+                    {tr('Bibliothèque', 'Library')}
+                  </button>
+                  <label className="px-3 py-1.5 border border-[#E8E8E8] hover:border-black inline-flex items-center gap-1.5 cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingImage ? tr('Import...', 'Uploading...') : tr('Importer', 'Upload')}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadImageFile(f);
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
 
-              {/* Adaptive Gallery Preview Grid */}
-              {productImagesList.length > 0 && (
-                <div className="flex flex-wrap gap-2 items-start">
-                  {productImagesList.map((imgUrl, idx) => (
-                    <div key={`${imgUrl}-${idx}`} className="relative w-24 bg-[#F7F7F7] rounded-none overflow-hidden">
-                      <img
-                        src={imgUrl}
-                        alt={`Preview ${idx + 1}`}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-auto block"
-                      />
+              {form.images.length > 0 && (
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5">
+                  {form.images.map((img, idx) => (
+                    <div key={`${img}_${idx}`} className="relative group aspect-[3/4] bg-[#F5F5F5] border border-[#E8E8E8]">
+                      <img src={img} alt="" className="w-full h-full object-cover object-top" />
                       <button
                         type="button"
-                        title="Supprimer image"
-                        onClick={() => {
-                          const remaining = productImagesList.filter((_, i) => i !== idx);
-                          setForm((prev) => ({ ...prev, imagesText: remaining.join('\n') }));
-                        }}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-none bg-black text-white flex items-center justify-center cursor-pointer"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            images: prev.images.filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className="absolute top-1 right-1 p-1 bg-black text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -801,407 +614,631 @@ export function AdminProducts({
                 </div>
               )}
 
-              <textarea
-                rows={2}
-                value={form.imagesText}
-                onChange={(e) => setForm({ ...form, imagesText: e.target.value })}
-                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2.5 font-light focus:outline-none"
-              />
-            </div>
-
-            {/* SHEIN-style Color Manager — Worn Garment Thumbnail + Dominant Identification + Delete × */}
-            <div className="bg-[#F7F7F7] p-4 space-y-3 text-xs rounded-none">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-bold uppercase tracking-wider text-black">
-                  Couleurs ({colorEntries.length})
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={scanningColors || productImagesList.length === 0}
-                    onClick={handleScanImageColors}
-                    className="px-3 py-1.5 rounded-none bg-black text-white text-[10px] font-bold uppercase tracking-wider hover:bg-black/85 cursor-pointer disabled:opacity-40"
-                  >
-                    {scanningColors ? 'Analyse...' : 'Identifier sur l’image'}
-                  </button>
-                </div>
-              </div>
-
-              {colorEntries.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {colorEntries.map((entry, idx) => {
-                    const thumbUrl = productImagesList[entry.imageIndex] || productImagesList[0] || '';
-                    return (
-                      <div
-                        key={`${entry.name}-${idx}`}
-                        className="relative bg-white p-2 rounded-none flex flex-col gap-2"
-                      >
-                        <button
-                          type="button"
-                          title="Supprimer cette couleur"
-                          aria-label={`Supprimer ${entry.name}`}
-                          onClick={() => handleRemoveColorEntry(entry.name)}
-                          className="absolute top-1 right-1 w-5 h-5 rounded-none bg-black text-white flex items-center justify-center hover:bg-black/80 cursor-pointer z-10"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-
-                        {/* Adaptive Garment Thumbnail for this Color */}
-                        <div className="flex items-start gap-2">
-                          <label
-                            title="Cliquer pour associer une photo portée"
-                            className="w-14 bg-[#F7F7F7] rounded-none overflow-hidden shrink-0 cursor-pointer block"
-                          >
-                            {thumbUrl ? (
-                              <img
-                                src={thumbUrl}
-                                alt={entry.name}
-                                referrerPolicy="no-referrer"
-                                className="w-full h-auto block"
-                              />
-                            ) : (
-                              <div
-                                className="w-14 h-14 rounded-none"
-                                style={{ backgroundColor: entry.hex }}
-                              />
-                            )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              disabled={uploadingImage}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleAssignColorImage(idx, file);
-                                e.target.value = '';
-                              }}
-                            />
-                          </label>
-
-                          <div className="flex-1 min-w-0 pr-5 space-y-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className="w-3 h-3 rounded-none shrink-0"
-                                style={{ backgroundColor: entry.hex }}
-                              />
-                              <span className="text-[10px] font-light text-black/55">
-                                #{idx + 1}
-                              </span>
-                            </div>
-                            <input
-                              value={entry.name}
-                              onChange={(e) => handleRenameColorEntry(idx, e.target.value)}
-                              className="w-full rounded-none bg-[#F7F7F7] px-2 py-1 text-[11px] font-bold text-black focus:outline-none"
-                            />
-                            {productImagesList.length > 1 && (
-                              <select
-                                value={entry.imageIndex}
-                                onChange={(e) => {
-                                  const nextImgIdx = Number(e.target.value);
-                                  setColorEntries((prev) =>
-                                    prev.map((c, i) =>
-                                      i === idx ? { ...c, imageIndex: nextImgIdx } : c
-                                    )
-                                  );
-                                }}
-                                className="w-full rounded-none bg-[#F7F7F7] px-1.5 py-1 text-[10px] font-light focus:outline-none"
-                              >
-                                {productImagesList.map((_, pIdx) => (
-                                  <option key={pIdx} value={pIdx}>
-                                    Image #{pIdx + 1}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Add color manually */}
               <div className="flex gap-2">
                 <input
-                  value={newColorInput}
-                  onChange={(e) => setNewColorInput(e.target.value)}
-                  placeholder="Ajouter une couleur (ex: Rouge Corail)..."
-                  className="flex-1 rounded-none bg-white px-3 py-2 text-xs font-light focus:outline-none"
+                  type="text"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder={tr('Ajouter une URL d’image (/assets/...)', 'Add image URL (/assets/...)')}
+                  className="flex-1 border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
                 />
                 <button
                   type="button"
-                  onClick={handleAddManualColor}
-                  className="px-4 py-2 rounded-none bg-black text-white text-[11px] font-bold uppercase tracking-wider cursor-pointer"
+                  onClick={() => {
+                    if (!newImageUrl.trim()) return;
+                    setForm((prev) => ({
+                      ...prev,
+                      images: [...prev.images, newImageUrl.trim()].slice(0, 12),
+                    }));
+                    setNewImageUrl('');
+                  }}
+                  className="px-4 py-2 border border-[#E8E8E8] hover:border-black font-medium cursor-pointer"
                 >
-                  Ajouter
+                  {tr('Ajouter', 'Add')}
                 </button>
               </div>
+
+              {showImagePresets && (
+                <div className="grid grid-cols-6 gap-2 pt-2 border-t border-[#F0F0F0]">
+                  {PRESET_GALLERY.map((url) => (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          images: prev.images.includes(url) ? prev.images : [...prev.images, url].slice(0, 12),
+                        }))
+                      }
+                      className="aspect-[3/4] border border-[#E8E8E8] hover:border-black overflow-hidden cursor-pointer"
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover object-top" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Collections & Pre-Order — Square, Zero Borders */}
-            <div className="bg-[#F7F7F7] p-4 space-y-4 text-xs rounded-none">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 font-bold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.isNewDrop}
-                      onChange={(e) => setForm({ ...form, isNewDrop: e.target.checked })}
-                      className="accent-black"
-                    />
-                    <span>Nouvelle Collection (Défilé Accueil)</span>
-                  </label>
-                  {form.isNewDrop && (
-                    <input
-                      type="number"
-                      placeholder="Ordre d’affichage"
-                      value={form.newDropOrder}
-                      onChange={(e) => setForm({ ...form, newDropOrder: Number(e.target.value) })}
-                      className="w-full rounded-none bg-white px-2.5 py-1.5 focus:outline-none"
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 font-bold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.isFeatured}
-                      onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })}
-                      className="accent-black"
-                    />
-                    <span>Featured on Homepage</span>
-                  </label>
-                  {form.isFeatured && (
-                    <input
-                      type="number"
-                      placeholder="Order"
-                      value={form.featuredOrder}
-                      onChange={(e) => setForm({ ...form, featuredOrder: Number(e.target.value) })}
-                      className="w-full rounded-none bg-white px-2.5 py-1.5 focus:outline-none"
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 font-bold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.isPreorder}
-                      onChange={(e) => setForm({ ...form, isPreorder: e.target.checked })}
-                      className="accent-black"
-                    />
-                    <span>Enable Pre-Order</span>
-                  </label>
-                  {form.isPreorder && (
-                    <input
-                      type="text"
-                      placeholder="Est. date (e.g. Dec 15)"
-                      value={form.preorderEstimateDate}
-                      onChange={(e) => setForm({ ...form, preorderEstimateDate: e.target.value })}
-                      className="w-full rounded-none bg-white px-2.5 py-1.5 focus:outline-none"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Runway Mannequin Photo for Nouvelle Collection Showcase */}
-              <div className="bg-white p-3.5 space-y-2.5 rounded-none">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="font-bold uppercase tracking-wider text-black block">
-                      Photo Mannequin Défilé (Nouvelle Collection — Fond Blanc)
-                    </span>
-                    <span className="text-[11px] font-light text-black/55">
-                      Affichée automatiquement dans le carrousel de mannequins sur la page d’accueil dès que « Nouvelle Collection » est coché.
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="px-3 py-1.5 rounded-none bg-black text-white font-bold uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer hover:bg-black/85">
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>{uploadingImage ? 'Upload...' : 'Importer Mannequin'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        disabled={uploadingImage}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setUploadingImage(true);
-                          try {
-                            const url = await uploadAdminImage(file);
-                            setForm((prev) => ({
-                              ...prev,
-                              runwayModelImageUrl: url,
-                              isNewDrop: true,
-                            }));
-                            onToast('Photo mannequin ajoutée au défilé Nouvelle Collection.', 'success');
-                          } catch (err: any) {
-                            onToast(err?.message || 'Impossible d’importer la photo mannequin.', 'error');
-                          } finally {
-                            setUploadingImage(false);
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                    </label>
-                    {form.runwayModelImageUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setForm((prev) => ({ ...prev, runwayModelImageUrl: '' }))}
-                        className="px-2.5 py-1.5 rounded-none bg-[#F7F7F7] text-black font-bold uppercase tracking-wider hover:bg-black hover:text-white cursor-pointer"
-                      >
-                        Retirer
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  {form.runwayModelImageUrl && (
-                    <div className="w-20 bg-white rounded-none overflow-hidden shrink-0">
-                      <img
-                        src={form.runwayModelImageUrl}
-                        alt="Mannequin défilé"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-auto block"
-                      />
-                    </div>
-                  )}
-                  <input
-                    type="text"
-                    placeholder="URL de la photo mannequin studio fond neutre"
-                    value={form.runwayModelImageUrl}
-                    onChange={(e) => setForm({ ...form, runwayModelImageUrl: e.target.value })}
-                    className="flex-1 rounded-none bg-[#F7F7F7] px-3 py-2 text-xs font-light focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Variants Matrix — Square, Zero Borders */}
-            <div className="bg-[#F7F7F7] p-4 space-y-3 rounded-none">
+            {/* Variants & Inventory */}
+            <div className="bg-white border border-[#E8E8E8] p-5 space-y-4 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-[0.14em] text-black/60">
-                  Sellable Variants ({variantRows.length})
-                </span>
+                <div>
+                  <span className="font-medium text-black">{tr('Variantes & Stock', 'Variants & Stock')}</span>
+                  <p className="text-[11px] text-black/50 mt-0.5">
+                    {tr('Couleurs, tailles, prix et quantités disponibles.', 'Colors, sizes, pricing, and stock quantities.')}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() =>
-                    setVariantRows((prev) => [
+                    setEditVariants((prev) => [
                       ...prev,
                       {
-                        id: sanitizeId(`var_${Date.now()}_${prev.length}`),
-                        color: colorEntries[0]?.name || 'Noir',
-                        colorHex: colorEntries[0]?.hex || '#000000',
-                        size: 'M',
-                        sku: `${form.sku || 'MRZ'}-${prev.length + 1}`,
-                        priceXof: form.regularPriceXof,
+                        id: sanitizeId(`var_${form.sku || 'KJ'}_${Date.now()}_${prev.length}`),
+                        sku: `${form.sku || 'KJ'}-${prev.length + 1}`,
+                        color: prev[prev.length - 1]?.color || 'Noir',
+                        colorHex: prev[prev.length - 1]?.colorHex || '#111111',
+                        size: 'XL',
+                        priceXof: Number(form.promoPriceXof) || Number(form.regularPriceXof) || 25000,
                         stockQty: 5,
+                        reservedQty: 0,
+                        lowStockThreshold: form.lowStockThreshold,
                         isActive: true,
                       },
                     ])
                   }
-                  className="text-xs font-bold px-3 py-1 rounded-none bg-black text-white cursor-pointer"
+                  className="px-3 py-1.5 border border-[#E8E8E8] hover:border-black font-medium inline-flex items-center gap-1 cursor-pointer"
                 >
-                  + Add Variant
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{tr('Variante', 'Variant')}</span>
                 </button>
               </div>
-              <div className="space-y-2">
-                {variantRows.map((v, idx) => (
-                  <div key={v.id} className="grid grid-cols-6 gap-2 text-xs items-center">
-                    <input
-                      value={v.color}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setVariantRows((rows) =>
-                          rows.map((r, i) =>
-                            i === idx ? { ...r, color: val, colorHex: getColorHex(val) } : r
-                          )
-                        );
-                      }}
-                      placeholder="Color"
-                      className="rounded-none bg-white px-2 py-1.5 focus:outline-none"
-                    />
-                    <input
-                      value={v.size}
-                      onChange={(e) =>
-                        setVariantRows((rows) =>
-                          rows.map((r, i) => (i === idx ? { ...r, size: e.target.value } : r))
-                        )
-                      }
-                      placeholder="Size"
-                      className="rounded-none bg-white px-2 py-1.5 focus:outline-none"
-                    />
-                    <input
-                      value={v.sku}
-                      onChange={(e) =>
-                        setVariantRows((rows) =>
-                          rows.map((r, i) => (i === idx ? { ...r, sku: e.target.value } : r))
-                        )
-                      }
-                      placeholder="SKU"
-                      className="rounded-none bg-white px-2 py-1.5 focus:outline-none"
-                    />
-                    <input
-                      type="number"
-                      value={v.priceXof}
-                      onChange={(e) =>
-                        setVariantRows((rows) =>
-                          rows.map((r, i) =>
-                            i === idx ? { ...r, priceXof: Number(e.target.value) } : r
-                          )
-                        )
-                      }
-                      placeholder="Price"
-                      className="rounded-none bg-white px-2 py-1.5 tabular-nums focus:outline-none"
-                    />
-                    <input
-                      type="number"
-                      value={v.stockQty}
-                      onChange={(e) =>
-                        setVariantRows((rows) =>
-                          rows.map((r, i) =>
-                            i === idx ? { ...r, stockQty: Number(e.target.value) } : r
-                          )
-                        )
-                      }
-                      placeholder="Stock"
-                      className="rounded-none bg-white px-2 py-1.5 tabular-nums focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setVariantRows((rows) => rows.filter((_, i) => i !== idx))
-                      }
-                      className="text-black/60 hover:text-black font-bold text-right cursor-pointer"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-[11px] text-black/45 border-b border-[#E8E8E8]">
+                      <th className="py-2 pr-2">{tr('Couleur', 'Color')}</th>
+                      <th className="py-2 pr-2">{tr('Taille', 'Size')}</th>
+                      <th className="py-2 pr-2">SKU</th>
+                      <th className="py-2 pr-2">{tr('Prix (XOF)', 'Price (XOF)')}</th>
+                      <th className="py-2 pr-2">{tr('Stock', 'Stock')}</th>
+                      <th className="py-2 w-8" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F0F0F0]">
+                    {editVariants.map((v, idx) => (
+                      <tr key={v.id}>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="text"
+                            value={v.color}
+                            onChange={(e) => {
+                              const next = [...editVariants];
+                              next[idx] = { ...v, color: e.target.value, colorHex: getColorHex(e.target.value) };
+                              setEditVariants(next);
+                            }}
+                            className="w-24 border border-[#E8E8E8] focus:border-black px-2 py-1 focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="text"
+                            value={v.size}
+                            onChange={(e) => {
+                              const next = [...editVariants];
+                              next[idx] = { ...v, size: e.target.value };
+                              setEditVariants(next);
+                            }}
+                            className="w-16 border border-[#E8E8E8] focus:border-black px-2 py-1 focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="text"
+                            value={v.sku}
+                            onChange={(e) => {
+                              const next = [...editVariants];
+                              next[idx] = { ...v, sku: e.target.value };
+                              setEditVariants(next);
+                            }}
+                            className="w-32 border border-[#E8E8E8] focus:border-black px-2 py-1 focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={v.priceXof}
+                            onChange={(e) => {
+                              const next = [...editVariants];
+                              next[idx] = { ...v, priceXof: Number(e.target.value) };
+                              setEditVariants(next);
+                            }}
+                            className="w-24 border border-[#E8E8E8] focus:border-black px-2 py-1 tabular-nums focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={v.stockQty}
+                            onChange={(e) => {
+                              const next = [...editVariants];
+                              next[idx] = { ...v, stockQty: Number(e.target.value) };
+                              setEditVariants(next);
+                            }}
+                            className="w-16 border border-[#E8E8E8] focus:border-black px-2 py-1 tabular-nums focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2 text-right">
+                          {editVariants.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setEditVariants((prev) => prev.filter((_, i) => i !== idx))}
+                              className="p-1 text-black/40 hover:text-black cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+            {/* Collapsible Advanced Options */}
+            <div className="bg-white border border-[#E8E8E8]">
               <button
                 type="button"
-                onClick={() => setEditorOpen(false)}
-                className="px-5 py-2.5 rounded-none bg-[#F7F7F7] text-xs font-bold uppercase tracking-wider cursor-pointer"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="w-full px-5 py-3.5 flex items-center justify-between text-xs font-medium text-black cursor-pointer"
               >
-                Cancel
+                <span>{tr('Options avancées (SEO, SKU, Précommande)', 'Advanced options (SEO, SKU, Pre-order)')}</span>
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
+              {showAdvanced && (
+                <div className="px-5 pb-5 pt-2 border-t border-[#F0F0F0] space-y-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className="block space-y-1">
+                      <span className="text-black/60">SKU principal</span>
+                      <input
+                        type="text"
+                        value={form.sku}
+                        onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                        className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-black/60">{tr('Seuil de stock faible', 'Low stock threshold')}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={form.lowStockThreshold}
+                        onChange={(e) => setForm({ ...form, lowStockThreshold: Number(e.target.value) })}
+                        className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 tabular-nums focus:outline-none"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block space-y-1">
+                    <span className="text-black/60">{tr('Titre SEO', 'SEO title')}</span>
+                    <input
+                      type="text"
+                      value={form.seoTitle}
+                      onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
+                      className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
+                    />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-black/60">{tr('Meta description SEO', 'SEO description')}</span>
+                    <textarea
+                      rows={2}
+                      value={form.seoDescription}
+                      onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
+                      className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none resize-none"
+                    />
+                  </label>
+
+                  <div className="flex flex-wrap items-center gap-4 pt-1">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.isPreorder}
+                        onChange={(e) => setForm({ ...form, isPreorder: e.target.checked })}
+                        className="accent-black"
+                      />
+                      <span>{tr('Activer la précommande', 'Enable pre-order')}</span>
+                    </label>
+                    {form.isPreorder && (
+                      <input
+                        type="text"
+                        value={form.preorderEstimateDate}
+                        onChange={(e) => setForm({ ...form, preorderEstimateDate: e.target.value })}
+                        placeholder={tr('Expédition estimée (ex : 15 juin)', 'Est. ship date (e.g. June 15)')}
+                        className="border border-[#E8E8E8] focus:border-black px-3 py-1.5 focus:outline-none"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Sidebar: Status, Pricing, Organization */}
+          <div className="space-y-6">
+            <div className="bg-white border border-[#E8E8E8] p-5 space-y-4 text-xs">
+              <label className="block space-y-1.5">
+                <span className="font-medium text-black">{tr('Statut', 'Status')}</span>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as ProductStatus })}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 bg-white focus:outline-none"
+                >
+                  <option value="published">{tr('Publié', 'Published')}</option>
+                  <option value="draft">{tr('Brouillon', 'Draft')}</option>
+                  <option value="archived">{tr('Archivé', 'Archived')}</option>
+                </select>
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="font-medium text-black">{tr('Collection / Catégorie', 'Collection / Category')}</span>
+                <select
+                  value={form.categoryId}
+                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 bg-white focus:outline-none"
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="bg-white border border-[#E8E8E8] p-5 space-y-4 text-xs">
+              <span className="font-medium text-black block">{tr('Tarification (XOF)', 'Pricing (XOF)')}</span>
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Prix régulier', 'Regular price')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  required
+                  value={form.regularPriceXof}
+                  onChange={(e) => setForm({ ...form, regularPriceXof: Number(e.target.value) })}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 tabular-nums focus:outline-none"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Prix promotionnel (optionnel)', 'Sale price (optional)')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.promoPriceXof}
+                  onChange={(e) =>
+                    setForm({ ...form, promoPriceXof: e.target.value === '' ? '' : Number(e.target.value) })
+                  }
+                  placeholder="—"
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 tabular-nums focus:outline-none"
+                />
+              </label>
+            </div>
+
+            <div className="bg-white border border-[#E8E8E8] p-5 space-y-3 text-xs">
+              <span className="font-medium text-black block">{tr('Mise en avant', 'Merchandising')}</span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isNewDrop}
+                  onChange={(e) => setForm({ ...form, isNewDrop: e.target.checked })}
+                  className="accent-black"
+                />
+                <span>{tr('Afficher dans Nouveautés', 'Show in New Arrivals')}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isFeatured}
+                  onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })}
+                  className="accent-black"
+                />
+                <span>{tr('Produit à la une', 'Featured product')}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-black">
+            {tr('Produits', 'Products')}
+          </h1>
+          <p className="text-xs text-black/55 mt-0.5 tabular-nums">
+            {products.length} {tr('produits au catalogue', 'catalog products')}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="px-3.5 py-2 border border-[#E8E8E8] bg-white hover:border-black text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>{tr('Importer CSV', 'Import CSV')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={openCreateEditor}
+            className="px-4 py-2 bg-black text-white text-xs font-medium hover:bg-black/85 inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{tr('Ajouter un produit', 'Add product')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Bulk Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="bg-black text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <span className="font-medium tabular-nums">
+            {selectedIds.length} {tr('sélectionné(s)', 'selected')}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleBulkStatus('published')}
+              className="px-3 py-1 bg-white text-black font-medium cursor-pointer"
+            >
+              {tr('Publier', 'Publish')}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkStatus('draft')}
+              className="px-3 py-1 border border-white/30 hover:border-white cursor-pointer"
+            >
+              {tr('Brouillon', 'Draft')}
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              className="px-3 py-1 border border-white/30 hover:border-white cursor-pointer"
+            >
+              {tr('Supprimer', 'Delete')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="p-1 text-white/70 hover:text-white cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search, Filter & Table */}
+      <div className="bg-white border border-[#E8E8E8]">
+        <div className="p-3.5 flex flex-col md:flex-row gap-3 border-b border-[#E8E8E8]">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-black/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={tr('Rechercher un produit ou SKU...', 'Search product or SKU...')}
+              className="w-full pl-9 pr-3 py-2 text-xs border border-[#E8E8E8] focus:border-black focus:outline-none"
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-3 py-2 text-xs border border-[#E8E8E8] focus:border-black bg-white focus:outline-none"
+          >
+            <option value="all">{tr('Toutes les collections', 'All collections')}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3 py-2 text-xs border border-[#E8E8E8] focus:border-black bg-white focus:outline-none"
+          >
+            <option value="all">{tr('Tous les statuts', 'All statuses')}</option>
+            <option value="published">{tr('Publié', 'Published')}</option>
+            <option value="draft">{tr('Brouillon', 'Draft')}</option>
+            <option value="archived">{tr('Archivé', 'Archived')}</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-3 py-2 text-xs border border-[#E8E8E8] focus:border-black bg-white focus:outline-none"
+          >
+            <option value="newest">{tr('Plus récents', 'Newest')}</option>
+            <option value="name">{tr('Nom (A–Z)', 'Name (A–Z)')}</option>
+            <option value="price_asc">{tr('Prix croissant', 'Price: Low to high')}</option>
+            <option value="price_desc">{tr('Prix décroissant', 'Price: High to low')}</option>
+            <option value="stock_asc">{tr('Stock croissant', 'Stock: Low to high')}</option>
+          </select>
+        </div>
+
+        {filteredProducts.length === 0 ? (
+          <div className="p-10 text-center text-xs text-black/50">
+            {tr('Aucun produit trouvé.', 'No products found.')}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-[11px] font-medium text-black/45 border-b border-[#E8E8E8]">
+                  <th className="py-3 pl-4 pr-2 w-8">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      className="accent-black cursor-pointer"
+                    />
+                  </th>
+                  <th className="py-3 px-2">{tr('Produit', 'Product')}</th>
+                  <th className="py-3 px-3">{tr('Catégorie', 'Category')}</th>
+                  <th className="py-3 px-3">{tr('Prix', 'Price')}</th>
+                  <th className="py-3 px-3">{tr('Stock', 'Stock')}</th>
+                  <th className="py-3 px-3">{tr('Statut', 'Status')}</th>
+                  <th className="py-3 px-4 text-right">{tr('Actions', 'Actions')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F0F0F0]">
+                {filteredProducts.map((p) => {
+                  const totalStock = productStockMap.get(p.id) || 0;
+                  const checked = selectedIds.includes(p.id);
+                  return (
+                    <tr key={p.id} className="hover:bg-[#FAFAFA] transition-colors">
+                      <td className="py-3 pl-4 pr-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSelectOne(p.id)}
+                          className="accent-black cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex items-center gap-3">
+                          {p.images?.[0] ? (
+                            <img
+                              src={p.images[0]}
+                              alt={p.name}
+                              className="w-10 h-12 object-cover object-top bg-[#F5F5F5] shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-12 bg-[#F5F5F5] shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => openEditEditor(p)}
+                              className="font-medium text-black hover:underline text-left truncate max-w-[240px] block cursor-pointer"
+                            >
+                              {p.name}
+                            </button>
+                            <p className="text-[11px] text-black/45">{p.sku}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-black/70">{p.categoryName}</td>
+                      <td className="py-3 px-3 tabular-nums whitespace-nowrap">
+                        {p.promoPriceXof ? (
+                          <div>
+                            <span className="font-semibold text-black">{formatXOF(p.promoPriceXof)}</span>
+                            <span className="block text-[10.5px] text-black/40 line-through">
+                              {formatXOF(p.regularPriceXof)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-medium text-black">{formatXOF(p.regularPriceXof)}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 tabular-nums">
+                        <span
+                          className={
+                            totalStock === 0
+                              ? 'text-black font-semibold'
+                              : totalStock <= (p.lowStockThreshold ?? 5)
+                                ? 'text-black/80 font-medium'
+                                : 'text-black/60'
+                          }
+                        >
+                          {totalStock === 0
+                            ? tr('Épuisé', 'Out of stock')
+                            : `${totalStock} ${tr('en stock', 'in stock')}`}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span
+                          className={`inline-block px-2 py-0.5 text-[10.5px] border ${
+                            p.status === 'published'
+                              ? 'bg-black text-white border-black'
+                              : 'bg-[#F5F5F5] text-black/70 border-[#E8E8E8]'
+                          }`}
+                        >
+                          {statusLabel(p.status)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEditEditor(p)}
+                            title={tr('Modifier', 'Edit')}
+                            className="p-1.5 text-black/60 hover:text-black cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicate(p)}
+                            title={tr('Dupliquer', 'Duplicate')}
+                            className="p-1.5 text-black/60 hover:text-black cursor-pointer"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSingle(p)}
+                            title={tr('Supprimer', 'Delete')}
+                            className="p-1.5 text-black/45 hover:text-black cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* CSV Import Modal */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setImportOpen(false)} />
+          <div className="relative bg-white border border-[#E8E8E8] w-full max-w-5xl max-h-[90vh] overflow-y-auto z-10 p-6">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E8E8E8]">
+              <h2 className="text-base font-semibold text-black">
+                {tr('Import CSV de produits', 'CSV Product Import')}
+              </h2>
               <button
-                type="submit"
-                disabled={saving}
-                className="px-7 py-2.5 rounded-none bg-black text-white text-xs font-bold uppercase tracking-[0.16em] cursor-pointer disabled:opacity-50"
+                type="button"
+                onClick={() => setImportOpen(false)}
+                className="p-1.5 text-black/60 hover:text-black cursor-pointer"
               >
-                {saving ? 'Saving...' : 'Save Product'}
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </form>
+            <AdminImportCenter
+              products={products}
+              variants={variants}
+              categories={categories}
+              importJobs={importJobs}
+              actorEmail={actorEmail}
+              onToast={onToast}
+            />
+          </div>
         </div>
       )}
     </div>

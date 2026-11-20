@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { GoogleGenAI, Type } from '@google/genai';
 import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 
 dotenv.config();
@@ -231,6 +232,183 @@ async function startServer() {
       res.status(201).json({ url: `/uploads/${filename}` });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || 'Failed to store uploaded image.' });
+    }
+  });
+
+  // Protected Admin AI Store Assistant (Server-Side Gemini 4 Hydrogen)
+  app.post('/api/admin/ai-assistant', requireAdmin, async (req: AuthRequest, res) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      res.status(503).json({
+        error:
+          'GEMINI_API_KEY is not configured on the server. Add GEMINI_API_KEY in environment secrets to enable the AI Store Assistant.',
+      });
+      return;
+    }
+
+    const { message, history = [], lang = 'fr', storeContext = {} } = req.body || {};
+    if (typeof message !== 'string' || !message.trim()) {
+      res.status(400).json({ error: 'Message is required.' });
+      return;
+    }
+
+    const responseLang = lang === 'en' ? 'English' : 'French';
+    const systemInstruction = `You are the KIKI JONES AI Store Manager embedded inside the KIKI JONES luxury fashion e-commerce admin console (currency: XOF / FCFA).
+Always reply concisely, clearly, and professionally in ${responseLang}.
+
+You help the administrator manage their real store directly via structured actions.
+You have the current live store snapshot in the prompt context:
+- storefrontConfig: heroHeadline, heroSubheadline, heroCtaLabel, heroCtaHref, heroSecondaryCtaLabel, heroSecondaryCtaHref, heroImageUrl, campaignBannerEnabled, campaignBannerText, sectionOrder, customSections, standardShippingXof, expressShippingXof, freeShippingThresholdXof, supportEmail, supportPhone
+- navigation: current header menu items [{ id, labelFr, labelEn, href, visible }]
+- categories (collections): [{ id, name, slug, description, imageUrl, sortOrder, isActive }]
+- products (summary): [{ id, name, slug, sku, categoryId, categoryName, regularPriceXof, promoPriceXof, status, isNewDrop, isFeatured, isPreorder }]
+- promotions: [{ id, code, type, value, minOrderXof, maxUses, usedCount, endsAt, isActive }]
+- availableImages: curated Fashion Nova assets already stored locally under /assets/fashionnova/...
+
+When the admin asks a question or wants advice (no store changes needed), return actions: [] and requiresConfirmation: false.
+When the admin requests changes to the store, generate one or more concrete actions in the "actions" array.
+
+Supported action types and their exact JSON payload structure (serialize payload as a valid JSON string in payloadJson):
+1. "update_storefront": partial fields of storefrontConfig (heroHeadline, heroSubheadline, heroCtaLabel, heroCtaHref, heroSecondaryCtaLabel, heroSecondaryCtaHref, heroImageUrl, campaignBannerEnabled, campaignBannerText, standardShippingXof, expressShippingXof, freeShippingThresholdXof, supportEmail, supportPhone, newsletterTitle, newsletterBody)
+2. "reorder_sections": { "sectionOrder": string[] } — keep existing section keys, prefix hidden ones with "hidden:"
+3. "toggle_section": { "sectionKey": string, "visible": boolean }
+4. "add_section": { "sectionKey"?: "trending_now_grid" | "best_sellers_grid" | "new_arrivals_grid" | "featured_collections_grid" | "hero_split" | "new_arrivals_banner" | "shop_by_category_strip" | "kiki_men_split" | "kiki_sculpt_triptych" | "women_exclusive_banner" | "dual_spotlight" | "shop_by_brand_strip", "customSection"?: { "id": string, "layout": "banner" | "split" | "duo", "theme"?: "dark" | "light", "title": string, "body"?: string, "ctaLabel"?: string, "ctaHref"?: string, "imageUrl": string, "secondaryTitle"?: string, "secondaryCtaLabel"?: string, "secondaryCtaHref"?: string, "secondaryImageUrl"?: string }, "position"?: "top" | "bottom" | number }
+5. "remove_section": { "sectionKey": string }
+6. "update_navigation": { "items": [{ "id": string, "labelFr": string, "labelEn": string, "href": string, "visible": boolean }] }
+7. "create_collection": { "name": string, "slug"?: string, "description": string, "imageUrl": string, "isActive"?: boolean, "sortOrder"?: number }
+8. "update_collection": { "categoryId": string, "name"?: string, "description"?: string, "imageUrl"?: string, "isActive"?: boolean, "sortOrder"?: number }
+9. "delete_collection": { "categoryId": string }
+10. "create_promotion": { "code": string, "type": "percentage" | "fixed", "value": number, "minOrderXof"?: number, "maxUses"?: number, "endsAt"?: string | null, "isActive"?: boolean }
+11. "toggle_promotion": { "promoId": string, "isActive": boolean }
+12. "update_product": { "productId": string, "fields": { "name"?: string, "description"?: string, "regularPriceXof"?: number, "promoPriceXof"?: number | null, "status"?: "published" | "draft" | "archived", "isNewDrop"?: boolean, "isFeatured"?: boolean, "isPreorder"?: boolean, "categoryId"?: string, "categoryName"?: string } }
+13. "bulk_update_prices": { "target": "all" | "category" | "productIds", "categoryId"?: string, "productIds"?: string[], "mode": "percent_discount" | "percent_increase" | "set_promo_percent" | "clear_promo", "percent"?: number }
+14. "delete_product": { "productId": string }
+
+Safety rules:
+- Set requiresConfirmation: true whenever ANY action is present, especially for deletions, bulk price updates, navigation changes, or homepage layout edits — the admin will preview the summary and click Confirm before changes apply.
+- Only reference real productId, categoryId, promoId, or sectionKey values from storeContext.
+- Always pick real image paths from availableImages (never invent external URLs).
+- Prices and promo values must be positive integers in XOF (or percentage 1-90).
+- In "summary", list clear bullet strings describing each exact change in ${responseLang}.`;
+
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: { 'User-Agent': 'aistudio-build' },
+        },
+      });
+
+      const recentHistory = Array.isArray(history)
+        ? history
+            .slice(-6)
+            .map((h: any) => `${h.role === 'user' ? 'Admin' : 'Assistant'}: ${String(h.content || '').slice(0, 600)}`)
+            .join('\n')
+        : '';
+
+      const userPrompt = `LIVE STORE CONTEXT (JSON):
+${JSON.stringify(storeContext)}
+
+${recentHistory ? `RECENT CONVERSATION:\n${recentHistory}\n\n` : ''}ADMIN REQUEST:
+${message.trim()}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-4-hydrogen',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reply: {
+                type: Type.STRING,
+                description: 'Concise, helpful response to the administrator in the requested language.',
+              },
+              requiresConfirmation: {
+                type: Type.BOOLEAN,
+                description: 'True whenever actions should be reviewed and confirmed by the administrator before execution.',
+              },
+              summary: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'Human-readable bullet list summarizing the proposed store changes.',
+              },
+              actions: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    type: {
+                      type: Type.STRING,
+                      enum: [
+                        'update_storefront',
+                        'reorder_sections',
+                        'add_section',
+                        'remove_section',
+                        'toggle_section',
+                        'create_collection',
+                        'update_collection',
+                        'delete_collection',
+                        'create_promotion',
+                        'toggle_promotion',
+                        'update_product',
+                        'bulk_update_prices',
+                        'delete_product',
+                        'update_navigation',
+                      ],
+                    },
+                    description: {
+                      type: Type.STRING,
+                      description: 'Short label describing this specific action.',
+                    },
+                    sensitive: {
+                      type: Type.BOOLEAN,
+                      description: 'True for destructive or bulk actions.',
+                    },
+                    payloadJson: {
+                      type: Type.STRING,
+                      description: 'Valid JSON string encoding the action payload object.',
+                    },
+                  },
+                  required: ['type', 'description', 'payloadJson'],
+                },
+              },
+            },
+            required: ['reply', 'requiresConfirmation', 'summary', 'actions'],
+          },
+        },
+      });
+
+      const rawText = response.text || '';
+      const parsed = JSON.parse(rawText);
+      const normalizedActions = Array.isArray(parsed.actions)
+        ? parsed.actions.map((a: any) => {
+            let payload: Record<string, any> = {};
+            try {
+              payload = typeof a.payloadJson === 'string' ? JSON.parse(a.payloadJson) : a.payload || {};
+            } catch {
+              payload = {};
+            }
+            return {
+              type: a.type,
+              description: String(a.description || a.type),
+              sensitive: Boolean(a.sensitive),
+              payload,
+            };
+          })
+        : [];
+
+      res.json({
+        reply: String(parsed.reply || ''),
+        requiresConfirmation: normalizedActions.length > 0 ? true : Boolean(parsed.requiresConfirmation),
+        summary: Array.isArray(parsed.summary) ? parsed.summary.map(String) : [],
+        actions: normalizedActions,
+      });
+    } catch (error: any) {
+      res.status(502).json({
+        error: error?.message || 'AI Store Assistant request failed.',
+      });
     }
   });
 

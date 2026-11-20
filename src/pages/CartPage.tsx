@@ -1,11 +1,13 @@
 import React from 'react';
 import { Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useLanguage } from '../context/LanguageContext';
 import { formatXOF } from '../lib/format';
 
 export function CartPage() {
   const { cart, updateCartQty, removeFromCart, cartSubtotalXof, storefrontConfig, navigate } =
     useStore();
+  const { tr } = useLanguage();
 
   const freeThreshold = storefrontConfig.freeShippingThresholdXof || 75000;
   const shippingEstimate =
@@ -16,26 +18,30 @@ export function CartPage() {
       <div className="pb-6 flex items-end justify-between">
         <div>
           <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">KIKI JONES</p>
-          <h1 className="font-editorial text-4xl text-black mt-1">Shopping Bag</h1>
+          <h1 className="font-editorial text-4xl text-black mt-1">
+            {tr('Votre panier', 'Shopping Bag')}
+          </h1>
         </div>
         <button
           type="button"
           onClick={() => navigate('/shop')}
           className="text-xs font-bold uppercase tracking-[0.18em] text-black underline underline-offset-4 cursor-pointer"
         >
-          Continue Shopping
+          {tr('Continuer vos achats', 'Continue Shopping')}
         </button>
       </div>
 
       {cart.length === 0 ? (
         <div className="py-20 text-center space-y-5">
-          <p className="font-editorial text-3xl text-black">Your bag is empty</p>
+          <p className="font-editorial text-3xl text-black">
+            {tr('Votre panier est vide', 'Your bag is empty')}
+          </p>
           <button
             type="button"
             onClick={() => navigate('/new-in')}
             className="px-8 py-3.5 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] cursor-pointer"
           >
-            Shop New In
+            {tr('Voir les nouveautés', 'Shop New In')}
           </button>
         </div>
       ) : (
@@ -63,11 +69,11 @@ export function CartPage() {
                       {item.name}
                     </button>
                     <p className="text-xs font-light text-black/65">
-                      {item.color} &middot; Size {item.size}
+                      {item.color} &middot; {tr('Taille', 'Size')} {item.size}
                     </p>
                     <p className="text-[11px] font-light text-black/50">{item.sku}</p>
                     <p className="text-xs font-light tabular-nums text-black/80 pt-1">
-                      {formatXOF(item.unitPriceXof)} each
+                      {formatXOF(item.unitPriceXof)} {tr('unité', 'each')}
                     </p>
                   </div>
                   <div className="flex items-center gap-6">
@@ -96,7 +102,7 @@ export function CartPage() {
                     <button
                       type="button"
                       onClick={() => removeFromCart(item.variantId)}
-                      aria-label="Remove item"
+                      aria-label={tr("Retirer l'article", 'Remove item')}
                       className="text-black/50 hover:text-black cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -108,21 +114,25 @@ export function CartPage() {
           </div>
 
           <div className="lg:col-span-4 bg-[#F7F7F7] p-6 space-y-5 h-fit">
-            <h2 className="font-editorial text-2xl text-black">Order Summary</h2>
+            <h2 className="font-editorial text-2xl text-black">
+              {tr('Récapitulatif', 'Order Summary')}
+            </h2>
             <div className="space-y-3 text-sm pb-2">
               <div className="flex justify-between">
-                <span className="font-light text-black/75">Subtotal</span>
+                <span className="font-light text-black/75">{tr('Sous-total', 'Subtotal')}</span>
                 <span className="tabular-nums font-bold">{formatXOF(cartSubtotalXof)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-light text-black/75">Estimated Standard Shipping</span>
+                <span className="font-light text-black/75">
+                  {tr('Livraison standard estimée', 'Estimated Standard Shipping')}
+                </span>
                 <span className="tabular-nums font-light">
-                  {shippingEstimate === 0 ? 'Complimentary' : formatXOF(shippingEstimate)}
+                  {shippingEstimate === 0 ? tr('Offerte', 'Complimentary') : formatXOF(shippingEstimate)}
                 </span>
               </div>
             </div>
             <div className="flex justify-between text-base font-bold">
-              <span>Estimated Total</span>
+              <span>{tr('Total estimé', 'Estimated Total')}</span>
               <span className="tabular-nums">{formatXOF(cartSubtotalXof + shippingEstimate)}</span>
             </div>
             <button
@@ -130,7 +140,7 @@ export function CartPage() {
               onClick={() => navigate('/checkout')}
               className="w-full py-4 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-black/85 cursor-pointer"
             >
-              <span>Proceed to Checkout</span>
+              <span>{tr('Passer la commande', 'Proceed to Checkout')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

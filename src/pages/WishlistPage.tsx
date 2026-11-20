@@ -1,10 +1,12 @@
 import React from 'react';
 import { Heart, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useLanguage } from '../context/LanguageContext';
 import { ProductCard } from '../components/storefront/ProductCard';
 
 export function WishlistPage() {
   const { products, wishlistIds, getProductVariants, navigate } = useStore();
+  const { tr } = useLanguage();
 
   const savedProducts = products.filter((p) => wishlistIds.includes(p.id));
 
@@ -13,10 +15,12 @@ export function WishlistPage() {
       <div className="pt-4 pb-5 border-b border-black/10 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div className="space-y-1">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-black/45">
-            Saved Selection
+            {tr('Sélection enregistrée', 'Saved Selection')}
           </p>
           <div className="flex items-start gap-1.5">
-            <h1 className="font-editorial text-3xl sm:text-4xl text-black">Wishlist</h1>
+            <h1 className="font-editorial text-3xl sm:text-4xl text-black">
+              {tr('Favoris', 'Wishlist')}
+            </h1>
             <sup className="text-xs font-bold text-black/50 tabular-nums mt-2">
               {savedProducts.length}
             </sup>
@@ -29,7 +33,7 @@ export function WishlistPage() {
             onClick={() => navigate('/new-in')}
             className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-black hover:opacity-65 cursor-pointer"
           >
-            <span>Continue Exploring</span>
+            <span>{tr('Continuer l’exploration', 'Continue Exploring')}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
@@ -42,10 +46,13 @@ export function WishlistPage() {
           </div>
           <div className="space-y-2">
             <h2 className="font-editorial text-2xl sm:text-3xl text-black">
-              Your wishlist is empty
+              {tr('Votre liste de favoris est vide', 'Your wishlist is empty')}
             </h2>
             <p className="text-xs sm:text-sm font-light text-black/65 max-w-md">
-              Tap the heart icon on any KIKI JONES piece to save it here for quick access later.
+              {tr(
+                'Cliquez sur l’icône cœur sur n’importe quelle pièce KIKI JONES pour la retrouver facilement ici.',
+                'Tap the heart icon on any KIKI JONES piece to save it here for quick access later.'
+              )}
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -54,14 +61,14 @@ export function WishlistPage() {
               onClick={() => navigate('/new-in')}
               className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] hover:bg-black/85 transition-colors cursor-pointer"
             >
-              Shop New In
+              {tr('Voir les nouveautés', 'Shop New In')}
             </button>
             <button
               type="button"
               onClick={() => navigate('/collections')}
               className="px-6 py-3 border border-black text-black text-xs font-bold uppercase tracking-[0.18em] hover:bg-black hover:text-white transition-colors cursor-pointer"
             >
-              Explore Collections
+              {tr('Explorer les collections', 'Explore Collections')}
             </button>
           </div>
         </div>

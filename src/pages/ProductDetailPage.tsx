@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Plus, Minus, Heart, Ruler, ChevronDown, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useLanguage } from '../context/LanguageContext';
 import { formatXOF, getAvailableStock, getColorHex } from '../lib/format';
 import { ProductCard } from '../components/storefront/ProductCard';
 import {
@@ -42,6 +43,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
     isWishlisted,
     toggleWishlist,
   } = useStore();
+  const { tr } = useLanguage();
 
   const product = useMemo(
     () => products.find((p) => p.slug === slug) || null,
@@ -157,16 +159,21 @@ export function ProductDetailPage({ slug }: { slug: string }) {
   if (!product) {
     return (
       <main className="pt-32 pb-24 max-w-[1440px] mx-auto px-4 md:px-8 min-h-[70vh] flex flex-col items-center justify-center text-center space-y-4 bg-white">
-        <h1 className="font-editorial text-3xl text-black">Piece Not Found</h1>
+        <h1 className="font-editorial text-3xl text-black">
+          {tr('Pièce introuvable', 'Piece Not Found')}
+        </h1>
         <p className="text-sm font-light text-black/65">
-          This piece may have been unpublished or moved.
+          {tr(
+            'Cette pièce a peut-être été retirée ou déplacée.',
+            'This piece may have been unpublished or moved.'
+          )}
         </p>
         <button
           type="button"
           onClick={() => navigate('/shop')}
           className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
         >
-          Return to Shop
+          {tr('Retour à la boutique', 'Return to Shop')}
         </button>
       </main>
     );
@@ -378,7 +385,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                     onClick={() => setOpenAccordion(openAccordion === 'details' ? null : 'details')}
                     className="w-full py-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.16em] text-black cursor-pointer"
                   >
-                    <span>Composition &amp; Care</span>
+                    <span>{tr('Composition & Entretien', 'Composition & Care')}</span>
                     <ChevronDown
                       className={`w-3.5 h-3.5 transition-transform ${
                         openAccordion === 'details' ? 'rotate-180' : ''
@@ -389,9 +396,17 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                     <div className="pb-3.5 text-xs font-light text-black/70 space-y-1.5 leading-relaxed">
                       <p>
                         {product.materialDetails ||
-                          'Refined contemporary fabrication selected for breathability, drape, and lasting shape.'}
+                          tr(
+                            'Matière contemporaine sélectionnée pour sa respirabilité, son tombé fluide et sa tenue durable.',
+                            'Refined contemporary fabrication selected for breathability, drape, and lasting shape.'
+                          )}
                       </p>
-                      <p>Machine wash cold on gentle cycle. Lay flat or hang to dry.</p>
+                      <p>
+                        {tr(
+                          'Lavage délicat à froid. Séchage à plat ou sur cintre.',
+                          'Machine wash cold on gentle cycle. Lay flat or hang to dry.'
+                        )}
+                      </p>
                       {activeVariant && (
                         <p className="text-[11px] text-black/45">SKU: {activeVariant.sku}</p>
                       )}
@@ -405,7 +420,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                     onClick={() => setOpenAccordion(openAccordion === 'shipping' ? null : 'shipping')}
                     className="w-full py-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.16em] text-black cursor-pointer"
                   >
-                    <span>Shipping &amp; Returns</span>
+                    <span>{tr('Livraison & Retours', 'Shipping & Returns')}</span>
                     <ChevronDown
                       className={`w-3.5 h-3.5 transition-transform ${
                         openAccordion === 'shipping' ? 'rotate-180' : ''
@@ -414,9 +429,24 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                   </button>
                   {openAccordion === 'shipping' && (
                     <div className="pb-3.5 text-xs font-light text-black/70 space-y-1.5 leading-relaxed">
-                      <p>Complimentary standard delivery on orders above 75,000 XOF.</p>
-                      <p>Express same-day and next-day delivery available at checkout.</p>
-                      <p>Easy 14-day returns and size exchanges on unworn pieces.</p>
+                      <p>
+                        {tr(
+                          'Livraison standard offerte dès 75 000 FCFA d’achat.',
+                          'Complimentary standard delivery on orders above 75,000 XOF.'
+                        )}
+                      </p>
+                      <p>
+                        {tr(
+                          'Livraison express le jour même ou le lendemain disponible au paiement.',
+                          'Express same-day and next-day delivery available at checkout.'
+                        )}
+                      </p>
+                      <p>
+                        {tr(
+                          'Retours et échanges de taille faciles sous 14 jours pour les pièces non portées.',
+                          'Easy 14-day returns and size exchanges on unworn pieces.'
+                        )}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -468,7 +498,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="font-bold uppercase tracking-[0.16em] text-black/55">
-                    Color
+                    {tr('Couleur', 'Color')}
                   </span>
                   <span className="font-medium text-black">{activeColorLabel}</span>
                 </div>
@@ -514,7 +544,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="font-bold uppercase tracking-[0.16em] text-black/55">
-                  Size
+                  {tr('Taille', 'Size')}
                 </span>
                 <button
                   type="button"
@@ -522,7 +552,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                   className="inline-flex items-center gap-1.5 font-bold uppercase tracking-[0.12em] text-black hover:opacity-65 underline underline-offset-4 cursor-pointer"
                 >
                   <Ruler className="w-3.5 h-3.5" />
-                  <span>Size Guide</span>
+                  <span>{tr('Guide des tailles', 'Size Guide')}</span>
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-2">
@@ -561,7 +591,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                   <button
                     type="button"
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    aria-label="Decrease quantity"
+                    aria-label={tr('Diminuer la quantité', 'Decrease quantity')}
                     className="w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
                   >
                     <Minus className="w-3.5 h-3.5" />
@@ -574,7 +604,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                         product.isPreorder ? q + 1 : Math.min(Math.max(1, available), q + 1)
                       )
                     }
-                    aria-label="Increase quantity"
+                    aria-label={tr('Augmenter la quantité', 'Increase quantity')}
                     className="w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -587,13 +617,13 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                   onClick={handleAdd}
                   className="flex-1 py-3.5 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-black/85 transition-colors disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {canPurchase ? 'Add to Bag' : 'Sold Out'}
+                  {canPurchase ? tr('Ajouter au panier', 'Add to Bag') : tr('Épuisé', 'Sold Out')}
                 </button>
               </div>
 
               <button
                 type="button"
-                onClick={() => toggleWishlist(product.id)}
+                onClick={() => toggleWishlist(product.id, product.name)}
                 className="w-full py-3 px-6 border border-black/20 bg-white text-black text-xs font-bold uppercase tracking-[0.18em] hover:border-black transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Heart
@@ -601,7 +631,11 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                   strokeWidth={1.7}
                   fill={wishlisted ? '#000000' : 'none'}
                 />
-                <span>{wishlisted ? 'Saved in Wishlist' : 'Save to Wishlist'}</span>
+                <span>
+                  {wishlisted
+                    ? tr('Dans vos favoris', 'Saved in Wishlist')
+                    : tr('Ajouter aux favoris', 'Save to Wishlist')}
+                </span>
               </button>
             </div>
           </div>
@@ -612,9 +646,11 @@ export function ProductDetailPage({ slug }: { slug: string }) {
       {related.length > 0 && (
         <section className="mt-8 pt-6 border-t border-black/10">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45 mb-0.5">
-            You May Also Like
+            {tr('Vous aimerez aussi', 'You May Also Like')}
           </p>
-          <h2 className="font-editorial text-2xl sm:text-3xl text-black mb-4">Complementary Pieces</h2>
+          <h2 className="font-editorial text-2xl sm:text-3xl text-black mb-4">
+            {tr('Pièces complémentaires', 'Complementary Pieces')}
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-1.5 gap-y-4 sm:gap-x-2 sm:gap-y-5 items-stretch">
             {related.map((p) => (
               <ProductCard key={p.id} product={p} variants={getProductVariants(p.id)} />
@@ -632,20 +668,22 @@ export function ProductDetailPage({ slug }: { slug: string }) {
           />
           <div
             role="dialog"
-            aria-label="KIKI JONES Size Guide"
+            aria-label={tr('Guide des tailles KIKI JONES', 'KIKI JONES Size Guide')}
             className="relative bg-white text-black w-full max-w-xl p-6 sm:p-8 shadow-2xl space-y-6"
           >
             <div className="flex items-center justify-between border-b border-black/10 pb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">
-                  KIKI JONES Fit Guide
+                  {tr('Guide KIKI JONES', 'KIKI JONES Fit Guide')}
                 </p>
-                <h2 className="font-editorial text-2xl text-black">Size Chart</h2>
+                <h2 className="font-editorial text-2xl text-black">
+                  {tr('Tableau des tailles', 'Size Chart')}
+                </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setSizeGuideOpen(false)}
-                aria-label="Close size guide"
+                aria-label={tr('Fermer le guide des tailles', 'Close size guide')}
                 className="p-1.5 text-black/65 hover:text-black cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -655,9 +693,9 @@ export function ProductDetailPage({ slug }: { slug: string }) {
             <div className="flex items-center gap-4 border-b border-black/10 text-xs">
               {(
                 [
-                  { id: 'women', label: 'Women' },
-                  { id: 'men', label: 'Men' },
-                  { id: 'youth', label: 'Girls & Boys' },
+                  { id: 'women', label: tr('Femme', 'Women') },
+                  { id: 'men', label: tr('Homme', 'Men') },
+                  { id: 'youth', label: tr('Filles & Garçons', 'Girls & Boys') },
                 ] as const
               ).map((tab) => (
                 <button
@@ -679,10 +717,10 @@ export function ProductDetailPage({ slug }: { slug: string }) {
               <table className="w-full text-left text-xs tabular-nums">
                 <thead>
                   <tr className="border-b border-black/15 text-[10px] font-bold uppercase tracking-[0.16em] text-black/55">
-                    <th className="py-2.5 pr-4">Size</th>
-                    <th className="py-2.5 pr-4">Chest</th>
-                    <th className="py-2.5 pr-4">Waist</th>
-                    <th className="py-2.5">Hips</th>
+                    <th className="py-2.5 pr-4">{tr('Taille', 'Size')}</th>
+                    <th className="py-2.5 pr-4">{tr('Poitrine', 'Chest')}</th>
+                    <th className="py-2.5 pr-4">{tr('Taille', 'Waist')}</th>
+                    <th className="py-2.5">{tr('Hanches', 'Hips')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/10 font-light">
@@ -699,7 +737,10 @@ export function ProductDetailPage({ slug }: { slug: string }) {
             </div>
 
             <p className="text-[11px] font-light text-black/55 leading-relaxed">
-              Measurements represent body dimensions. For relaxed or oversized silhouettes, choose your standard size for the intended drape or size down for a closer fit.
+              {tr(
+                'Les mesures correspondent aux mensurations du corps. Pour une coupe ample, choisissez votre taille habituelle ; pour une coupe plus ajustée, prenez la taille en dessous.',
+                'Measurements represent body dimensions. For relaxed or oversized silhouettes, choose your standard size for the intended drape or size down for a closer fit.'
+              )}
             </p>
           </div>
         </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { formatXOF, getColorHex } from '../../lib/format';
 import { detectDominantColorsFromImageUrl, DetectedColor } from '../../lib/colorDetector';
 import { Product } from '../../types/commerce';
@@ -15,6 +16,7 @@ function getCircularOffset(index: number, active: number, total: number): number
 
 export function FashionDiscoverySection() {
   const { products, getProductVariants, navigate } = useStore();
+  const { tr } = useLanguage();
   const shouldReduceMotion = useReducedMotion();
   const [activeIdx, setActiveIdx] = useState(0);
   const [detectedColorsMap, setDetectedColorsMap] = useState<Record<string, DetectedColor[]>>({});
@@ -231,7 +233,7 @@ export function FashionDiscoverySection() {
               className="space-y-2.5"
             >
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">
-                New Season Spotlight &middot; {activeProduct.categoryName}
+                {tr('Sélection Nouvelle Saison', 'New Season Spotlight')} &middot; {activeProduct.categoryName}
               </p>
               <h2 className="font-editorial text-2xl sm:text-3xl lg:text-[32px] text-black leading-[1.06] tracking-[-0.01em] uppercase">
                 {displayTitle}
@@ -258,7 +260,7 @@ export function FashionDiscoverySection() {
                   onClick={() => navigate(targetHref)}
                   className="px-6 py-2.5 bg-black text-white text-[11px] font-bold uppercase tracking-[0.14em] inline-flex items-center gap-2.5 hover:bg-black/85 transition-colors cursor-pointer"
                 >
-                  <span>Explore Piece</span>
+                  <span>{tr('Découvrir la pièce', 'Explore Piece')}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

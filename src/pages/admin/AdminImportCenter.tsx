@@ -6,6 +6,7 @@ import { db } from '../../lib/firebase';
 import { Category, ImportJob, Product, ProductVariant } from '../../types/commerce';
 import { formatXOF, getColorHex, sanitizeId, slugify, formatTimestamp } from '../../lib/format';
 import { recordImportJob, logAudit } from '../../lib/firestoreService';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface AdminImportCenterProps {
   products: Product[];
@@ -75,6 +76,7 @@ export function AdminImportCenter({
   actorEmail,
   onToast,
 }: AdminImportCenterProps) {
+  const { tr } = useLanguage();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [filename, setFilename] = useState('');
   const [rawHeaders, setRawHeaders] = useState<string[]>([]);
@@ -464,45 +466,50 @@ export function AdminImportCenter({
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-editorial text-3xl text-black">Product Import Center</h2>
-          <p className="text-xs font-light text-black/60 mt-0.5">
-            Shopify CSV &amp; KIKI JONES template ingestion with variant reconstruction, inventory diff review, and duplicate protection.
+          <h3 className="text-base font-semibold text-black">
+            {tr('Centre d’import CSV', 'CSV Product Import')}
+          </h3>
+          <p className="text-xs text-black/55 mt-0.5">
+            {tr(
+              'Import Shopify CSV ou modèle KIKI JONES avec regroupement automatique des variantes et aperçu des stocks.',
+              'Shopify CSV & KIKI JONES template ingestion with variant reconstruction and stock diff preview.'
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={downloadBrandTemplate}
-            className="px-4 py-2 border border-black/25 bg-white text-xs font-bold uppercase tracking-[0.14em] inline-flex items-center gap-2 hover:border-black cursor-pointer"
+            className="px-3.5 py-2 border border-[#E8E8E8] bg-white text-xs font-medium inline-flex items-center gap-1.5 hover:border-black cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>KIKI JONES CSV Template</span>
+            <span>{tr('Modèle KIKI JONES CSV', 'KIKI JONES CSV Template')}</span>
           </button>
           <button
             type="button"
             onClick={downloadSampleShopify}
-            className="px-4 py-2 border border-black/25 bg-white text-xs font-bold uppercase tracking-[0.14em] inline-flex items-center gap-2 hover:border-black cursor-pointer"
+            className="px-3.5 py-2 border border-[#E8E8E8] bg-white text-xs font-medium inline-flex items-center gap-1.5 hover:border-black cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Sample Shopify CSV</span>
+            <span>{tr('Exemple Shopify CSV', 'Sample Shopify CSV')}</span>
           </button>
         </div>
       </div>
 
       {/* Step Indicator */}
-      <div className="grid grid-cols-4 gap-2 text-xs pb-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pb-2">
         {[
-          { num: 1, label: '1. Upload CSV' },
-          { num: 2, label: '2. Column Mapping' },
-          { num: 3, label: '3. Diff & Preview' },
-          { num: 4, label: '4. Import Report' },
+          { num: 1, label: tr('1. Fichier CSV', '1. Upload CSV') },
+          { num: 2, label: tr('2. Colonnes', '2. Mapping') },
+          { num: 3, label: tr('3. Aperçu', '3. Preview') },
+          { num: 4, label: tr('4. Rapport', '4. Report') },
         ].map((s) => (
           <div
             key={s.num}
             className={`py-2 px-3 border ${
               step === s.num
-                ? 'border-black bg-black text-white font-bold'
-                : 'border-black/15 bg-white text-black/60 font-light'
+                ? 'border-black bg-black text-white font-medium'
+                : 'border-[#E8E8E8] bg-white text-black/55'
             }`}
           >
             {s.label}
@@ -511,13 +518,13 @@ export function AdminImportCenter({
       </div>
 
       {step === 1 && (
-        <label className="block border-2 border-dashed border-black/25 bg-white p-14 text-center cursor-pointer hover:border-black transition-colors">
-          <Upload className="w-8 h-8 mx-auto text-black/60 mb-3" />
-          <p className="font-editorial text-2xl text-black">
-            Drop Shopify Export or KIKI JONES CSV
+        <label className="block border border-dashed border-black/30 bg-[#FAFAFA] p-12 text-center cursor-pointer hover:border-black transition-colors">
+          <Upload className="w-7 h-7 mx-auto text-black/55 mb-3" />
+          <p className="text-sm font-semibold text-black">
+            {tr('Déposez un export Shopify ou un fichier CSV KIKI JONES', 'Drop Shopify Export or KIKI JONES CSV')}
           </p>
-          <p className="text-xs font-light text-black/60 mt-1">
-            Automatic format detection, multi-row variant grouping, and SKU matching.
+          <p className="text-xs text-black/55 mt-1">
+            {tr('Détection automatique du format, regroupement des variantes et correspondance SKU.', 'Automatic format detection, multi-row variant grouping, and SKU matching.')}
           </p>
           <input
             type="file"
@@ -781,32 +788,32 @@ export function AdminImportCenter({
       )}
 
       {/* Persistent Import History */}
-      <div className="bg-white p-6 space-y-4">
-        <h3 className="font-editorial text-2xl text-black">Import History</h3>
+      <div className="bg-white border border-[#E8E8E8] p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-black">{tr('Historique des imports', 'Import history')}</h3>
         {importJobs.length === 0 ? (
-          <p className="text-xs font-light text-black/60">No CSV import jobs recorded yet.</p>
+          <p className="text-xs text-black/55">{tr('Aucun import CSV enregistré pour le moment.', 'No CSV import jobs recorded yet.')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-[11px] font-bold uppercase tracking-[0.14em] text-black/60 bg-black/[0.03]">
-                  <th className="py-2 pr-4 pl-2">File</th>
-                  <th className="py-2 pr-4">Format</th>
-                  <th className="py-2 pr-4">Mode</th>
-                  <th className="py-2 pr-4 text-right">Created / Updated / Errors</th>
-                  <th className="py-2 text-right pr-2">Date</th>
+                <tr className="text-left text-[11px] font-medium text-black/45 border-b border-[#E8E8E8]">
+                  <th className="py-2 pr-4">{tr('Fichier', 'File')}</th>
+                  <th className="py-2 pr-4">{tr('Format', 'Format')}</th>
+                  <th className="py-2 pr-4">{tr('Mode', 'Mode')}</th>
+                  <th className="py-2 pr-4 text-right">{tr('Créés / MAJ / Erreurs', 'Created / Updated / Errors')}</th>
+                  <th className="py-2 text-right">{tr('Date', 'Date')}</th>
                 </tr>
               </thead>
-              <tbody>
-                {importJobs.map((job, idx) => (
-                  <tr key={job.id} className={idx % 2 === 1 ? 'bg-black/[0.015]' : ''}>
-                    <td className="py-2.5 pr-4 pl-2 font-bold">{job.filename}</td>
-                    <td className="py-2.5 pr-4 uppercase font-light">{job.format}</td>
-                    <td className="py-2.5 pr-4 font-light">{job.mode}</td>
+              <tbody className="divide-y divide-[#F0F0F0]">
+                {importJobs.map((job) => (
+                  <tr key={job.id}>
+                    <td className="py-2.5 pr-4 font-medium text-black">{job.filename}</td>
+                    <td className="py-2.5 pr-4 uppercase text-black/65">{job.format}</td>
+                    <td className="py-2.5 pr-4 text-black/65">{job.mode}</td>
                     <td className="py-2.5 pr-4 text-right tabular-nums">
                       {job.createdCount} / {job.updatedCount} / {job.errorCount}
                     </td>
-                    <td className="py-2.5 text-right font-light text-black/60">
+                    <td className="py-2.5 text-right text-black/50 tabular-nums">
                       {formatTimestamp(job.createdAt)}
                     </td>
                   </tr>

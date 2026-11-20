@@ -3,6 +3,7 @@ import { Heart } from 'lucide-react';
 import { Product, ProductVariant } from '../../types/commerce';
 import { formatXOF, getAvailableStock, getColorHex, getProductAvailability } from '../../lib/format';
 import { useStore } from '../../context/StoreContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   detectDominantColorsFromImageUrl,
   DetectedColor,
@@ -17,6 +18,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, variants }: ProductCardProps) {
   const { navigate, addToCart, isWishlisted, toggleWishlist } = useStore();
+  const { tr } = useLanguage();
   const [selectedColor, setSelectedColor] = useState<string>(
     () => product.colors?.[0] || variants[0]?.color || ''
   );
@@ -76,13 +78,13 @@ export function ProductCard({ product, variants }: ProductCardProps) {
 
   // Show at most 1 clean editorial badge
   const badgeLabel = useMemo(() => {
-    if (availability.primaryState === 'SOLD OUT') return 'SOLD OUT';
-    if (availability.primaryState === 'SALE') return 'SALE';
-    if (availability.primaryState === 'NEW') return 'NEW';
-    if (availability.primaryState === 'BEST SELLER') return 'BEST SELLER';
-    if (availability.primaryState === 'PRE-ORDER') return 'PRE-ORDER';
+    if (availability.primaryState === 'SOLD OUT') return tr('ÉPUISÉ', 'SOLD OUT');
+    if (availability.primaryState === 'SALE') return tr('SOLDES', 'SALE');
+    if (availability.primaryState === 'NEW') return tr('NOUVEAU', 'NEW');
+    if (availability.primaryState === 'BEST SELLER') return 'BEST-SELLER';
+    if (availability.primaryState === 'PRE-ORDER') return tr('PRÉCOMMANDE', 'PRE-ORDER');
     return null;
-  }, [availability.primaryState]);
+  }, [availability.primaryState, tr]);
 
   const selectedColorIndex = useMemo(() => {
     if (!selectedColor || colorSwatches.length <= 1) return 0;
@@ -210,9 +212,9 @@ export function ProductCard({ product, variants }: ProductCardProps) {
           <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
             <span
               className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] ${
-                badgeLabel === 'SOLD OUT'
+                availability.primaryState === 'SOLD OUT'
                   ? 'bg-white/95 text-black/60 border border-black/15'
-                  : badgeLabel === 'NEW'
+                  : availability.primaryState === 'NEW'
                     ? 'bg-black text-white'
                     : 'bg-white text-black border border-black/15'
               }`}
@@ -227,9 +229,13 @@ export function ProductCard({ product, variants }: ProductCardProps) {
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            toggleWishlist(product.id);
+            toggleWishlist(product.id, product.name);
           }}
-          aria-label={wishlisted ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
+          aria-label={
+            wishlisted
+              ? tr(`Retirer ${product.name} des favoris`, `Remove ${product.name} from wishlist`)
+              : tr(`Ajouter ${product.name} aux favoris`, `Save ${product.name} to wishlist`)
+          }
           className="absolute top-2.5 right-2.5 z-10 w-8 h-8 bg-white/90 hover:bg-white text-black flex items-center justify-center transition-colors cursor-pointer"
         >
           <Heart
@@ -246,7 +252,7 @@ export function ProductCard({ product, variants }: ProductCardProps) {
             className="hidden md:flex absolute inset-x-0 bottom-0 bg-white/95 border-t border-black/10 px-2.5 py-2 items-center justify-between gap-1.5 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200"
           >
             <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-black/55 shrink-0">
-              Quick Add
+              {tr('Ajout rapide', 'Quick Add')}
             </span>
             <div className="flex items-center gap-1 flex-wrap justify-end">
               {variantsForColor.map((v) => {

@@ -3,6 +3,7 @@ import { ShieldCheck, AlertCircle, Lock } from 'lucide-react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { db } from '../lib/firebase';
 import { formatXOF, sanitizeId } from '../lib/format';
 import { validatePromoCode } from '../lib/firestoreService';
@@ -11,6 +12,7 @@ import { PaymentMethod, PaymentProviderStatus, Promotion } from '../types/commer
 export function CheckoutPage() {
   const { cart, cartSubtotalXof, storefrontConfig, clearCart, navigate, toast } = useStore();
   const { user, idToken, loginWithGoogle } = useAuth();
+  const { tr } = useLanguage();
 
   const [customerName, setCustomerName] = useState(user?.displayName || '');
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
@@ -74,25 +76,37 @@ export function CheckoutPage() {
     try {
       const promo = await validatePromoCode(promoInput, cartSubtotalXof);
       if (!promo) {
-        toast('Invalid, expired, or minimum-spend unmet discount code.', 'error');
+        toast(
+          tr(
+            'Code promo invalide, expiré ou montant minimum non atteint.',
+            'Invalid, expired, or minimum-spend unmet discount code.'
+          ),
+          'error'
+        );
         setAppliedPromo(null);
       } else {
         setAppliedPromo(promo);
-        toast(`Code ${promo.code} applied.`, 'success');
+        toast(tr(`Code ${promo.code} appliqué.`, `Code ${promo.code} applied.`), 'success');
       }
     } catch {
-      toast('Could not validate promotion code.', 'error');
+      toast(
+        tr('Impossible de vérifier le code promo.', 'Could not validate promotion code.'),
+        'error'
+      );
     }
   };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) {
-      toast('Your bag is empty.', 'error');
+      toast(tr('Votre panier est vide.', 'Your bag is empty.'), 'error');
       return;
     }
     if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim() || !street.trim()) {
-      toast('Please complete all required delivery fields.', 'error');
+      toast(
+        tr('Veuillez remplir tous les champs de livraison obligatoires.', 'Please complete all required delivery fields.'),
+        'error'
+      );
       return;
     }
 
@@ -129,14 +143,22 @@ export function CheckoutPage() {
       if (res.ok) {
         clearCart();
         setOrderConfirmation(data);
-        toast(`Order ${data.orderNumber} reserved.`, 'success');
+        toast(
+          tr(`Commande ${data.orderNumber} réservée.`, `Order ${data.orderNumber} reserved.`),
+          'success'
+        );
         return;
       }
 
-      // If server Admin Firestore lacks local ADC in preview, fall back to authenticated Firestore order creation
       if (res.status >= 500 || data.code === 'SERVER_ADC_UNAVAILABLE') {
         if (!user) {
-          toast('Please sign in with Google above to place and track your order.', 'error');
+          toast(
+            tr(
+              'Veuillez vous connecter avec Google ci-dessus pour finaliser et suivre votre commande.',
+              'Please sign in with Google above to place and track your order.'
+            ),
+            'error'
+          );
           return;
         }
         const orderId = sanitizeId(`ord_${Date.now()}`);
@@ -191,13 +213,13 @@ export function CheckoutPage() {
           providerConfigured: Boolean(sel?.configured),
           missingEnvVars: sel?.missingEnvVars || [],
         });
-        toast(`Order ${orderNumber} placed.`, 'success');
+        toast(tr(`Commande ${orderNumber} enregistrée.`, `Order ${orderNumber} placed.`), 'success');
         return;
       }
 
-      throw new Error(data.error || 'Checkout could not be completed.');
+      throw new Error(data.error || tr('Impossible de finaliser la commande.', 'Checkout could not be completed.'));
     } catch (err: any) {
-      toast(err?.message || 'Unable to create order.', 'error');
+      toast(err?.message || tr('Erreur lors de la création de la commande.', 'Unable to create order.'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -209,26 +231,33 @@ export function CheckoutPage() {
         <div className="border border-black/20 bg-white p-8 md:p-10 space-y-6">
           <div className="space-y-2">
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/60">
-              Order Created &middot; Stock Reserved
+              {tr('Commande créée · Stock réservé', 'Order Created · Stock Reserved')}
             </p>
             <h1 className="font-editorial text-3xl md:text-4xl text-black">
-              Order {orderConfirmation.orderNumber}
+              {tr('Commande', 'Order')} {orderConfirmation.orderNumber}
             </h1>
             <p className="text-sm font-light text-black/75">
-              Total due: <span className="font-bold tabular-nums text-black">{formatXOF(orderConfirmation.totalXof)}</span>
+              {tr('Total à régler :', 'Total due:')}{' '}
+              <span className="font-bold tabular-nums text-black">
+                {formatXOF(orderConfirmation.totalXof)}
+              </span>
             </p>
           </div>
 
           <div className="p-4 border border-black/15 bg-black/[0.02] space-y-2 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-bold uppercase tracking-[0.14em] text-black/60">Payment State</span>
+              <span className="font-bold uppercase tracking-[0.14em] text-black/60">
+                {tr('Statut paiement', 'Payment State')}
+              </span>
               <span className="uppercase font-bold text-black">
                 {orderConfirmation.paymentStatus}
               </span>
             </div>
             {orderConfirmation.reservationExpiresAt && (
               <div className="flex items-center justify-between">
-                <span className="font-bold uppercase tracking-[0.14em] text-black/60">Stock Hold Until</span>
+                <span className="font-bold uppercase tracking-[0.14em] text-black/60">
+                  {tr('Stock réservé jusqu’à', 'Stock Hold Until')}
+                </span>
                 <span className="font-light text-black">
                   {new Date(orderConfirmation.reservationExpiresAt).toLocaleTimeString()}
                 </span>
@@ -240,22 +269,32 @@ export function CheckoutPage() {
             <div className="p-4 border border-black bg-black/[0.03] space-y-2 text-xs text-black">
               <div className="flex items-center gap-2 font-bold">
                 <AlertCircle className="w-4 h-4 text-black shrink-0" />
-                <span>External Payment Gateway Credentials Not Supplied</span>
+                <span>
+                  {tr(
+                    'Identifiants passerelle de paiement non configurés',
+                    'External Payment Gateway Credentials Not Supplied'
+                  )}
+                </span>
               </div>
               <p className="font-light leading-relaxed text-black/80">
-                Your order is securely stored in <span className="font-bold">awaiting_verification</span> state.
-                KIKI JONES never fabricates payment confirmations—only a verified server-side webhook from the
-                payment provider marks an order as paid.
+                {tr(
+                  'Votre commande est enregistrée en attente de vérification. Seule une notification webhook vérifiée du prestataire marque une commande comme payée.',
+                  'Your order is securely stored in awaiting_verification state. Only a verified server-side webhook from the payment provider marks an order as paid.'
+                )}
               </p>
               {orderConfirmation.missingEnvVars.length > 0 && (
                 <p className="font-light text-[11px] text-black/70">
-                  Missing configuration: {orderConfirmation.missingEnvVars.join(', ')}
+                  {tr('Configuration manquante :', 'Missing configuration:')}{' '}
+                  {orderConfirmation.missingEnvVars.join(', ')}
                 </p>
               )}
             </div>
           ) : (
             <div className="p-4 border border-black/15 bg-black/[0.02] text-xs font-light text-black">
-              Awaiting verified payment notification from provider webhook before fulfillment begins.
+              {tr(
+                'En attente de confirmation vérifiée du prestataire avant préparation de la commande.',
+                'Awaiting verified payment notification from provider webhook before fulfillment begins.'
+              )}
             </div>
           )}
 
@@ -265,14 +304,14 @@ export function CheckoutPage() {
               onClick={() => navigate('/orders')}
               className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
             >
-              View Order History
+              {tr('Voir mes commandes', 'View Order History')}
             </button>
             <button
               type="button"
               onClick={() => navigate('/shop')}
               className="px-6 py-3 border border-black text-black text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
             >
-              Continue Shopping
+              {tr('Continuer vos achats', 'Continue Shopping')}
             </button>
           </div>
         </div>
@@ -284,8 +323,12 @@ export function CheckoutPage() {
     <main className="pt-28 pb-24 max-w-[1440px] mx-auto px-5 md:px-10">
       <div className="pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">KIKI JONES Checkout</p>
-          <h1 className="font-editorial text-4xl text-black mt-1">Delivery &amp; Payment</h1>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">
+            {tr('Paiement KIKI JONES', 'KIKI JONES Checkout')}
+          </p>
+          <h1 className="font-editorial text-4xl text-black mt-1">
+            {tr('Livraison & Paiement', 'Delivery & Payment')}
+          </h1>
         </div>
         {!user && (
           <button
@@ -293,32 +336,37 @@ export function CheckoutPage() {
             onClick={() => loginWithGoogle()}
             className="text-xs font-bold uppercase tracking-[0.16em] text-black bg-[#F7F7F7] px-4 py-2.5 hover:bg-black hover:text-white cursor-pointer"
           >
-            Sign in with Google for Order Tracking
+            {tr('Se connecter avec Google pour le suivi', 'Sign in with Google for Order Tracking')}
           </button>
         )}
       </div>
 
       {cart.length === 0 ? (
         <div className="py-16 text-center space-y-4">
-          <p className="font-editorial text-2xl">No items in your bag to check out.</p>
+          <p className="font-editorial text-2xl">
+            {tr('Aucun article dans votre panier.', 'No items in your bag to check out.')}
+          </p>
           <button
             type="button"
             onClick={() => navigate('/shop')}
             className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
           >
-            Browse Catalog
+            {tr('Parcourir la boutique', 'Browse Catalog')}
           </button>
         </div>
       ) : (
         <form onSubmit={handleSubmitOrder} className="pt-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Left Checkout Form */}
           <div className="lg:col-span-7 space-y-10">
-            {/* Contact */}
             <section className="space-y-4">
-              <h2 className="font-editorial text-2xl text-black">1. Client Details</h2>
+              <h2 className="font-editorial text-2xl text-black">
+                {tr('1. Coordonnées client', '1. Client Details')}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="block space-y-1.5 text-xs">
-                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">Full Name *</span>
+                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">
+                    {tr('Nom complet *', 'Full Name *')}
+                  </span>
                   <input
                     type="text"
                     required
@@ -328,7 +376,9 @@ export function CheckoutPage() {
                   />
                 </label>
                 <label className="block space-y-1.5 text-xs">
-                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">Email *</span>
+                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">
+                    {tr('E-mail *', 'Email *')}
+                  </span>
                   <input
                     type="email"
                     required
@@ -339,7 +389,7 @@ export function CheckoutPage() {
                 </label>
                 <label className="block space-y-1.5 text-xs sm:col-span-2">
                   <span className="font-bold uppercase tracking-[0.14em] text-black/60">
-                    Phone (Mobile Money / Courier) *
+                    {tr('Téléphone (Mobile Money / Livreur) *', 'Phone (Mobile Money / Courier) *')}
                   </span>
                   <input
                     type="tel"
@@ -353,13 +403,14 @@ export function CheckoutPage() {
               </div>
             </section>
 
-            {/* Shipping Address */}
             <section className="space-y-4 pt-4">
-              <h2 className="font-editorial text-2xl text-black">2. Shipping Destination</h2>
+              <h2 className="font-editorial text-2xl text-black">
+                {tr('2. Adresse de livraison', '2. Shipping Destination')}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="block space-y-1.5 text-xs sm:col-span-2">
                   <span className="font-bold uppercase tracking-[0.14em] text-black/60">
-                    Street Address / District *
+                    {tr('Rue / Quartier *', 'Street Address / District *')}
                   </span>
                   <input
                     type="text"
@@ -370,7 +421,9 @@ export function CheckoutPage() {
                   />
                 </label>
                 <label className="block space-y-1.5 text-xs">
-                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">City *</span>
+                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">
+                    {tr('Ville *', 'City *')}
+                  </span>
                   <input
                     type="text"
                     required
@@ -380,7 +433,9 @@ export function CheckoutPage() {
                   />
                 </label>
                 <label className="block space-y-1.5 text-xs">
-                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">Country *</span>
+                  <span className="font-bold uppercase tracking-[0.14em] text-black/60">
+                    {tr('Pays *', 'Country *')}
+                  </span>
                   <input
                     type="text"
                     required
@@ -402,10 +457,10 @@ export function CheckoutPage() {
                   }`}
                 >
                   <div className="flex justify-between text-xs font-bold">
-                    <span>Standard Delivery</span>
+                    <span>{tr('Livraison standard', 'Standard Delivery')}</span>
                     <span className="tabular-nums">
                       {discountedSubtotal >= freeThreshold
-                        ? 'Complimentary'
+                        ? tr('Offerte', 'Complimentary')
                         : formatXOF(storefrontConfig.standardShippingXof || 3500)}
                     </span>
                   </div>
@@ -414,7 +469,7 @@ export function CheckoutPage() {
                       deliveryMethod === 'standard' ? 'text-white/75' : 'text-black/60'
                     }`}
                   >
-                    2–4 business days
+                    {tr('2 à 4 jours ouvrés', '2–4 business days')}
                   </p>
                 </button>
                 <button
@@ -427,7 +482,7 @@ export function CheckoutPage() {
                   }`}
                 >
                   <div className="flex justify-between text-xs font-bold">
-                    <span>Express Courier</span>
+                    <span>{tr('Coursier Express', 'Express Courier')}</span>
                     <span className="tabular-nums">
                       {formatXOF(storefrontConfig.expressShippingXof || 7500)}
                     </span>
@@ -437,29 +492,50 @@ export function CheckoutPage() {
                       deliveryMethod === 'express' ? 'text-white/75' : 'text-black/60'
                     }`}
                   >
-                    Same / Next day dispatch
+                    {tr('Expédition le jour même ou lendemain', 'Same / Next day dispatch')}
                   </p>
                 </button>
               </div>
             </section>
 
-            {/* Payment Method */}
             <section className="space-y-4 pt-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-editorial text-2xl text-black">3. Payment Method (XOF)</h2>
+                <h2 className="font-editorial text-2xl text-black">
+                  {tr('3. Moyen de paiement (FCFA)', '3. Payment Method (XOF)')}
+                </h2>
                 <span className="inline-flex items-center gap-1 text-[11px] font-light text-black/60">
                   <Lock className="w-3 h-3" />
-                  Webhook-Verified
+                  {tr('Sécurisé par webhook', 'Webhook-Verified')}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
-                  { id: 'wave' as PaymentMethod, label: 'Wave', note: 'Instant Mobile Payment (XOF)' },
-                  { id: 'orange_money' as PaymentMethod, label: 'Orange Money', note: 'UEMOA Mobile Wallet (XOF)' },
-                  { id: 'mobile_money' as PaymentMethod, label: 'Mobile Money', note: 'MTN / Moov Money (XOF)' },
-                  { id: 'visa' as PaymentMethod, label: 'Visa', note: '3DS Secure Card Payment' },
-                  { id: 'mastercard' as PaymentMethod, label: 'Mastercard', note: '3DS Secure Card Payment' },
+                  {
+                    id: 'wave' as PaymentMethod,
+                    label: 'Wave',
+                    note: tr('Paiement mobile instantané (FCFA)', 'Instant Mobile Payment (XOF)'),
+                  },
+                  {
+                    id: 'orange_money' as PaymentMethod,
+                    label: 'Orange Money',
+                    note: tr('Portefeuille UEMOA (FCFA)', 'UEMOA Mobile Wallet (XOF)'),
+                  },
+                  {
+                    id: 'mobile_money' as PaymentMethod,
+                    label: 'Mobile Money',
+                    note: tr('MTN / Moov Money (FCFA)', 'MTN / Moov Money (XOF)'),
+                  },
+                  {
+                    id: 'visa' as PaymentMethod,
+                    label: 'Visa',
+                    note: tr('Carte bancaire 3DS sécurisée', '3DS Secure Card Payment'),
+                  },
+                  {
+                    id: 'mastercard' as PaymentMethod,
+                    label: 'Mastercard',
+                    note: tr('Carte bancaire 3DS sécurisée', '3DS Secure Card Payment'),
+                  },
                 ].map((m) => {
                   const status = providers.find((p) => p.id === m.id);
                   const active = paymentMethod === m.id;
@@ -479,7 +555,7 @@ export function CheckoutPage() {
                             active ? 'text-white/80' : 'text-black/60'
                           }`}
                         >
-                          {status?.configured ? 'Ready' : 'Config Pending'}
+                          {status?.configured ? tr('Prêt', 'Ready') : tr('En attente', 'Config Pending')}
                         </span>
                       </div>
                       <p
@@ -499,7 +575,9 @@ export function CheckoutPage() {
           {/* Right Summary */}
           <div className="lg:col-span-5">
             <div className="bg-[#F7F7F7] p-6 md:p-8 space-y-6 sticky top-24">
-              <h2 className="font-editorial text-2xl text-black">Bag Summary</h2>
+              <h2 className="font-editorial text-2xl text-black">
+                {tr('Résumé du panier', 'Bag Summary')}
+              </h2>
 
               <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                 {cart.map((item) => (
@@ -517,13 +595,12 @@ export function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Promo Code */}
               <div className="pt-2 flex gap-2">
                 <input
                   type="text"
                   value={promoInput}
                   onChange={(e) => setPromoInput(e.target.value)}
-                  placeholder="Promo code (e.g. KIKIJONES10)"
+                  placeholder={tr('Code promo (ex. KIKIJONES10)', 'Promo code (e.g. KIKIJONES10)')}
                   className="flex-1 bg-white px-3 py-2.5 text-xs font-light uppercase focus:outline-none"
                 />
                 <button
@@ -531,25 +608,27 @@ export function CheckoutPage() {
                   onClick={handleApplyPromo}
                   className="px-4 py-2.5 bg-white text-xs font-bold uppercase tracking-[0.14em] hover:bg-black hover:text-white cursor-pointer"
                 >
-                  Apply
+                  {tr('Appliquer', 'Apply')}
                 </button>
               </div>
 
               <div className="space-y-2.5 text-sm pt-2">
                 <div className="flex justify-between">
-                  <span className="font-light text-black/75">Subtotal</span>
+                  <span className="font-light text-black/75">{tr('Sous-total', 'Subtotal')}</span>
                   <span className="tabular-nums font-bold">{formatXOF(cartSubtotalXof)}</span>
                 </div>
                 {discountXof > 0 && (
                   <div className="flex justify-between text-black">
-                    <span className="font-light">Discount ({appliedPromo?.code})</span>
+                    <span className="font-light">
+                      {tr('Réduction', 'Discount')} ({appliedPromo?.code})
+                    </span>
                     <span className="tabular-nums font-bold">-{formatXOF(discountXof)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="font-light text-black/75">Shipping</span>
+                  <span className="font-light text-black/75">{tr('Livraison', 'Shipping')}</span>
                   <span className="tabular-nums font-light">
-                    {shippingFeeXof === 0 ? 'Complimentary' : formatXOF(shippingFeeXof)}
+                    {shippingFeeXof === 0 ? tr('Offerte', 'Complimentary') : formatXOF(shippingFeeXof)}
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-bold pt-2">
@@ -563,13 +642,18 @@ export function CheckoutPage() {
                 disabled={submitting}
                 className="w-full py-4 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-black/85 transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {submitting ? 'Reserving Inventory...' : `Place Order (${formatXOF(totalXof)})`}
+                {submitting
+                  ? tr('Réservation du stock...', 'Reserving Inventory...')
+                  : tr(`Confirmer la commande (${formatXOF(totalXof)})`, `Place Order (${formatXOF(totalXof)})`)}
               </button>
 
               <p className="text-[11px] font-light text-black/60 flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                 <span>
-                  Inventory is reserved transactionally for 15 minutes upon order placement.
+                  {tr(
+                    'Le stock est réservé de manière sécurisée pendant 15 minutes dès validation.',
+                    'Inventory is reserved transactionally for 15 minutes upon order placement.'
+                  )}
                 </span>
               </p>
             </div>

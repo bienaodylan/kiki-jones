@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
-import { MegaMenuKey, MEGA_MENUS } from '../../lib/navigationData';
+import { MegaMenuKey } from '../../lib/navigationData';
+import { useLanguage } from '../../context/LanguageContext';
+import { getMegaMenuLocalized } from '../../lib/i18n';
 
 interface MegaMenuProps {
   activeKey: MegaMenuKey | null;
@@ -18,7 +20,8 @@ export function MegaMenu({
   onMouseEnter,
   onMouseLeave,
 }: MegaMenuProps) {
-  const config = activeKey ? MEGA_MENUS[activeKey] : null;
+  const { lang } = useLanguage();
+  const config = getMegaMenuLocalized(activeKey, lang);
 
   return (
     <AnimatePresence>

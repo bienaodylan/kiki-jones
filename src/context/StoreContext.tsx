@@ -18,6 +18,7 @@ import {
   enrichProductMetadata,
 } from '../lib/catalogDefaults';
 import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
 import {
   seedInitialCatalogClient,
   ensureDefaultCategories,
@@ -165,6 +166,7 @@ const RECENT_SEARCH_KEY = 'kikijones_recent_searches_v1';
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, authReady } = useAuth();
+  const { tr } = useLanguage();
   const [route, setRoute] = useState<RouteView>(() => parseHashOrPath());
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -344,7 +346,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const raw = snap.data() as StorefrontConfig;
           const isLegacyPreRebrand =
             !raw.cmsVersion ||
-            raw.cmsVersion < 8 ||
+            raw.cmsVersion < 9 ||
             (typeof raw.brandIntroTitle === 'string' && raw.brandIntroTitle.toLowerCase().includes('mireza')) ||
             (typeof raw.heroHeadline === 'string' && raw.heroHeadline.toLowerCase().includes('caribbean'));
 
@@ -469,17 +471,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const initializeCatalog = useCallback(async () => {
     if (!user?.email || !isAdmin) {
-      toast('Administrator authentication required to initialize catalog.', 'error');
+      toast(
+        tr(
+          'Authentification administrateur requise pour initialiser le catalogue.',
+          'Administrator authentication required to initialize catalog.'
+        ),
+        'error'
+      );
       return false;
     }
     const res = await seedInitialCatalogClient(user.email);
     if (res.seeded) {
-      toast('KIKI JONES catalog initialized.', 'success');
+      toast(tr('Catalogue KIKI JONES initialisé.', 'KIKI JONES catalog initialized.'), 'success');
     } else {
-      toast('Catalog is already populated.', 'default');
+      toast(tr('Le catalogue est déjà rempli.', 'Catalog is already populated.'), 'default');
     }
     return res.seeded;
-  }, [user, isAdmin, toast]);
+  }, [user, isAdmin, toast, tr]);
 
   // Auto-seed or expand KIKI JONES catalog once when bootstrapped admin loads
   useEffect(() => {
@@ -490,7 +498,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       seedInitialCatalogClient(adminEmail)
         .then((res) => {
           if (res.seeded) {
-            toast('KIKI JONES catalog initialized in Firestore.', 'success');
+            toast(
+              tr('Catalogue KIKI JONES initialisé dans Firestore.', 'KIKI JONES catalog initialized in Firestore.'),
+              'success'
+            );
           }
         })
         .catch(() => {});
@@ -498,14 +509,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ensureFullSampleCatalog(adminEmail)
         .then((res) => {
           if (res.addedProducts > 0) {
-            toast(`Synced ${res.addedProducts} KIKI JONES pieces across all audiences.`, 'success');
+            toast(
+              tr(
+                `${res.addedProducts} pièces KIKI JONES synchronisées.`,
+                `Synced ${res.addedProducts} KIKI JONES pieces across all audiences.`
+              ),
+              'success'
+            );
           }
         })
         .catch(() => {
           ensureDefaultCategories(adminEmail).catch(() => {});
         });
     }
-  }, [authReady, isAdmin, loadingCatalog, products.length, categories.length, user?.email, toast]);
+  }, [authReady, isAdmin, loadingCatalog, products.length, categories.length, user?.email, toast, tr]);
 
   const effectiveCategories = useMemo(() => {
     if (!loadingCatalog && categories.length === 0) return fallbackCategories;
@@ -557,9 +574,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return [...prev, item];
       });
       if (openDrawer) setCartOpen(true);
-      toast(`${item.name} (${item.color} / ${item.size}) added to bag.`, 'success');
+      toast(
+        tr(
+          `${item.name} (${item.color} / ${item.size}) ajouté au panier.`,
+          `${item.name} (${item.color} / ${item.size}) added to bag.`
+        ),
+        'success'
+      );
     },
-    [effectiveVariants, toast]
+    [effectiveVariants, toast, tr]
   );
 
   const updateCartQty = useCallback(
@@ -601,14 +624,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (productId: string, productName?: string) => {
       setWishlistIds((prev) => {
         if (prev.includes(productId)) {
-          if (productName) toast(`${productName} removed from wishlist.`, 'default');
+          if (productName) {
+            toast(
+              tr(`${productName} retiré des favoris.`, `${productName} removed from wishlist.`),
+              'default'
+            );
+          }
           return prev.filter((id) => id !== productId);
         }
-        if (productName) toast(`${productName} saved to wishlist.`, 'success');
+        if (productName) {
+          toast(
+            tr(`${productName} ajouté aux favoris.`, `${productName} saved to wishlist.`),
+            'success'
+          );
+        }
         return [productId, ...prev];
       });
     },
-    [toast]
+    [toast, tr]
   );
 
   const addRecentSearch = useCallback((term: string) => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { formatXOF } from '../../lib/format';
 
 export function CartDrawer() {
@@ -14,12 +15,14 @@ export function CartDrawer() {
     storefrontConfig,
     navigate,
   } = useStore();
+  const { tr } = useLanguage();
 
   if (!cartOpen) return null;
 
   const freeThreshold = storefrontConfig.freeShippingThresholdXof || 75000;
   const remainingForFree = Math.max(0, freeThreshold - cartSubtotalXof);
   const progressPct = Math.min(100, Math.round((cartSubtotalXof / freeThreshold) * 100));
+  const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -28,21 +31,23 @@ export function CartDrawer() {
         onClick={() => setCartOpen(false)}
       />
       <aside
-        aria-label="Shopping Bag"
+        aria-label={tr('Panier', 'Shopping Bag')}
         className="relative w-full max-w-md bg-white h-full flex flex-col rounded-none shadow-2xl"
       >
         {/* Header */}
         <div className="px-6 py-5 border-b border-black/10 flex items-center justify-between">
           <div>
-            <h2 className="font-editorial text-2xl text-black">Shopping Bag</h2>
+            <h2 className="font-editorial text-2xl text-black">
+              {tr('Votre panier', 'Shopping Bag')}
+            </h2>
             <p className="text-[11px] font-light uppercase tracking-[0.16em] text-black/55 tabular-nums">
-              {cart.reduce((s, i) => s + i.quantity, 0)} Items Selected
+              {totalItems} {tr(totalItems > 1 ? 'articles sélectionnés' : 'article sélectionné', 'Items Selected')}
             </p>
           </div>
           <button
             type="button"
             onClick={() => setCartOpen(false)}
-            aria-label="Close bag"
+            aria-label={tr('Fermer le panier', 'Close bag')}
             className="min-h-[44px] min-w-[44px] flex items-center justify-center text-black hover:opacity-65 cursor-pointer"
           >
             <X className="w-5 h-5" strokeWidth={1.6} />
@@ -53,8 +58,11 @@ export function CartDrawer() {
         <div className="px-6 py-3 bg-[#F5F5F5] space-y-2">
           <p className="text-xs font-light text-black">
             {remainingForFree === 0
-              ? 'Complimentary standard delivery unlocked.'
-              : `Add ${formatXOF(remainingForFree)} more for complimentary standard delivery.`}
+              ? tr('Livraison standard offerte débloquée.', 'Complimentary standard delivery unlocked.')
+              : tr(
+                  `Ajoutez ${formatXOF(remainingForFree)} pour bénéficier de la livraison standard offerte.`,
+                  `Add ${formatXOF(remainingForFree)} more for complimentary standard delivery.`
+                )}
           </p>
           <div className="h-[2px] bg-black/15 w-full overflow-hidden">
             <div
@@ -68,9 +76,14 @@ export function CartDrawer() {
         <div className="flex-1 overflow-y-auto px-6 py-5 divide-y divide-black/10">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-12 space-y-4">
-              <p className="font-editorial text-2xl text-black">Your bag is empty</p>
+              <p className="font-editorial text-2xl text-black">
+                {tr('Votre panier est vide', 'Your bag is empty')}
+              </p>
               <p className="text-xs font-light text-black/65 max-w-xs leading-relaxed">
-                Explore the latest KIKI JONES arrivals across Women, Men, Girls, Boys, and Accessories.
+                {tr(
+                  'Découvrez les dernières nouveautés KIKI JONES pour Femme, Homme, Filles, Garçons et Accessoires.',
+                  'Explore the latest KIKI JONES arrivals across Women, Men, Girls, Boys, and Accessories.'
+                )}
               </p>
               <button
                 type="button"
@@ -80,7 +93,7 @@ export function CartDrawer() {
                 }}
                 className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] hover:bg-black/85 transition-colors cursor-pointer"
               >
-                Shop New In
+                {tr('Voir les nouveautés', 'Shop New In')}
               </button>
             </div>
           ) : (
@@ -116,14 +129,14 @@ export function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => removeFromCart(item.variantId)}
-                        aria-label={`Remove ${item.name}`}
+                        aria-label={tr(`Retirer ${item.name}`, `Remove ${item.name}`)}
                         className="text-black/45 hover:text-black p-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <p className="text-xs font-light text-black/65 mt-0.5">
-                      {item.color} &middot; Size {item.size}
+                      {item.color} &middot; {tr('Taille', 'Size')} {item.size}
                     </p>
                     <p className="text-[11px] font-light text-black/45 mt-0.5">{item.sku}</p>
                   </div>
@@ -132,7 +145,7 @@ export function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => updateCartQty(item.variantId, item.quantity - 1)}
-                        aria-label="Decrease quantity"
+                        aria-label={tr('Diminuer la quantité', 'Decrease quantity')}
                         className="w-8 h-8 flex items-center justify-center hover:bg-black/5 cursor-pointer"
                       >
                         <Minus className="w-3 h-3" />
@@ -143,7 +156,7 @@ export function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => updateCartQty(item.variantId, item.quantity + 1)}
-                        aria-label="Increase quantity"
+                        aria-label={tr('Augmenter la quantité', 'Increase quantity')}
                         className="w-8 h-8 flex items-center justify-center hover:bg-black/5 cursor-pointer"
                       >
                         <Plus className="w-3 h-3" />
@@ -163,13 +176,18 @@ export function CartDrawer() {
         {cart.length > 0 && (
           <div className="p-6 bg-[#F5F5F5] border-t border-black/10 space-y-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-light text-black/75">Estimated Subtotal</span>
+              <span className="font-light text-black/75">
+                {tr('Sous-total estimé', 'Estimated Subtotal')}
+              </span>
               <span className="font-bold tabular-nums text-black">
                 {formatXOF(cartSubtotalXof)}
               </span>
             </div>
             <p className="text-[11px] font-light text-black/55">
-              Taxes included. Shipping and promo codes applied at checkout.
+              {tr(
+                'Taxes incluses. Livraison et codes promo appliqués lors du paiement.',
+                'Taxes included. Shipping and promo codes applied at checkout.'
+              )}
             </p>
             <div className="grid grid-cols-1 gap-2.5">
               <button
@@ -180,7 +198,7 @@ export function CartDrawer() {
                 }}
                 className="w-full py-3.5 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-black/85 transition-colors cursor-pointer"
               >
-                <span>Proceed to Checkout</span>
+                <span>{tr('Passer la commande', 'Proceed to Checkout')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
               <button
@@ -191,7 +209,7 @@ export function CartDrawer() {
                 }}
                 className="w-full py-3 px-6 border border-black/15 bg-white text-black text-xs font-bold uppercase tracking-[0.2em] hover:border-black hover:bg-black hover:text-white transition-colors cursor-pointer"
               >
-                View Full Bag
+                {tr('Voir le panier complet', 'View Full Bag')}
               </button>
             </div>
           </div>

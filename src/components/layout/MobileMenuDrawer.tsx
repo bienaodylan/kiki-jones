@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ChevronDown, ArrowRight, Heart, User, Shield } from 'lucide-react';
-import {
-  DivisionKey,
-  FLOATING_SUBNAV_BY_DIVISION,
-  MEGA_MENUS,
-  MegaMenuKey,
-  PRIMARY_NAV_ITEMS,
-} from '../../lib/navigationData';
+import { X, ChevronDown, ArrowRight, Heart, User, Shield, Globe } from 'lucide-react';
+import { DivisionKey, MegaMenuKey, PRIMARY_NAV_ITEMS } from '../../lib/navigationData';
+import { useLanguage } from '../../context/LanguageContext';
+import { getFloatingSubnav, getMegaMenuLocalized, getPrimaryNavLabel } from '../../lib/i18n';
 
 interface MobileMenuDrawerProps {
   open: boolean;
@@ -17,14 +13,6 @@ interface MobileMenuDrawerProps {
   isAdmin: boolean;
 }
 
-const MOBILE_DIVISIONS: { key: DivisionKey; label: string }[] = [
-  { key: 'women', label: 'Women' },
-  { key: 'curve', label: 'Curve' },
-  { key: 'men', label: 'Men' },
-  { key: 'sport', label: 'Sport' },
-  { key: 'kids', label: 'Kids' },
-];
-
 export function MobileMenuDrawer({
   open,
   onClose,
@@ -32,15 +20,26 @@ export function MobileMenuDrawer({
   wishlistCount,
   isAdmin,
 }: MobileMenuDrawerProps) {
+  const { lang, setLang, tr } = useLanguage();
   const [selectedDivision, setSelectedDivision] = useState<DivisionKey>('women');
   const [expandedKey, setExpandedKey] = useState<MegaMenuKey | null>('brands');
+
+  const mobileDivisions: { key: DivisionKey; label: string }[] = [
+    { key: 'women', label: tr('Femme', 'Women') },
+    { key: 'curve', label: 'Curve' },
+    { key: 'men', label: tr('Homme', 'Men') },
+    { key: 'sport', label: 'Sport' },
+    { key: 'kids', label: tr('Enfants', 'Kids') },
+  ];
 
   const go = (path: string) => {
     onNavigate(path);
     onClose();
   };
 
-  const quickLinks = FLOATING_SUBNAV_BY_DIVISION[selectedDivision] || FLOATING_SUBNAV_BY_DIVISION.women;
+  const quickLinks = getFloatingSubnav(selectedDivision, lang);
+  const selectedDivLabel =
+    mobileDivisions.find((d) => d.key === selectedDivision)?.label || selectedDivision;
 
   return (
     <AnimatePresence>
@@ -60,7 +59,7 @@ export function MobileMenuDrawer({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-            aria-label="Mobile Navigation"
+            aria-label={tr('Navigation mobile', 'Mobile Navigation')}
             className="fixed top-0 left-0 bottom-0 w-full max-w-[360px] bg-white text-black z-50 flex flex-col shadow-2xl"
           >
             {/* Header */}
@@ -72,19 +71,29 @@ export function MobileMenuDrawer({
               >
                 KIKI JONES
               </button>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close navigation menu"
-                className="p-2 -mr-2 text-black/70 hover:text-black cursor-pointer"
-              >
-                <X className="w-5 h-5" strokeWidth={1.6} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 border border-black/15 text-[10px] font-bold uppercase tracking-[0.12em] text-black hover:border-black cursor-pointer"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>{lang === 'fr' ? 'FR / EN' : 'EN / FR'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={tr('Fermer le menu', 'Close navigation menu')}
+                  className="p-2 -mr-2 text-black/70 hover:text-black cursor-pointer"
+                >
+                  <X className="w-5 h-5" strokeWidth={1.6} />
+                </button>
+              </div>
             </div>
 
-            {/* Fashion Nova–Style Top Division Tabs */}
+            {/* Division Tabs */}
             <div className="grid grid-cols-5 border-b border-black/10 shrink-0 bg-[#FAFAFA]">
-              {MOBILE_DIVISIONS.map((div) => {
+              {mobileDivisions.map((div) => {
                 const active = selectedDivision === div.key;
                 return (
                   <button
@@ -108,7 +117,7 @@ export function MobileMenuDrawer({
               {/* Division Quick Collections */}
               <div className="space-y-2">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">
-                  {selectedDivision.toUpperCase()} &middot; Warm-Climate Collections
+                  {selectedDivLabel.toUpperCase()} &middot; {tr('Sélections du moment', 'Warm-Climate Collections')}
                 </p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {quickLinks.map((q) => (
@@ -134,8 +143,9 @@ export function MobileMenuDrawer({
                   const megaKey: MegaMenuKey | null = item.hasMegaMenu
                     ? (item.key as MegaMenuKey)
                     : null;
-                  const mega = megaKey ? MEGA_MENUS[megaKey] : null;
+                  const mega = getMegaMenuLocalized(megaKey, lang);
                   const isExpanded = Boolean(megaKey && expandedKey === megaKey);
+                  const itemLabel = getPrimaryNavLabel(item.key, item.label, lang);
 
                   if (!mega || !megaKey) return null;
 
@@ -147,12 +157,12 @@ export function MobileMenuDrawer({
                           onClick={() => go(item.href)}
                           className="text-xs font-bold uppercase tracking-[0.18em] text-black py-1 cursor-pointer"
                         >
-                          {item.label}
+                          {itemLabel}
                         </button>
                         <button
                           type="button"
                           onClick={() => setExpandedKey(isExpanded ? null : megaKey)}
-                          aria-label={`Toggle ${item.label} categories`}
+                          aria-label={tr(`Afficher ${itemLabel}`, `Toggle ${itemLabel} categories`)}
                           aria-expanded={isExpanded}
                           className="p-1.5 text-black/70 hover:text-black cursor-pointer"
                         >
@@ -199,7 +209,7 @@ export function MobileMenuDrawer({
                                 onClick={() => go(mega.editorial.href)}
                                 className="w-full flex items-center justify-between bg-[#F5F5F5] px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-black cursor-pointer"
                               >
-                                <span>Shop All {item.label}</span>
+                                <span>{tr(`Tout voir · ${itemLabel}`, `Shop All ${itemLabel}`)}</span>
                                 <ArrowRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -221,7 +231,7 @@ export function MobileMenuDrawer({
                   className="flex items-center justify-center gap-2 py-2.5 border border-black/15 bg-white text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:border-black cursor-pointer"
                 >
                   <User className="w-3.5 h-3.5" />
-                  Account
+                  {tr('Compte', 'Account')}
                 </button>
                 <button
                   type="button"
@@ -229,7 +239,7 @@ export function MobileMenuDrawer({
                   className="flex items-center justify-center gap-2 py-2.5 border border-black/15 bg-white text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:border-black cursor-pointer"
                 >
                   <Heart className="w-3.5 h-3.5" />
-                  Wishlist {wishlistCount > 0 ? `(${wishlistCount})` : ''}
+                  {tr('Favoris', 'Wishlist')} {wishlistCount > 0 ? `(${wishlistCount})` : ''}
                 </button>
               </div>
               {isAdmin && (
@@ -239,7 +249,7 @@ export function MobileMenuDrawer({
                   className="w-full flex items-center justify-center gap-2 py-2.5 bg-black text-white text-[11px] font-bold uppercase tracking-[0.16em] cursor-pointer"
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  Admin Studio
+                  {tr('Administration', 'Admin Studio')}
                 </button>
               )}
             </div>

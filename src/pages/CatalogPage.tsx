@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useLanguage } from '../context/LanguageContext';
 import { ProductCard } from '../components/storefront/ProductCard';
 import { formatXOF, getProductAvailability } from '../lib/format';
 import { INITIAL_CATEGORIES } from '../lib/catalogDefaults';
+import { MEGA_MENUS, MegaMenuKey } from '../lib/navigationData';
 import {
-  BRAND_LINES,
-  EDITORIAL_COLLECTIONS,
-  MEGA_MENUS,
-  MegaMenuKey,
-  PRODUCT_CATEGORIES,
-} from '../lib/navigationData';
+  getLocalizedBrands,
+  getLocalizedCategories,
+  getLocalizedCollections,
+  localizeAudienceLabel,
+  translateLabel,
+} from '../lib/i18n';
 import { AudienceSlug } from '../types/commerce';
 
 type CatalogAudience = 'women' | 'men' | 'girls' | 'boys' | 'accessories';
@@ -129,6 +131,10 @@ export function CatalogPage({
     loadingCatalog,
     navigate,
   } = useStore();
+  const { lang, tr } = useLanguage();
+  const localizedBrands = useMemo(() => getLocalizedBrands(lang), [lang]);
+  const localizedCategories = useMemo(() => getLocalizedCategories(lang), [lang]);
+  const localizedCollections = useMemo(() => getLocalizedCollections(lang), [lang]);
 
   const [selectedAudience, setSelectedAudience] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
@@ -167,29 +173,32 @@ export function CatalogPage({
 
   const activeCollectionObj = useMemo(() => {
     if (mode !== 'collection' || !collectionSlug) return null;
-    const found = EDITORIAL_COLLECTIONS.find((c) => c.slug === collectionSlug);
+    const found = localizedCollections.find((c) => c.slug === collectionSlug);
     if (found) return found;
     return {
       slug: collectionSlug,
-      seasonTag: 'Seasonal Drop',
+      seasonTag: tr('Capsule saisonnière', 'Seasonal Drop'),
       title: formatSlugLabel(collectionSlug) || 'Collection',
       shortTitle: formatSlugLabel(collectionSlug) || 'Collection',
-      subtitle: 'KIKI JONES Seasonal Edit',
-      description: 'Curated monochrome wardrobe silhouettes across Women, Men, Girls, and Boys.',
+      subtitle: tr('Édition saisonnière KIKI JONES', 'KIKI JONES Seasonal Edit'),
+      description: tr(
+        'Silhouettes contemporaines pour Femme, Homme, Filles et Garçons.',
+        'Curated monochrome wardrobe silhouettes across Women, Men, Girls, and Boys.'
+      ),
       campaignImage: '',
       audiences: ['women', 'men', 'girls', 'boys'] as ('women' | 'men' | 'girls' | 'boys')[],
     };
-  }, [mode, collectionSlug]);
+  }, [mode, collectionSlug, localizedCollections, tr]);
 
   const activeBrandObj = useMemo(() => {
     if (mode !== 'brand' || !brandSlug) return null;
-    return BRAND_LINES.find((b) => b.slug === brandSlug) || null;
-  }, [mode, brandSlug]);
+    return localizedBrands.find((b) => b.slug === brandSlug) || null;
+  }, [mode, brandSlug, localizedBrands]);
 
   const activeProductCategoryObj = useMemo(() => {
     if (mode !== 'category' || !categorySlug) return null;
-    return PRODUCT_CATEGORIES.find((c) => c.slug === categorySlug) || null;
-  }, [mode, categorySlug]);
+    return localizedCategories.find((c) => c.slug === categorySlug) || null;
+  }, [mode, categorySlug, localizedCategories]);
 
   const activeCategoryObj = useMemo(() => {
     if (mode !== 'category' || !categorySlug) return null;
@@ -447,7 +456,7 @@ export function CatalogPage({
   const pageMeta = useMemo(() => {
     if (mode === 'brand' && activeBrandObj) {
       return {
-        eyebrow: `Shop by Brand · ${activeBrandObj.tagline}`,
+        eyebrow: `${tr('Par Marque', 'Shop by Brand')} · ${activeBrandObj.tagline}`,
         title: activeBrandObj.name,
         description: activeBrandObj.description,
         bannerImage: '',
@@ -455,7 +464,7 @@ export function CatalogPage({
     }
     if (mode === 'category' && activeProductCategoryObj) {
       return {
-        eyebrow: `Shop by Category · ${activeProductCategoryObj.subtitle}`,
+        eyebrow: `${tr('Par Catégorie', 'Shop by Category')} · ${activeProductCategoryObj.subtitle}`,
         title: activeProductCategoryObj.name,
         description: activeProductCategoryObj.description,
         bannerImage: '',
@@ -463,7 +472,9 @@ export function CatalogPage({
     }
     if (mode === 'collection' && activeCollectionObj) {
       return {
-        eyebrow: `${activeCollectionObj.seasonTag} · ${activeCollectionObj.audiences.join(' / ')}`,
+        eyebrow: `${activeCollectionObj.seasonTag} · ${activeCollectionObj.audiences
+          .map((a) => localizeAudienceLabel(a, lang))
+          .join(' / ')}`,
         title: activeCollectionObj.title,
         description: activeCollectionObj.description,
         bannerImage: activeCollectionObj.campaignImage || '',
@@ -471,36 +482,55 @@ export function CatalogPage({
     }
     if (mode === 'new-in') {
       return {
-        eyebrow: 'Just Landed',
-        title: 'New Arrivals',
-        description:
-          'The latest warm-climate drops across Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.',
+        eyebrow: tr('Vient d’arriver', 'Just Landed'),
+        title: tr('Nouveautés', 'New Arrivals'),
+        description: tr(
+          'Les dernières arrivées pour climats chauds sur Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
+          'The latest warm-climate drops across Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
+        ),
         bannerImage: '',
       };
     }
     if (mode === 'sale') {
       return {
-        eyebrow: 'Limited-Time Offers',
-        title: 'Sale',
-        description:
-          'Curated seasonal reductions across dresses, matching sets, rompers, biker shorts, menswear, and accessories.',
+        eyebrow: tr('Offres limitées', 'Limited-Time Offers'),
+        title: tr('Soldes', 'Sale'),
+        description: tr(
+          'Sélection de remises saisonnières sur les robes, ensembles, combinaisons, sport, mode homme et accessoires.',
+          'Curated seasonal reductions across dresses, matching sets, rompers, biker shorts, menswear, and accessories.'
+        ),
         bannerImage: '',
       };
     }
     if (effectiveAudience) {
       const copy = AUDIENCE_COPY[effectiveAudience];
+      const localizedTitle = localizeAudienceLabel(effectiveAudience, lang);
+      const subLabel = subSlug ? translateLabel(formatSlugLabel(subSlug), lang) : '';
       return {
-        eyebrow: subSlug ? `${copy.title} · ${formatSlugLabel(subSlug)}` : copy.eyebrow,
-        title: subSlug ? `${copy.title} — ${formatSlugLabel(subSlug)}` : copy.title,
-        description: copy.description,
+        eyebrow: subSlug
+          ? `${localizedTitle} · ${subLabel}`
+          : tr(localizedTitle, copy.eyebrow),
+        title: subSlug ? `${localizedTitle} — ${subLabel}` : localizedTitle,
+        description:
+          lang === 'fr'
+            ? tr(
+                `Découvrez notre sélection ${localizedTitle.toLowerCase()} KIKI JONES pensée pour le style et le confort.`,
+                copy.description
+              )
+            : copy.description,
         bannerImage: '',
       };
     }
     return {
-      eyebrow: 'KIKI JONES Store',
-      title: activeCategoryObj?.name || formatSlugLabel(categorySlug) || 'All Clothing & Accessories',
-      description:
-        'Explore the complete KIKI JONES catalog across brands and categories.',
+      eyebrow: tr('Boutique KIKI JONES', 'KIKI JONES Store'),
+      title:
+        activeCategoryObj?.name ||
+        (categorySlug ? translateLabel(formatSlugLabel(categorySlug), lang) : '') ||
+        tr('Toute la boutique', 'All Clothing & Accessories'),
+      description: tr(
+        'Explorez l’ensemble du catalogue KIKI JONES par marques et catégories.',
+        'Explore the complete KIKI JONES catalog across brands and categories.'
+      ),
       bannerImage: '',
     };
   }, [
@@ -512,13 +542,15 @@ export function CatalogPage({
     subSlug,
     activeCategoryObj,
     categorySlug,
+    lang,
+    tr,
   ]);
 
   const quickTabs = useMemo(() => {
     if (mode === 'brand') {
       return [
-        { label: 'All Brands', path: '/brands', slug: '__all_brands__' },
-        ...BRAND_LINES.map((b) => ({
+        { label: tr('Toutes les marques', 'All Brands'), path: '/brands', slug: '__all_brands__' },
+        ...localizedBrands.map((b) => ({
           label: b.name,
           path: `/brand/${b.slug}`,
           slug: b.slug,
@@ -527,19 +559,24 @@ export function CatalogPage({
     }
     if (mode === 'category' && activeProductCategoryObj) {
       return [
-        { label: 'All Categories', path: '/categories', slug: '__all_cats__' },
-        ...PRODUCT_CATEGORIES.map((c) => ({
+        { label: tr('Toutes les catégories', 'All Categories'), path: '/categories', slug: '__all_cats__' },
+        ...localizedCategories.map((c) => ({
           label: c.name,
           path: `/category/${c.slug}`,
           slug: c.slug,
         })),
       ];
     }
-    if (effectiveAudience) return AUDIENCE_COPY[effectiveAudience].quickTabs;
+    if (effectiveAudience) {
+      return AUDIENCE_COPY[effectiveAudience].quickTabs.map((t) => ({
+        ...t,
+        label: translateLabel(t.label, lang),
+      }));
+    }
     if (mode === 'collection') {
       return [
-        { label: 'All Collections', path: '/collections', slug: '__all__' },
-        ...EDITORIAL_COLLECTIONS.map((c) => ({
+        { label: tr('Toutes les collections', 'All Collections'), path: '/collections', slug: '__all__' },
+        ...localizedCollections.map((c) => ({
           label: c.title,
           path: `/collection/${c.slug}`,
           slug: c.slug,
@@ -547,15 +584,24 @@ export function CatalogPage({
       ];
     }
     return [
-      { label: 'Shop All', path: '/shop', slug: '__shop__' },
-      { label: 'New In', path: '/new-in', slug: '__new__' },
-      { label: 'Shop by Brand', path: '/brands', slug: '__brands__' },
-      { label: 'Shop by Category', path: '/categories', slug: '__categories__' },
-      { label: 'Women', path: '/women', slug: 'women' },
-      { label: 'Men', path: '/men', slug: 'men' },
-      { label: 'Kids', path: '/brand/kiki-kids', slug: 'kiki-kids' },
+      { label: tr('Tout voir', 'Shop All'), path: '/shop', slug: '__shop__' },
+      { label: tr('Nouveautés', 'New In'), path: '/new-in', slug: '__new__' },
+      { label: tr('Par Marque', 'Shop by Brand'), path: '/brands', slug: '__brands__' },
+      { label: tr('Par Catégorie', 'Shop by Category'), path: '/categories', slug: '__categories__' },
+      { label: tr('Femme', 'Women'), path: '/women', slug: 'women' },
+      { label: tr('Homme', 'Men'), path: '/men', slug: 'men' },
+      { label: tr('Enfants', 'Kids'), path: '/brand/kiki-kids', slug: 'kiki-kids' },
     ];
-  }, [effectiveAudience, mode, activeProductCategoryObj]);
+  }, [
+    effectiveAudience,
+    mode,
+    activeProductCategoryObj,
+    localizedBrands,
+    localizedCategories,
+    localizedCollections,
+    lang,
+    tr,
+  ]);
 
   const megaMenuBanner = useMemo(() => {
     if (effectiveAudience && MEGA_MENUS[effectiveAudience as MegaMenuKey]) {
@@ -609,7 +655,7 @@ export function CatalogPage({
             )}
             {mode === 'collection' && pageMeta.bannerImage ? (
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-black/55 tabular-nums">
-                {filteredProducts.length} Pieces Available
+                {filteredProducts.length} {tr('pièces disponibles', 'Pieces Available')}
               </p>
             ) : (
               <p className="text-xs font-light text-black/65 leading-relaxed">
@@ -621,16 +667,16 @@ export function CatalogPage({
           {/* Sort + Filter Controls */}
           <div className="flex items-center gap-2 self-start md:self-end shrink-0">
             <select
-              aria-label="Sort products"
+              aria-label={tr('Trier les produits', 'Sort products')}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="border border-black/15 bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-black focus:outline-none focus:border-black cursor-pointer"
             >
-              <option value="recommended">Recommended</option>
-              <option value="newest">Newest</option>
-              <option value="best-sellers">Best Sellers</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
+              <option value="recommended">{tr('Recommandés', 'Recommended')}</option>
+              <option value="newest">{tr('Nouveautés', 'Newest')}</option>
+              <option value="best-sellers">Best-Sellers</option>
+              <option value="price-asc">{tr('Prix croissant', 'Price: Low to High')}</option>
+              <option value="price-desc">{tr('Prix décroissant', 'Price: High to Low')}</option>
             </select>
 
             <button
@@ -639,7 +685,10 @@ export function CatalogPage({
               className="inline-flex items-center gap-1.5 border border-black bg-black text-white px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+              <span>
+                {tr('Filtrer', 'Filter')}
+                {activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+              </span>
             </button>
           </div>
         </div>
@@ -684,10 +733,13 @@ export function CatalogPage({
           ) : filteredProducts.length === 0 ? (
             <div className="bg-[#F7F7F7] px-5 py-12 text-center space-y-3">
               <p className="font-editorial text-2xl sm:text-3xl text-black">
-                No pieces match these filters
+                {tr('Aucune pièce ne correspond à ces filtres', 'No pieces match these filters')}
               </p>
               <p className="text-xs font-light text-black/60 max-w-md mx-auto">
-                Adjust or reset your active filters, or explore the full {effectiveAudience ? AUDIENCE_COPY[effectiveAudience].title : 'KIKI JONES'} selection.
+                {tr(
+                  'Ajustez ou réinitialisez vos filtres pour découvrir toute la sélection KIKI JONES.',
+                  'Adjust or reset your active filters, or explore the full KIKI JONES selection.'
+                )}
               </p>
               <div className="flex flex-wrap justify-center gap-2.5 pt-1">
                 <button
@@ -695,7 +747,7 @@ export function CatalogPage({
                   onClick={resetFilters}
                   className="px-5 py-2.5 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
                 >
-                  Reset Filters
+                  {tr('Réinitialiser', 'Reset Filters')}
                 </button>
                 {subSlug && effectiveAudience && (
                   <button
@@ -703,7 +755,10 @@ export function CatalogPage({
                     onClick={() => navigate(`/${effectiveAudience}`)}
                     className="px-5 py-2.5 border border-black text-black text-xs font-bold uppercase tracking-[0.18em] cursor-pointer"
                   >
-                    View All {AUDIENCE_COPY[effectiveAudience].title}
+                    {tr(
+                      `Tout voir · ${localizeAudienceLabel(effectiveAudience, lang)}`,
+                      `View All ${AUDIENCE_COPY[effectiveAudience].title}`
+                    )}
                   </button>
                 )}
               </div>
@@ -722,10 +777,10 @@ export function CatalogPage({
           <div className="mt-8 pt-6 border-t border-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">
-                Editorial Spotlight
+                {tr('Sélection éditoriale', 'Editorial Spotlight')}
               </p>
               <p className="font-editorial text-2xl text-black mt-0.5">
-                Explore KIKI JONES Seasonal Collections
+                {tr('Découvrir les collections KIKI JONES', 'Explore KIKI JONES Seasonal Collections')}
               </p>
             </div>
             <button
@@ -733,7 +788,7 @@ export function CatalogPage({
               onClick={() => navigate('/collections')}
               className="px-5 py-2.5 border border-black text-black text-[11px] font-bold uppercase tracking-[0.16em] hover:bg-black hover:text-white transition-colors cursor-pointer self-start sm:self-auto"
             >
-              View All Collections
+              {tr('Toutes les collections', 'View All Collections')}
             </button>
           </div>
         )}
@@ -749,12 +804,12 @@ export function CatalogPage({
           <div className="relative w-80 max-w-[88vw] bg-white h-full flex flex-col shadow-2xl">
             <div className="px-6 py-5 border-b border-black/10 flex items-center justify-between shrink-0">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-black">
-                Filter &amp; Refine
+                {tr('Filtrer & Affiner', 'Filter & Refine')}
               </span>
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
-                aria-label="Close filters"
+                aria-label={tr('Fermer les filtres', 'Close filters')}
                 className="p-1.5 text-black/70 hover:text-black cursor-pointer"
               >
                 <X className="w-5 h-5" strokeWidth={1.6} />
@@ -762,20 +817,19 @@ export function CatalogPage({
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-7">
-              {/* Audience / Category */}
               {!effectiveAudience && (
                 <div className="space-y-2.5">
                   <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
-                    Category
+                    {tr('Univers', 'Category')}
                   </p>
                   <div className="flex flex-col gap-1.5 text-xs">
                     {[
-                      { id: 'all', label: 'All Categories' },
-                      { id: 'women', label: 'Women' },
-                      { id: 'men', label: 'Men' },
-                      { id: 'girls', label: 'Girls' },
-                      { id: 'boys', label: 'Boys' },
-                      { id: 'accessories', label: 'Accessories' },
+                      { id: 'all', label: tr('Tous les univers', 'All Categories') },
+                      { id: 'women', label: tr('Femme', 'Women') },
+                      { id: 'men', label: tr('Homme', 'Men') },
+                      { id: 'girls', label: tr('Filles', 'Girls') },
+                      { id: 'boys', label: tr('Garçons', 'Boys') },
+                      { id: 'accessories', label: tr('Accessoires', 'Accessories') },
                     ].map((item) => (
                       <button
                         key={item.id}
@@ -794,11 +848,10 @@ export function CatalogPage({
                 </div>
               )}
 
-              {/* Brand Filter */}
               {mode !== 'brand' && (
                 <div className="space-y-2.5">
                   <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
-                    Brand
+                    {tr('Marque', 'Brand')}
                   </p>
                   <div className="flex flex-col gap-1.5 text-xs">
                     <button
@@ -810,9 +863,9 @@ export function CatalogPage({
                           : 'font-light text-black/65 hover:text-black'
                       }`}
                     >
-                      All Brands
+                      {tr('Toutes les marques', 'All Brands')}
                     </button>
-                    {BRAND_LINES.map((b) => (
+                    {localizedBrands.map((b) => (
                       <button
                         key={b.slug}
                         type="button"
@@ -830,7 +883,6 @@ export function CatalogPage({
                 </div>
               )}
 
-              {/* Collection */}
               {mode !== 'collection' && (
                 <div className="space-y-2.5">
                   <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
@@ -846,9 +898,9 @@ export function CatalogPage({
                           : 'font-light text-black/65 hover:text-black'
                       }`}
                     >
-                      All Collections
+                      {tr('Toutes les collections', 'All Collections')}
                     </button>
-                    {EDITORIAL_COLLECTIONS.map((col) => (
+                    {localizedCollections.map((col) => (
                       <button
                         key={col.slug}
                         type="button"
@@ -866,7 +918,6 @@ export function CatalogPage({
                 </div>
               )}
 
-              {/* Style */}
               {allStyles.length > 0 && (
                 <div className="space-y-2.5">
                   <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
@@ -882,7 +933,7 @@ export function CatalogPage({
                           : 'bg-[#F5F5F5] text-black hover:bg-black/10'
                       }`}
                     >
-                      All
+                      {tr('Tous', 'All')}
                     </button>
                     {allStyles.map((st) => (
                       <button
@@ -902,10 +953,9 @@ export function CatalogPage({
                 </div>
               )}
 
-              {/* Size */}
               <div className="space-y-2.5">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
-                  Size
+                  {tr('Taille', 'Size')}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   <button
@@ -917,7 +967,7 @@ export function CatalogPage({
                         : 'bg-[#F5F5F5] text-black hover:bg-black/10'
                     }`}
                   >
-                    All
+                    {tr('Toutes', 'All')}
                   </button>
                   {allSizes.map((sz) => (
                     <button
@@ -936,10 +986,9 @@ export function CatalogPage({
                 </div>
               </div>
 
-              {/* Color */}
               <div className="space-y-2.5">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
-                  Color
+                  {tr('Couleur', 'Color')}
                 </p>
                 <div className="flex flex-col gap-1.5 text-xs max-h-40 overflow-y-auto">
                   <button
@@ -949,7 +998,7 @@ export function CatalogPage({
                       selectedColor === 'all' ? 'font-bold text-black' : 'font-light text-black/65'
                     }`}
                   >
-                    All Colors
+                    {tr('Toutes les couleurs', 'All Colors')}
                   </button>
                   {allColors.map((c) => (
                     <button
@@ -968,18 +1017,17 @@ export function CatalogPage({
                 </div>
               </div>
 
-              {/* Availability */}
               <div className="space-y-2.5">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
-                  Availability
+                  {tr('Disponibilité', 'Availability')}
                 </p>
                 <div className="flex flex-col gap-1.5 text-xs">
                   {[
-                    { id: 'all', label: 'All Pieces' },
-                    { id: 'in_stock', label: 'In Stock Only' },
-                    { id: 'new', label: 'New Arrivals' },
-                    { id: 'bestseller', label: 'Best Sellers' },
-                    { id: 'sale', label: 'On Sale' },
+                    { id: 'all', label: tr('Toutes les pièces', 'All Pieces') },
+                    { id: 'in_stock', label: tr('En stock uniquement', 'In Stock Only') },
+                    { id: 'new', label: tr('Nouveautés', 'New Arrivals') },
+                    { id: 'bestseller', label: 'Best-Sellers' },
+                    { id: 'sale', label: tr('En promotion', 'On Sale') },
                   ].map((opt) => (
                     <button
                       key={opt.id}
@@ -997,10 +1045,9 @@ export function CatalogPage({
                 </div>
               </div>
 
-              {/* Max Price */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/50">
-                  <span>Max Price</span>
+                  <span>{tr('Prix maximum', 'Max Price')}</span>
                   <span className="tabular-nums text-black">{formatXOF(maxPriceXof)}</span>
                 </div>
                 <input
@@ -1021,14 +1068,14 @@ export function CatalogPage({
                 onClick={resetFilters}
                 className="flex-1 py-3 bg-[#F5F5F5] text-xs font-bold uppercase tracking-[0.14em] text-black hover:bg-black/10 cursor-pointer"
               >
-                Reset
+                {tr('Réinitialiser', 'Reset')}
               </button>
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
                 className="flex-1 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.14em] hover:bg-black/85 cursor-pointer"
               >
-                Apply ({filteredProducts.length})
+                {tr('Appliquer', 'Apply')} ({filteredProducts.length})
               </button>
             </div>
           </div>

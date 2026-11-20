@@ -1,1569 +1,901 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowUp,
   ArrowDown,
+  Eye,
+  EyeOff,
   Plus,
   Trash2,
-  Upload,
-  Copy,
-  ChevronDown,
-  ChevronUp,
-  Layers,
+  GripVertical,
+  Sparkles,
+  Edit3,
+  X,
+  ExternalLink,
 } from 'lucide-react';
 import {
   Category,
-  CollectionBannerConfig,
   CustomHomepageSection,
   StorefrontConfig,
+  StoreNavigationItem,
 } from '../../types/commerce';
-import { saveCategory, saveStorefrontConfig } from '../../lib/firestoreService';
-import { DEFAULT_STOREFRONT_CONFIG, KIKI_JONES_IMAGES } from '../../lib/catalogDefaults';
-import { uploadAdminImage } from '../../lib/imageUpload';
+import { useLanguage } from '../../context/LanguageContext';
+import { saveStorefrontConfig } from '../../lib/firestoreService';
+import { KJ_IMAGES } from '../../lib/navigationData';
+import { sanitizeId, slugify } from '../../lib/format';
+import {
+  extractNavigationFromConfig,
+  mergeNavigationIntoGalleryItems,
+} from '../../components/admin/AdminAiAssistant';
 
 interface AdminStorefrontProps {
   config: StorefrontConfig;
   categories: Category[];
   actorEmail: string;
+  onOpenAiAssistant: () => void;
+  onOpenLiveStore: () => void;
   onToast: (msg: string, tone?: 'default' | 'error' | 'success') => void;
 }
 
-const BUILTIN_SECTION_LABELS: Record<string, string> = {
-  hero_split: '50/50 Split Hero Campaign (Full-Bleed)',
-  new_arrivals_banner: 'New Arrivals Full-Bleed Campaign Banner',
-  shop_by_category_strip: 'Shop by Category 4-Column Full-Bleed Strip',
-  kiki_men_split: 'Kiki Men 50/50 Split Campaign',
-  kiki_sculpt_triptych: 'Kiki Sculpt & Curve 3-Column Triptych',
-  women_exclusive_banner: 'Kiki Luxe Full-Bleed Widescreen Banner',
-  dual_spotlight: 'Dual 50/50 Spotlight (Kiki Kids + Shoes & Sunglasses)',
-  shop_by_brand_strip: 'Shop by Brand Showcase Strip (5 Labels)',
-  hero: 'Hero Campaign Banner',
-  new_arrivals: 'New Arrivals Campaign Banner',
-  next_drop: 'Dual Spotlight Campaign',
-  categories: 'Category Strip',
-  fashion_discovery: 'Sculpt & Curve Triptych',
-  trending: 'Kiki Luxe Campaign Banner',
-  after_dark_banner: 'Kiki Luxe Campaign Banner',
-  brand_intro: 'Shop by Brand Strip',
-  new_drop: 'New Arrivals Banner',
-  featured: 'Kiki Luxe Banner',
-  mireza_world: 'Shop by Brand Strip',
-};
+type StoreSubTab = 'homepage' | 'navigation' | 'banners' | 'preview';
 
-const QUICK_ROUTES = [
-  { label: 'New Arrivals (/new-in)', value: '/new-in' },
-  { label: 'Shop by Brand (/brands)', value: '/brands' },
-  { label: 'Shop by Category (/categories)', value: '/categories' },
-  { label: 'Kiki Men (/brand/kiki-men)', value: '/brand/kiki-men' },
-  { label: 'Kiki Luxe (/brand/kiki-luxe)', value: '/brand/kiki-luxe' },
-  { label: 'Kiki Sculpt (/brand/kiki-sculpt)', value: '/brand/kiki-sculpt' },
-  { label: 'Kiki Curve (/brand/kiki-curve)', value: '/brand/kiki-curve' },
-  { label: 'Kiki Kids (/brand/kiki-kids)', value: '/brand/kiki-kids' },
-  { label: 'Shoes (/category/shoes)', value: '/category/shoes' },
-  { label: 'Sunglasses (/category/sunglasses)', value: '/category/sunglasses' },
-  { label: 'Dresses (/category/dresses)', value: '/category/dresses' },
-  { label: 'Matching Sets (/category/matching-sets)', value: '/category/matching-sets' },
-];
+const PRESET_IMAGES = Array.from(new Set(Object.values(KJ_IMAGES))).slice(0, 12);
 
 export function AdminStorefront({
   config,
-  categories,
   actorEmail,
+  onOpenAiAssistant,
+  onOpenLiveStore,
   onToast,
 }: AdminStorefrontProps) {
+  const { tr } = useLanguage();
+  const [subTab, setSubTab] = useState<StoreSubTab>('homepage');
   const [draft, setDraft] = useState<StorefrontConfig>(config);
+  const [navItems, setNavItems] = useState<StoreNavigationItem[]>(() =>
+    extractNavigationFromConfig(config)
+  );
   const [saving, setSaving] = useState(false);
-  const [uploadingField, setUploadingField] = useState<string | null>(null);
-  const [expandedKey, setExpandedKey] = useState<string | null>('hero_0');
-  const [newBlockType, setNewBlockType] = useState<'banner' | 'split' | 'duo' | string>('banner');
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  // Add section modal
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [customForm, setCustomForm] = useState({
+    layout: 'banner' as 'banner' | 'duo',
+    title: '',
+    body: '',
+    ctaLabel: 'Découvrir',
+    ctaHref: '/shop',
+    imageUrl: KJ_IMAGES.heroCampaign,
+    secondaryTitle: '',
+    secondaryCtaLabel: 'Explorer',
+    secondaryCtaHref: '/new-in',
+    secondaryImageUrl: KJ_IMAGES.bannerAfterDark,
+  });
+
+  // Inline custom section edit modal
+  const [editingCustomId, setEditingCustomId] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraft({
-      ...DEFAULT_STOREFRONT_CONFIG,
-      ...config,
-      sectionOrder: (config.sectionOrder || DEFAULT_STOREFRONT_CONFIG.sectionOrder).filter(
-        (s) => s !== 'newsletter'
-      ),
-      collectionBanners:
-        config.collectionBanners && config.collectionBanners.length > 0
-          ? config.collectionBanners
-          : DEFAULT_STOREFRONT_CONFIG.collectionBanners,
-      customSections: config.customSections || [],
-    });
+    setDraft(config);
+    setNavItems(extractNavigationFromConfig(config));
   }, [config]);
 
-  const handleUploadField = async (
-    fieldKey: string,
-    file: File | undefined,
-    onUrl: (url: string) => void | Promise<void>
-  ) => {
-    if (!file) return;
-    setUploadingField(fieldKey);
-    try {
-      const url = await uploadAdminImage(file);
-      await onUrl(url);
-      onToast('Photo importée avec succès.', 'success');
-    } catch (err: any) {
-      onToast(err?.message || "Impossible d'importer la photo.", 'error');
-    } finally {
-      setUploadingField(null);
-    }
-  };
+  const builtinSectionCatalog: { key: string; labelFr: string; labelEn: string; descFr: string; descEn: string }[] = [
+    { key: 'hero_split', labelFr: 'Bannière Hero Principale', labelEn: 'Main Split Hero Banner', descFr: 'Grande ouverture plein écran avec titre et CTA', descEn: 'Full-bleed opening banner with headline & CTA' },
+    { key: 'new_arrivals_banner', labelFr: 'Bannière Nouveautés', labelEn: 'New Arrivals Banner', descFr: 'Visuel éditorial vers les dernières sorties', descEn: 'Editorial banner linking to New Arrivals' },
+    { key: 'shop_by_category_strip', labelFr: 'Acheter par Catégorie', labelEn: 'Shop by Category Strip', descFr: 'Carrousel horizontal des catégories mode', descEn: 'Horizontal fashion category discovery strip' },
+    { key: 'kiki_men_split', labelFr: 'Section Kiki Men (Double)', labelEn: 'Kiki Men Split', descFr: 'Deux visuels côte à côte pour l’univers Homme', descEn: 'Dual side-by-side visuals for Kiki Men' },
+    { key: 'kiki_sculpt_triptych', labelFr: 'Triptyque Kiki Sculpt', labelEn: 'Kiki Sculpt Triptych', descFr: 'Trois silhouettes éditoriales en grille', descEn: 'Three editorial silhouettes in a triptych' },
+    { key: 'women_exclusive_banner', labelFr: 'Bannière Exclusivité Femme', labelEn: 'Women Exclusive Banner', descFr: 'Mise en avant robes et silhouettes soirée', descEn: 'Full-width women dresses & evening showcase' },
+    { key: 'dual_spotlight', labelFr: 'Double Spotlight (Enfants & Sport)', labelEn: 'Dual Spotlight (Kids & Sport)', descFr: 'Deux blocs côte à côte sur toute la largeur', descEn: 'Two full-width side-by-side editorial blocks' },
+    { key: 'shop_by_brand_strip', labelFr: 'Acheter par Marque', labelEn: 'Shop by Brand Strip', descFr: 'Carrousel Kiki Luxe, Sculpt, Curve, Men, Sport, Kids', descEn: 'Brand universe strip: Luxe, Sculpt, Curve, Men, Sport, Kids' },
+    { key: 'trending_now_grid', labelFr: 'Grille Tendances (4 produits)', labelEn: 'Trending Now Grid (4 products)', descFr: 'Sélection dynamique des 4 pièces tendances', descEn: 'Dynamic 4-product Trending Now showcase' },
+    { key: 'best_sellers_grid', labelFr: 'Grille Meilleures Ventes (4 produits)', labelEn: 'Best Sellers Grid (4 products)', descFr: 'Sélection dynamique des 4 best-sellers', descEn: 'Dynamic 4-product Best Sellers showcase' },
+    { key: 'new_arrivals_grid', labelFr: 'Grille Nouveautés (4 produits)', labelEn: 'New Arrivals Grid (4 products)', descFr: 'Sélection dynamique des 4 dernières nouveautés', descEn: 'Dynamic 4-product New Arrivals showcase' },
+    { key: 'featured_collections_grid', labelFr: 'Collections à la une (3 cartes)', labelEn: 'Featured Collections (3 cards)', descFr: 'Trois cartes éditoriales de collections', descEn: 'Three editorial collection showcase cards' },
+  ];
 
-  const sectionOrder = draft.sectionOrder || [];
-  const customSections = draft.customSections || [];
-  const collectionBanners = draft.collectionBanners || [];
-
-  const moveSection = (idx: number, dir: -1 | 1) => {
-    const order = [...sectionOrder];
-    const target = idx + dir;
-    if (target < 0 || target >= order.length) return;
-    const temp = order[idx];
-    order[idx] = order[target];
-    order[target] = temp;
-    setDraft({ ...draft, sectionOrder: order });
-  };
-
-  const removeSectionAt = (idx: number) => {
-    const removedKey = sectionOrder[idx];
-    const nextOrder = sectionOrder.filter((_, i) => i !== idx);
-    let nextCustom = customSections;
-    if (removedKey.startsWith('custom:')) {
-      const cid = removedKey.slice('custom:'.length);
-      if (!nextOrder.includes(removedKey)) {
-        nextCustom = customSections.filter((c) => c.id !== cid);
-      }
-    }
-    setDraft({ ...draft, sectionOrder: nextOrder, customSections: nextCustom });
-  };
-
-  const createCustomBlockFromBuiltin = (builtinKey: string): CustomHomepageSection => {
-    const id = `blk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    if (builtinKey === 'next_drop') {
+  const getSectionDisplay = (rawKey: string) => {
+    const hidden = rawKey.startsWith('hidden:');
+    const cleanKey = rawKey.replace(/^hidden:/, '');
+    if (cleanKey.startsWith('custom:')) {
+      const cid = cleanKey.replace(/^custom:/, '');
+      const custom = (draft.customSections || []).find((c) => c.id === cid);
       return {
-        id,
-        layout: 'duo',
-        title: draft.nextDropLeftTitle || 'The Essentials Collection',
-        body: draft.nextDropLeftBody || '',
-        ctaLabel: draft.nextDropLeftCtaLabel || 'Shop Essentials',
-        ctaHref: draft.nextDropLeftCtaHref || '/collection/essentials',
-        imageUrl: draft.nextDropLeftImageUrl || KIKI_JONES_IMAGES.nextDropBanner,
-        secondaryTitle: draft.nextDropRightTitle || 'Street Collection',
-        secondaryCtaLabel: draft.nextDropRightCtaLabel || 'Explore Street',
-        secondaryCtaHref: draft.nextDropRightCtaHref || '/collection/street-collection',
-        secondaryImageUrl: draft.nextDropRightImageUrl || KIKI_JONES_IMAGES.streetBanner,
+        cleanKey,
+        hidden,
+        isCustom: true,
+        custom,
+        label: custom?.title || cid,
+        desc: custom?.layout === 'duo' ? tr('Bloc personnalisé double', 'Custom duo section') : tr('Bannière personnalisée', 'Custom banner section'),
       };
     }
-    if (builtinKey === 'brand_intro') {
-      return {
-        id,
-        layout: 'split',
-        theme: 'dark',
-        eyebrow: draft.brandIntroEyebrow || 'About KIKI JONES',
-        title: draft.brandIntroTitle,
-        body: draft.brandIntroBody,
-        ctaLabel: draft.brandIntroCtaLabel || 'Explore Collections',
-        ctaHref: draft.brandIntroCtaHref || '/collections',
-        imageUrl: draft.brandIntroImageUrl || KIKI_JONES_IMAGES.brandIntro,
-      };
-    }
+    const found = builtinSectionCatalog.find((b) => b.key === cleanKey);
     return {
-      id,
-      layout: 'banner',
-      title: draft.heroHeadline || 'KIKI JONES Campaign Banner',
-      body: '',
-      ctaLabel: draft.heroCtaLabel || 'Shop Now',
-      ctaHref: draft.heroCtaHref || '/new-in',
-      imageUrl: draft.heroImageUrl || KIKI_JONES_IMAGES.hero,
+      cleanKey,
+      hidden,
+      isCustom: false,
+      custom: undefined,
+      label: found ? tr(found.labelFr, found.labelEn) : cleanKey,
+      desc: found ? tr(found.descFr, found.descEn) : tr('Section boutique', 'Storefront section'),
     };
   };
 
-  const duplicateSectionAt = (idx: number) => {
-    const key = sectionOrder[idx];
-    let cloned: CustomHomepageSection;
-    if (key.startsWith('custom:')) {
-      const src = customSections.find((c) => c.id === key.slice('custom:'.length));
-      if (!src) return;
-      cloned = {
-        ...src,
-        id: `blk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        title: `${src.title} (Copie)`,
-      };
-    } else {
-      cloned = createCustomBlockFromBuiltin(key);
-    }
-    const nextOrder = [...sectionOrder];
-    const nextKey = `custom:${cloned.id}`;
-    nextOrder.splice(idx + 1, 0, nextKey);
-    setDraft({
-      ...draft,
-      sectionOrder: nextOrder,
-      customSections: [...customSections, cloned],
-    });
-    setExpandedKey(`${nextKey}_${idx + 1}`);
-    onToast('Bloc dupliqué — vous pouvez le modifier indépendamment.', 'success');
-  };
-
-  const handleAddSection = () => {
-    if (newBlockType === 'banner' || newBlockType === 'split' || newBlockType === 'duo') {
-      const id = `blk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      const fresh: CustomHomepageSection = {
-        id,
-        layout: newBlockType,
-        theme: 'dark',
-        eyebrow: newBlockType === 'split' ? 'KIKI JONES Editorial' : '',
-        title:
-          newBlockType === 'duo'
-            ? 'Left Campaign Block'
-            : newBlockType === 'split'
-              ? 'Editorial Split Block'
-              : 'New Campaign Banner',
-        body:
-          newBlockType === 'banner'
-            ? ''
-            : 'Add your editorial copy for this section.',
-        ctaLabel: 'Explore',
-        ctaHref: '/collections',
-        imageUrl: KIKI_JONES_IMAGES.essentialsBanner,
-        ...(newBlockType === 'duo'
-          ? {
-              secondaryTitle: 'Right Campaign Block',
-              secondaryCtaLabel: 'Shop Now',
-              secondaryCtaHref: '/new-in',
-              secondaryImageUrl: KIKI_JONES_IMAGES.streetBanner,
-            }
-          : {}),
-      };
-      const nextKey = `custom:${id}`;
-      const nextOrder = [...sectionOrder, nextKey];
-      setDraft({
-        ...draft,
-        sectionOrder: nextOrder,
-        customSections: [...customSections, fresh],
-      });
-      setExpandedKey(`${nextKey}_${nextOrder.length - 1}`);
-      return;
-    }
-
-    // Adding a built-in section
-    if (!sectionOrder.includes(newBlockType)) {
-      const nextOrder = [...sectionOrder, newBlockType];
-      setDraft({ ...draft, sectionOrder: nextOrder });
-      setExpandedKey(`${newBlockType}_${nextOrder.length - 1}`);
-    } else {
-      // Built-in section is already present -> add an independent editable copy
-      const cloned = createCustomBlockFromBuiltin(newBlockType);
-      const nextKey = `custom:${cloned.id}`;
-      const nextOrder = [...sectionOrder, nextKey];
-      setDraft({
-        ...draft,
-        sectionOrder: nextOrder,
-        customSections: [...customSections, cloned],
-      });
-      setExpandedKey(`${nextKey}_${nextOrder.length - 1}`);
-    }
-  };
-
-  const updateCustomSection = (id: string, patch: Partial<CustomHomepageSection>) => {
-    setDraft((prev) => ({
-      ...prev,
-      customSections: (prev.customSections || []).map((c) =>
-        c.id === id ? { ...c, ...patch } : c
-      ),
-    }));
-  };
-
-  const updateCollectionBanner = (id: string, patch: Partial<CollectionBannerConfig>) => {
-    setDraft((prev) => ({
-      ...prev,
-      collectionBanners: (prev.collectionBanners || []).map((b) =>
-        b.id === id ? { ...b, ...patch } : b
-      ),
-    }));
-  };
-
-  const handleSaveCms = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const persistConfig = async (nextConfig: StorefrontConfig, successMsg?: string) => {
     setSaving(true);
     try {
-      await saveStorefrontConfig(draft, actorEmail);
-      onToast('Configuration du Storefront publiée.', 'success');
-    } catch {
-      onToast("Échec lors de l'enregistrement de la configuration.", 'error');
+      await saveStorefrontConfig(nextConfig, actorEmail);
+      setDraft(nextConfig);
+      onToast(successMsg || tr('Boutique enregistrée et publiée.', 'Storefront changes published.'), 'success');
+    } catch (err: any) {
+      onToast(err?.message || tr('Échec de l’enregistrement.', 'Failed to save changes.'), 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleUpdateCategory = async (
-    cat: Category,
-    patch: Partial<Pick<Category, 'name' | 'description' | 'imageUrl'>>
-  ) => {
-    await saveCategory(
-      cat.id,
-      {
-        name: patch.name ?? cat.name,
-        slug: cat.slug,
-        description: patch.description ?? cat.description,
-        imageUrl: patch.imageUrl ?? cat.imageUrl,
-        sortOrder: cat.sortOrder,
-        isActive: cat.isActive,
-      },
-      actorEmail
-    );
-    onToast(`Catégorie ${patch.name ?? cat.name} mise à jour.`, 'success');
+  const sectionsList = (draft.sectionOrder || []).filter((s) => s !== 'newsletter');
+
+  const moveSection = (index: number, delta: number) => {
+    const nextIdx = index + delta;
+    if (nextIdx < 0 || nextIdx >= sectionsList.length) return;
+    const copy = [...sectionsList];
+    const [moved] = copy.splice(index, 1);
+    copy.splice(nextIdx, 0, moved);
+    setDraft({ ...draft, sectionOrder: copy });
   };
 
-  const getSectionDisplayTitle = (key: string): string => {
-    if (key.startsWith('custom:')) {
-      const found = customSections.find((c) => c.id === key.slice('custom:'.length));
-      if (!found) return 'Bloc Personnalisé';
-      const typeTag =
-        found.layout === 'banner'
-          ? 'Bannière'
-          : found.layout === 'split'
-            ? 'Split Texte/Image'
-            : 'Double Image';
-      return `${found.title || 'Sans titre'} · ${typeTag}`;
+  const handleDropSection = (targetIdx: number) => {
+    if (dragIdx === null || dragIdx === targetIdx) {
+      setDragIdx(null);
+      return;
     }
-    return BUILTIN_SECTION_LABELS[key] || key;
+    const copy = [...sectionsList];
+    const [moved] = copy.splice(dragIdx, 1);
+    copy.splice(targetIdx, 0, moved);
+    setDraft({ ...draft, sectionOrder: copy });
+    setDragIdx(null);
+  };
+
+  const toggleSectionVisibility = (index: number) => {
+    const copy = [...sectionsList];
+    const current = copy[index];
+    copy[index] = current.startsWith('hidden:')
+      ? current.replace(/^hidden:/, '')
+      : `hidden:${current}`;
+    setDraft({ ...draft, sectionOrder: copy });
+  };
+
+  const removeSection = (index: number) => {
+    const removed = sectionsList[index];
+    const clean = removed.replace(/^hidden:/, '');
+    const nextOrder = sectionsList.filter((_, i) => i !== index);
+    let nextCustom = draft.customSections || [];
+    if (clean.startsWith('custom:')) {
+      const cid = clean.replace(/^custom:/, '');
+      nextCustom = nextCustom.filter((c) => c.id !== cid);
+    }
+    setDraft({ ...draft, sectionOrder: nextOrder, customSections: nextCustom });
+  };
+
+  const addBuiltinSection = (key: string) => {
+    const filtered = sectionsList.filter((s) => s.replace(/^hidden:/, '') !== key);
+    setDraft({ ...draft, sectionOrder: [...filtered, key] });
+    setAddModalOpen(false);
+    onToast(tr('Section ajoutée. Cliquez sur Publier pour enregistrer.', 'Section added. Click Publish to save.'));
+  };
+
+  const addCustomSection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customForm.title.trim()) return;
+    const id = sanitizeId(`custom_${slugify(customForm.title)}_${Date.now().toString().slice(-4)}`);
+    const newSec: CustomHomepageSection = {
+      id,
+      layout: customForm.layout,
+      theme: 'dark',
+      title: customForm.title.trim().slice(0, 120),
+      body: customForm.body.trim().slice(0, 300),
+      ctaLabel: customForm.ctaLabel.trim().slice(0, 50) || tr('Découvrir', 'Shop Now'),
+      ctaHref: customForm.ctaHref.trim() || '/shop',
+      imageUrl: customForm.imageUrl.trim() || KJ_IMAGES.heroCampaign,
+      ...(customForm.layout === 'duo'
+        ? {
+            secondaryTitle: customForm.secondaryTitle.trim() || customForm.title.trim(),
+            secondaryCtaLabel: customForm.secondaryCtaLabel.trim() || tr('Explorer', 'Explore'),
+            secondaryCtaHref: customForm.secondaryCtaHref.trim() || '/new-in',
+            secondaryImageUrl: customForm.secondaryImageUrl.trim() || KJ_IMAGES.bannerAfterDark,
+          }
+        : {}),
+    };
+    setDraft({
+      ...draft,
+      customSections: [...(draft.customSections || []), newSec].slice(0, 24),
+      sectionOrder: [...sectionsList, `custom:${id}`].slice(0, 30),
+    });
+    setAddModalOpen(false);
+    setCustomForm({
+      layout: 'banner',
+      title: '',
+      body: '',
+      ctaLabel: 'Découvrir',
+      ctaHref: '/shop',
+      imageUrl: KJ_IMAGES.heroCampaign,
+      secondaryTitle: '',
+      secondaryCtaLabel: 'Explorer',
+      secondaryCtaHref: '/new-in',
+      secondaryImageUrl: KJ_IMAGES.bannerAfterDark,
+    });
+    onToast(tr('Section personnalisée ajoutée. Cliquez sur Publier.', 'Custom section added. Click Publish.'));
+  };
+
+  const handleSaveNavigation = async () => {
+    const nextConfig: StorefrontConfig = {
+      ...draft,
+      galleryItems: mergeNavigationIntoGalleryItems(draft.galleryItems, navItems),
+    };
+    await persistConfig(nextConfig, tr('Navigation de l’en-tête mise à jour.', 'Header navigation updated.'));
+  };
+
+  const editingCustom = editingCustomId
+    ? (draft.customSections || []).find((c) => c.id === editingCustomId) || null
+    : null;
+
+  const updateEditingCustom = (patch: Partial<CustomHomepageSection>) => {
+    if (!editingCustomId) return;
+    setDraft({
+      ...draft,
+      customSections: (draft.customSections || []).map((c) =>
+        c.id === editingCustomId ? { ...c, ...patch } : c
+      ),
+    });
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-editorial text-3xl text-black">Storefront CMS</h1>
-          <p className="text-xs font-light text-black/60 mt-0.5">
-            Gérez librement tous les titres, textes, boutons, images bannières, l&apos;ordre des sections, la duplication ou l&apos;ajout de nouveaux blocs sur la page d&apos;accueil.
+          <h1 className="text-xl font-semibold tracking-tight text-black">
+            {tr('Boutique', 'Store')}
+          </h1>
+          <p className="text-xs text-black/55 mt-0.5">
+            {tr('Gérez la page d’accueil, la navigation et les bannières en toute simplicité.', 'Manage homepage sections, navigation, and banners cleanly.')}
           </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onOpenAiAssistant}
+            className="px-3.5 py-2 border border-[#E8E8E8] bg-white hover:border-black text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{tr('Modifier avec l’IA', 'Edit with AI')}</span>
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => persistConfig(draft)}
+            className="px-4 py-2 bg-black text-white text-xs font-medium hover:bg-black/85 disabled:opacity-50 cursor-pointer"
+          >
+            {saving ? tr('Publication...', 'Publishing...') : tr('Publier', 'Publish')}
+          </button>
         </div>
       </div>
 
-      <form onSubmit={handleSaveCms} className="space-y-8">
-        {/* TOP ADD-SECTION BAR + INTERACTIVE SECTION BUILDER */}
-        <div className="bg-white p-6 space-y-5 text-xs rounded-none">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
-              <h2 className="font-editorial text-2xl text-black flex items-center gap-2">
-                <Layers className="w-5 h-5" />
-                <span>Constructeur des Sections de la Page d&apos;Accueil</span>
-              </h2>
-              <p className="text-[11px] font-light text-black/60 mt-1">
-                Déplacez, modifiez chaque titre/image, dupliquez une section existante ou ajoutez un nouveau bloc.
-              </p>
-            </div>
+      {/* Sub-navigation Tabs */}
+      <div className="bg-white border border-[#E8E8E8]">
+        <div className="flex items-center overflow-x-auto border-b border-[#E8E8E8] px-2">
+          {[
+            { id: 'homepage' as StoreSubTab, label: tr('Page d’accueil', 'Homepage') },
+            { id: 'navigation' as StoreSubTab, label: tr('Navigation', 'Navigation') },
+            { id: 'banners' as StoreSubTab, label: tr('Hero & Bannières', 'Hero & Banners') },
+            { id: 'preview' as StoreSubTab, label: tr('Aperçu', 'Preview') },
+          ].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setSubTab(t.id)}
+              className={`px-4 py-3 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
+                subTab === t.id
+                  ? 'border-black text-black font-semibold'
+                  : 'border-transparent text-black/55 hover:text-black'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={newBlockType}
-                onChange={(e) => setNewBlockType(e.target.value)}
-                className="rounded-none bg-[#F7F7F7] px-3 py-2.5 text-xs font-bold text-black focus:outline-none"
-              >
-                <optgroup label="Nouveau Bloc Personnalisé">
-                  <option value="banner">Bannière Pleine Largeur (1 Image + Titre + CTA)</option>
-                  <option value="split">Bloc 50/50 Texte + Image Éditoriale</option>
-                  <option value="duo">Double Bloc 50/50 (2 Images Côte à Côte)</option>
-                </optgroup>
-                <optgroup label="Storefront Built-in Sections">
-                  <option value="hero">Hero Campaign Banner</option>
-                  <option value="new_arrivals">New Arrivals Grid</option>
-                  <option value="next_drop">Featured Collections Duo</option>
-                  <option value="categories">Audiences + Stacked Campaign Banners</option>
-                  <option value="fashion_discovery">3D Editorial Runway Showcase</option>
-                  <option value="trending">Trending Now / Best Sellers</option>
-                  <option value="brand_intro">About KIKI JONES (Black &amp; White Split)</option>
-                  <option value="mireza_world">Editorial Lookbook Gallery (4 Images)</option>
-                </optgroup>
-              </select>
+        {/* TAB 1: HOMEPAGE SECTIONS */}
+        {subTab === 'homepage' && (
+          <div className="p-5 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-black">
+                  {tr('Sections de la page d’accueil', 'Homepage sections')} ({sectionsList.length})
+                </h2>
+                <p className="text-xs text-black/50 mt-0.5">
+                  {tr('Glissez-déposez pour réorganiser, masquez ou ajoutez une nouvelle section.', 'Drag to reorder, toggle visibility, or add a new section.')}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={handleAddSection}
-                className="px-4 py-2.5 rounded-none bg-black text-white text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 hover:bg-black/85 cursor-pointer"
+                onClick={() => setAddModalOpen(true)}
+                className="px-3.5 py-2 border border-black bg-white hover:bg-black hover:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Ajouter Section</span>
+                <span>{tr('Ajouter une section', 'Add section')}</span>
               </button>
             </div>
-          </div>
 
-          {/* Active Sections List with Inline Editors */}
-          <div className="space-y-3">
-            {sectionOrder.length === 0 && (
-              <div className="p-8 bg-[#F7F7F7] text-center text-black/60">
-                Aucune section active. Utilisez « Ajouter Section » ci-dessus pour composer la page d&apos;accueil.
-              </div>
-            )}
-
-            {sectionOrder.map((sec, idx) => {
-              const rowId = `${sec}_${idx}`;
-              const isOpen = expandedKey === rowId;
-              const customSec = sec.startsWith('custom:')
-                ? customSections.find((c) => c.id === sec.slice('custom:'.length))
-                : undefined;
-
-              return (
-                <div key={rowId} className="bg-[#F7F7F7] rounded-none">
-                  {/* Section Row Header */}
-                  <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedKey(isOpen ? null : rowId)}
-                      className="flex items-center gap-3 text-left flex-1 min-w-0 cursor-pointer"
-                    >
-                      <span className="px-2 py-1 bg-black text-white text-[10px] font-bold tabular-nums rounded-none">
+            <div className="border border-[#E8E8E8] divide-y divide-[#F0F0F0]">
+              {sectionsList.map((rawKey, idx) => {
+                const info = getSectionDisplay(rawKey);
+                return (
+                  <div
+                    key={`${rawKey}_${idx}`}
+                    draggable
+                    onDragStart={() => setDragIdx(idx)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleDropSection(idx)}
+                    className={`px-4 py-3 flex items-center justify-between gap-3 bg-white hover:bg-[#FAFAFA] transition-colors ${
+                      info.hidden ? 'opacity-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <GripVertical className="w-4 h-4 text-black/30 cursor-grab shrink-0" />
+                      <span className="text-[11px] font-medium tabular-nums text-black/40 w-5">
                         {String(idx + 1).padStart(2, '0')}
                       </span>
-                      <span className="font-bold text-sm text-black truncate">
-                        {getSectionDisplayTitle(sec)}
-                      </span>
-                      {isOpen ? (
-                        <ChevronUp className="w-4 h-4 text-black/60 shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-black/60 shrink-0" />
-                      )}
-                    </button>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-black truncate">{info.label}</p>
+                        <p className="text-[11px] text-black/45 truncate">{info.desc}</p>
+                      </div>
+                    </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 shrink-0">
+                      {info.isCustom && info.custom && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingCustomId(info.custom!.id)}
+                          title={tr('Modifier', 'Edit')}
+                          className="p-1.5 text-black/55 hover:text-black cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {info.cleanKey === 'hero_split' && (
+                        <button
+                          type="button"
+                          onClick={() => setSubTab('banners')}
+                          title={tr('Modifier le Hero', 'Edit Hero')}
+                          className="p-1.5 text-black/55 hover:text-black cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => moveSection(idx, -1)}
                         disabled={idx === 0}
-                        title="Monter"
-                        className="p-2 bg-white hover:bg-black hover:text-white rounded-none cursor-pointer disabled:opacity-30"
+                        className="p-1.5 text-black/50 hover:text-black disabled:opacity-25 cursor-pointer"
+                        title={tr('Monter', 'Move up')}
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
                       </button>
                       <button
                         type="button"
                         onClick={() => moveSection(idx, 1)}
-                        disabled={idx === sectionOrder.length - 1}
-                        title="Descendre"
-                        className="p-2 bg-white hover:bg-black hover:text-white rounded-none cursor-pointer disabled:opacity-30"
+                        disabled={idx === sectionsList.length - 1}
+                        className="p-1.5 text-black/50 hover:text-black disabled:opacity-25 cursor-pointer"
+                        title={tr('Descendre', 'Move down')}
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => duplicateSectionAt(idx)}
-                        title="Dupliquer cette section"
-                        className="px-2.5 py-2 bg-white hover:bg-black hover:text-white rounded-none inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                        onClick={() => toggleSectionVisibility(idx)}
+                        className="p-1.5 text-black/55 hover:text-black cursor-pointer"
+                        title={info.hidden ? tr('Afficher', 'Show') : tr('Masquer', 'Hide')}
                       >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Dupliquer</span>
+                        {info.hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
                       <button
                         type="button"
-                        onClick={() => removeSectionAt(idx)}
-                        title="Supprimer cette section"
-                        className="p-2 bg-white hover:bg-black hover:text-white text-black/70 rounded-none cursor-pointer"
+                        onClick={() => removeSection(idx)}
+                        className="p-1.5 text-black/40 hover:text-black cursor-pointer"
+                        title={tr('Supprimer', 'Remove')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-
-                  {/* Inline Editor Body for Each Section Type */}
-                  {isOpen && (
-                    <div className="px-4 pb-5 pt-2 space-y-4">
-                      {/* HERO EDITOR */}
-                      {sec === 'hero' && (
-                        <div className="bg-white p-4 space-y-4 rounded-none">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Titre Hero
-                              </span>
-                              <input
-                                value={draft.heroHeadline}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, heroHeadline: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Sous-titre / Meta SEO
-                              </span>
-                              <input
-                                value={draft.heroSubheadline}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, heroSubheadline: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton Principal (Texte)
-                              </span>
-                              <input
-                                value={draft.heroCtaLabel || ''}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, heroCtaLabel: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton Principal (Lien)
-                              </span>
-                              <input
-                                list="quick-routes"
-                                value={draft.heroCtaHref || '/shop'}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, heroCtaHref: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton Secondaire (Texte)
-                              </span>
-                              <input
-                                value={draft.heroSecondaryCtaLabel ?? 'Nouvelle Collection'}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, heroSecondaryCtaLabel: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton Secondaire (Lien)
-                              </span>
-                              <input
-                                list="quick-routes"
-                                value={draft.heroSecondaryCtaHref || '/collection/casquettes-tapis'}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, heroSecondaryCtaHref: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row gap-4 items-start">
-                            {draft.heroImageUrl && (
-                              <div className="w-28 bg-[#F7F7F7] shrink-0 overflow-hidden">
-                                <img
-                                  src={draft.heroImageUrl}
-                                  alt="Hero Preview"
-                                  className="w-full h-auto block"
-                                />
-                              </div>
-                            )}
-                            <div className="flex-1 w-full space-y-1.5">
-                              <span className="font-bold uppercase tracking-wider text-black/60 block">
-                                Image Hero (URL ou Import)
-                              </span>
-                              <div className="flex flex-col sm:flex-row gap-2">
-                                <input
-                                  value={draft.heroImageUrl}
-                                  onChange={(e) =>
-                                    setDraft({ ...draft, heroImageUrl: e.target.value })
-                                  }
-                                  className="flex-1 rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                                />
-                                <label className="px-4 py-2 rounded-none bg-black text-white font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2 cursor-pointer shrink-0">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <span>{uploadingField === 'hero' ? 'Envoi...' : 'Importer'}</span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    disabled={uploadingField !== null}
-                                    onChange={(e) =>
-                                      handleUploadField('hero', e.target.files?.[0], (url) =>
-                                        setDraft((prev) => ({ ...prev, heroImageUrl: url }))
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* NEXT DROP DUO EDITOR */}
-                      {sec === 'next_drop' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {/* Left Card */}
-                          <div className="bg-white p-4 space-y-3 rounded-none">
-                            <p className="font-bold uppercase tracking-wider text-black">
-                              Left Card
-                            </p>
-                            <input
-                              value={draft.nextDropLeftTitle || ''}
-                              onChange={(e) =>
-                                setDraft({ ...draft, nextDropLeftTitle: e.target.value })
-                              }
-                              placeholder="Titre gauche"
-                              className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                            />
-                            <textarea
-                              rows={2}
-                              value={draft.nextDropLeftBody || ''}
-                              onChange={(e) =>
-                                setDraft({ ...draft, nextDropLeftBody: e.target.value })
-                              }
-                              placeholder="Description gauche"
-                              className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <input
-                                value={draft.nextDropLeftCtaLabel || ''}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, nextDropLeftCtaLabel: e.target.value })
-                                }
-                                placeholder="Texte bouton"
-                                className="rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                              <input
-                                list="quick-routes"
-                                value={draft.nextDropLeftCtaHref || ''}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, nextDropLeftCtaHref: e.target.value })
-                                }
-                                placeholder="Lien (/category/accessories)"
-                                className="rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </div>
-                            <div className="flex gap-3 items-start">
-                              {draft.nextDropLeftImageUrl && (
-                                <div className="w-20 bg-[#F7F7F7] shrink-0 overflow-hidden">
-                                  <img
-                                    src={draft.nextDropLeftImageUrl}
-                                    alt="Next Drop Left"
-                                    className="w-full h-auto block"
-                                  />
-                                </div>
-                              )}
-                              <div className="flex-1 flex gap-2">
-                                <input
-                                  value={draft.nextDropLeftImageUrl || ''}
-                                  onChange={(e) =>
-                                    setDraft({ ...draft, nextDropLeftImageUrl: e.target.value })
-                                  }
-                                  className="flex-1 min-w-0 rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                                />
-                                <label className="px-3 py-2 rounded-none bg-black text-white font-bold inline-flex items-center gap-1 cursor-pointer shrink-0">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    disabled={uploadingField !== null}
-                                    onChange={(e) =>
-                                      handleUploadField('nd_left', e.target.files?.[0], (url) =>
-                                        setDraft((prev) => ({
-                                          ...prev,
-                                          nextDropLeftImageUrl: url,
-                                        }))
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Right Card */}
-                          <div className="bg-white p-4 space-y-3 rounded-none">
-                            <p className="font-bold uppercase tracking-wider text-black">
-                              Right Card
-                            </p>
-                            <input
-                              value={draft.nextDropRightTitle || ''}
-                              onChange={(e) =>
-                                setDraft({ ...draft, nextDropRightTitle: e.target.value })
-                              }
-                              placeholder="Titre droite"
-                              className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                            />
-                            <textarea
-                              rows={2}
-                              value={draft.nextDropRightBody || ''}
-                              onChange={(e) =>
-                                setDraft({ ...draft, nextDropRightBody: e.target.value })
-                              }
-                              placeholder="Description droite"
-                              className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <input
-                                value={draft.nextDropRightCtaLabel || ''}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, nextDropRightCtaLabel: e.target.value })
-                                }
-                                placeholder="Texte bouton"
-                                className="rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                              <input
-                                list="quick-routes"
-                                value={draft.nextDropRightCtaHref || ''}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, nextDropRightCtaHref: e.target.value })
-                                }
-                                placeholder="Lien (/new-drop)"
-                                className="rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </div>
-                            <div className="flex gap-3 items-start">
-                              {draft.nextDropRightImageUrl && (
-                                <div className="w-20 bg-[#F7F7F7] shrink-0 overflow-hidden">
-                                  <img
-                                    src={draft.nextDropRightImageUrl}
-                                    alt="Next Drop Right"
-                                    className="w-full h-auto block"
-                                  />
-                                </div>
-                              )}
-                              <div className="flex-1 flex gap-2">
-                                <input
-                                  value={draft.nextDropRightImageUrl || ''}
-                                  onChange={(e) =>
-                                    setDraft({ ...draft, nextDropRightImageUrl: e.target.value })
-                                  }
-                                  className="flex-1 min-w-0 rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                                />
-                                <label className="px-3 py-2 rounded-none bg-black text-white font-bold inline-flex items-center gap-1 cursor-pointer shrink-0">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    disabled={uploadingField !== null}
-                                    onChange={(e) =>
-                                      handleUploadField('nd_right', e.target.files?.[0], (url) =>
-                                        setDraft((prev) => ({
-                                          ...prev,
-                                          nextDropRightImageUrl: url,
-                                        }))
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* CATEGORIES + STACKED BANNERS (JERSEY / BIKINI / SET) EDITOR */}
-                      {sec === 'categories' && (
-                        <div className="bg-white p-4 space-y-4 rounded-none">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-bold uppercase tracking-wider text-black">
-                                Bannières Horizontales Superposées
-                              </p>
-                              <p className="text-[11px] font-light text-black/60">
-                                Chaque bannière utilise une seule image grand format (1800×760) et un bouton d&apos;action.
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setDraft((prev) => ({
-                                  ...prev,
-                                  collectionBanners: [
-                                    ...(prev.collectionBanners || []),
-                                    {
-                                      id: `banner_${Date.now()}`,
-                                      title: 'Nouvelle Catégorie',
-                                      ctaLabel: 'Découvrir',
-                                      href: '/shop',
-                                      imageUrl: KIKI_JONES_IMAGES.essentialsBanner,
-                                    },
-                                  ],
-                                }))
-                              }
-                              className="px-3 py-1.5 rounded-none bg-black text-white font-bold inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Ajouter Bannière</span>
-                            </button>
-                          </div>
-
-                          <div className="space-y-3">
-                            {collectionBanners.map((b, bIdx) => (
-                              <div
-                                key={b.id}
-                                className="bg-[#F7F7F7] p-3 flex flex-col md:flex-row gap-4 items-start"
-                              >
-                                <div className="w-full md:w-44 bg-white shrink-0 overflow-hidden">
-                                  <img
-                                    src={b.imageUrl}
-                                    alt={b.title}
-                                    className="w-full h-auto block"
-                                  />
-                                </div>
-                                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                  <label className="space-y-1">
-                                    <span className="text-[10px] font-bold uppercase text-black/60">
-                                      Titre
-                                    </span>
-                                    <input
-                                      value={b.title}
-                                      onChange={(e) =>
-                                        updateCollectionBanner(b.id, { title: e.target.value })
-                                      }
-                                      className="w-full rounded-none bg-white px-2.5 py-2 focus:outline-none"
-                                    />
-                                  </label>
-                                  <label className="space-y-1">
-                                    <span className="text-[10px] font-bold uppercase text-black/60">
-                                      Texte du Bouton
-                                    </span>
-                                    <input
-                                      value={b.ctaLabel}
-                                      onChange={(e) =>
-                                        updateCollectionBanner(b.id, { ctaLabel: e.target.value })
-                                      }
-                                      className="w-full rounded-none bg-white px-2.5 py-2 focus:outline-none"
-                                    />
-                                  </label>
-                                  <label className="space-y-1">
-                                    <span className="text-[10px] font-bold uppercase text-black/60">
-                                      Lien Destination
-                                    </span>
-                                    <input
-                                      list="quick-routes"
-                                      value={b.href}
-                                      onChange={(e) =>
-                                        updateCollectionBanner(b.id, { href: e.target.value })
-                                      }
-                                      className="w-full rounded-none bg-white px-2.5 py-2 focus:outline-none"
-                                    />
-                                  </label>
-                                  <div className="sm:col-span-3 flex gap-2 items-center pt-1">
-                                    <input
-                                      value={b.imageUrl}
-                                      onChange={(e) =>
-                                        updateCollectionBanner(b.id, { imageUrl: e.target.value })
-                                      }
-                                      placeholder="URL image bannière"
-                                      className="flex-1 rounded-none bg-white px-2.5 py-2 font-light focus:outline-none"
-                                    />
-                                    <label className="px-3 py-2 rounded-none bg-black text-white font-bold inline-flex items-center gap-1 cursor-pointer shrink-0">
-                                      <Upload className="w-3.5 h-3.5" />
-                                      <span>
-                                        {uploadingField === `cb_${b.id}` ? '...' : 'Importer'}
-                                      </span>
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        disabled={uploadingField !== null}
-                                        onChange={(e) =>
-                                          handleUploadField(
-                                            `cb_${b.id}`,
-                                            e.target.files?.[0],
-                                            (url) => updateCollectionBanner(b.id, { imageUrl: url })
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                    {bIdx > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const arr = [...collectionBanners];
-                                          const tmp = arr[bIdx];
-                                          arr[bIdx] = arr[bIdx - 1];
-                                          arr[bIdx - 1] = tmp;
-                                          setDraft({ ...draft, collectionBanners: arr });
-                                        }}
-                                        className="p-2 bg-white hover:bg-black hover:text-white cursor-pointer"
-                                        title="Monter"
-                                      >
-                                        <ArrowUp className="w-3.5 h-3.5" />
-                                      </button>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setDraft({
-                                          ...draft,
-                                          collectionBanners: collectionBanners.filter(
-                                            (x) => x.id !== b.id
-                                          ),
-                                        })
-                                      }
-                                      className="p-2 bg-white hover:bg-black hover:text-white text-black/70 cursor-pointer"
-                                      title="Supprimer bannière"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* BRAND INTRO EDITOR */}
-                      {sec === 'brand_intro' && (
-                        <div className="bg-white p-4 space-y-4 rounded-none">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Surtitre Rose
-                              </span>
-                              <input
-                                value={draft.brandIntroEyebrow || ''}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, brandIntroEyebrow: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Grand Titre
-                              </span>
-                              <input
-                                value={draft.brandIntroTitle}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, brandIntroTitle: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1 md:col-span-2">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Texte de Présentation
-                              </span>
-                              <textarea
-                                rows={3}
-                                value={draft.brandIntroBody}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, brandIntroBody: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton 1 (Texte)
-                              </span>
-                              <input
-                                value={draft.brandIntroCtaLabel || ''}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, brandIntroCtaLabel: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton 1 (Lien)
-                              </span>
-                              <input
-                                list="quick-routes"
-                                value={draft.brandIntroCtaHref || '/shop'}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, brandIntroCtaHref: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton 2 (Texte)
-                              </span>
-                              <input
-                                value={draft.brandIntroSecondaryCtaLabel ?? 'Nouvelle Collection'}
-                                onChange={(e) =>
-                                  setDraft({
-                                    ...draft,
-                                    brandIntroSecondaryCtaLabel: e.target.value,
-                                  })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton 2 (Lien)
-                              </span>
-                              <input
-                                list="quick-routes"
-                                value={draft.brandIntroSecondaryCtaHref || '/collection/casquettes-tapis'}
-                                onChange={(e) =>
-                                  setDraft({
-                                    ...draft,
-                                    brandIntroSecondaryCtaHref: e.target.value,
-                                  })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                          </div>
-
-                          <div className="flex gap-4 items-start">
-                            {draft.brandIntroImageUrl && (
-                              <div className="w-24 bg-[#F7F7F7] shrink-0 overflow-hidden">
-                                <img
-                                  src={draft.brandIntroImageUrl}
-                                  alt="Brand Intro"
-                                  className="w-full h-auto block"
-                                />
-                              </div>
-                            )}
-                            <div className="flex-1 flex gap-2">
-                              <input
-                                value={draft.brandIntroImageUrl}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, brandIntroImageUrl: e.target.value })
-                                }
-                                className="flex-1 min-w-0 rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                              />
-                              <label className="px-4 py-2 rounded-none bg-black text-white font-bold uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer shrink-0">
-                                <Upload className="w-3.5 h-3.5" />
-                                <span>{uploadingField === 'brandIntro' ? '...' : 'Importer'}</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  disabled={uploadingField !== null}
-                                  onChange={(e) =>
-                                    handleUploadField('brandIntro', e.target.files?.[0], (url) =>
-                                      setDraft((prev) => ({ ...prev, brandIntroImageUrl: url }))
-                                    )
-                                  }
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* CUSTOM / DUPLICATED SECTION EDITOR */}
-                      {customSec && (
-                        <div className="bg-white p-4 space-y-4 rounded-none">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Mise en Page du Bloc
-                              </span>
-                              <select
-                                value={customSec.layout}
-                                onChange={(e) =>
-                                  updateCustomSection(customSec.id, {
-                                    layout: e.target.value as CustomHomepageSection['layout'],
-                                  })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-bold focus:outline-none"
-                              >
-                                <option value="banner">Bannière Pleine Largeur</option>
-                                <option value="split">Split 50/50 Texte + Image</option>
-                                <option value="duo">Double Image 50/50</option>
-                              </select>
-                            </label>
-
-                            {customSec.layout === 'split' && (
-                              <label className="block space-y-1">
-                                <span className="font-bold uppercase tracking-wider text-black/60">
-                                  Thème Couleurs
-                                </span>
-                                <select
-                                  value={customSec.theme || 'dark'}
-                                  onChange={(e) =>
-                                    updateCustomSection(customSec.id, {
-                                      theme: e.target.value as 'dark' | 'light',
-                                    })
-                                  }
-                                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-bold focus:outline-none"
-                                >
-                                  <option value="dark">Fond Noir &amp; Texte Rose</option>
-                                  <option value="light">Fond Blanc &amp; Texte Noir</option>
-                                </select>
-                              </label>
-                            )}
-
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Titre Principal
-                              </span>
-                              <input
-                                value={customSec.title}
-                                onChange={(e) =>
-                                  updateCustomSection(customSec.id, { title: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-
-                            {customSec.layout === 'split' && (
-                              <label className="block space-y-1">
-                                <span className="font-bold uppercase tracking-wider text-black/60">
-                                  Surtitre (optionnel)
-                                </span>
-                                <input
-                                  value={customSec.eyebrow || ''}
-                                  onChange={(e) =>
-                                    updateCustomSection(customSec.id, { eyebrow: e.target.value })
-                                  }
-                                  className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                                />
-                              </label>
-                            )}
-
-                            <label className="block space-y-1 md:col-span-3">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Description / Texte (optionnel)
-                              </span>
-                              <textarea
-                                rows={2}
-                                value={customSec.body || ''}
-                                onChange={(e) =>
-                                  updateCustomSection(customSec.id, { body: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                              />
-                            </label>
-
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton (Texte)
-                              </span>
-                              <input
-                                value={customSec.ctaLabel || ''}
-                                onChange={(e) =>
-                                  updateCustomSection(customSec.id, { ctaLabel: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-
-                            <label className="block space-y-1">
-                              <span className="font-bold uppercase tracking-wider text-black/60">
-                                Bouton (Lien)
-                              </span>
-                              <input
-                                list="quick-routes"
-                                value={customSec.ctaHref || '/shop'}
-                                onChange={(e) =>
-                                  updateCustomSection(customSec.id, { ctaHref: e.target.value })
-                                }
-                                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-                              />
-                            </label>
-                          </div>
-
-                          {/* Primary Image */}
-                          <div className="flex gap-4 items-start">
-                            {customSec.imageUrl && (
-                              <div className="w-28 bg-[#F7F7F7] shrink-0 overflow-hidden">
-                                <img
-                                  src={customSec.imageUrl}
-                                  alt={customSec.title}
-                                  className="w-full h-auto block"
-                                />
-                              </div>
-                            )}
-                            <div className="flex-1 space-y-1.5">
-                              <span className="font-bold uppercase tracking-wider text-black/60 block">
-                                Image {customSec.layout === 'duo' ? 'Gauche' : 'du Bloc'}
-                              </span>
-                              <div className="flex gap-2">
-                                <input
-                                  value={customSec.imageUrl}
-                                  onChange={(e) =>
-                                    updateCustomSection(customSec.id, { imageUrl: e.target.value })
-                                  }
-                                  className="flex-1 rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-                                />
-                                <label className="px-4 py-2 rounded-none bg-black text-white font-bold uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer shrink-0">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <span>
-                                    {uploadingField === `custom1_${customSec.id}`
-                                      ? '...'
-                                      : 'Importer'}
-                                  </span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    disabled={uploadingField !== null}
-                                    onChange={(e) =>
-                                      handleUploadField(
-                                        `custom1_${customSec.id}`,
-                                        e.target.files?.[0],
-                                        (url) =>
-                                          updateCustomSection(customSec.id, { imageUrl: url })
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Secondary Image & Title for Duo Layout */}
-                          {customSec.layout === 'duo' && (
-                            <div className="bg-[#F7F7F7] p-3 space-y-3">
-                              <p className="font-bold uppercase tracking-wider text-black/70">
-                                Bloc Droit (Duo 50/50)
-                              </p>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                <input
-                                  value={customSec.secondaryTitle || ''}
-                                  onChange={(e) =>
-                                    updateCustomSection(customSec.id, {
-                                      secondaryTitle: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Titre droite"
-                                  className="rounded-none bg-white px-3 py-2 focus:outline-none"
-                                />
-                                <input
-                                  value={customSec.secondaryCtaLabel || ''}
-                                  onChange={(e) =>
-                                    updateCustomSection(customSec.id, {
-                                      secondaryCtaLabel: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Texte bouton droite"
-                                  className="rounded-none bg-white px-3 py-2 focus:outline-none"
-                                />
-                                <input
-                                  list="quick-routes"
-                                  value={customSec.secondaryCtaHref || ''}
-                                  onChange={(e) =>
-                                    updateCustomSection(customSec.id, {
-                                      secondaryCtaHref: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Lien droite"
-                                  className="rounded-none bg-white px-3 py-2 focus:outline-none"
-                                />
-                              </div>
-                              <div className="flex gap-3 items-start">
-                                {customSec.secondaryImageUrl && (
-                                  <div className="w-24 bg-white shrink-0 overflow-hidden">
-                                    <img
-                                      src={customSec.secondaryImageUrl}
-                                      alt={customSec.secondaryTitle || ''}
-                                      className="w-full h-auto block"
-                                    />
-                                  </div>
-                                )}
-                                <div className="flex-1 flex gap-2">
-                                  <input
-                                    value={customSec.secondaryImageUrl || ''}
-                                    onChange={(e) =>
-                                      updateCustomSection(customSec.id, {
-                                        secondaryImageUrl: e.target.value,
-                                      })
-                                    }
-                                    placeholder="Image URL droite"
-                                    className="flex-1 rounded-none bg-white px-3 py-2 font-light focus:outline-none"
-                                  />
-                                  <label className="px-3 py-2 rounded-none bg-black text-white font-bold inline-flex items-center gap-1 cursor-pointer shrink-0">
-                                    <Upload className="w-3.5 h-3.5" />
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      disabled={uploadingField !== null}
-                                      onChange={(e) =>
-                                        handleUploadField(
-                                          `custom2_${customSec.id}`,
-                                          e.target.files?.[0],
-                                          (url) =>
-                                            updateCustomSection(customSec.id, {
-                                              secondaryImageUrl: url,
-                                            })
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* LOOKBOOK GALLERY EDITOR (Only when mireza_world is in active sections) */}
-                      {sec === 'mireza_world' && (
-                        <div className="bg-white p-4 space-y-3 rounded-none">
-                          <div className="flex items-center justify-between">
-                            <p className="font-bold uppercase tracking-wider text-black">
-                              Entrées de la Galerie Lookbook
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setDraft({
-                                  ...draft,
-                                  galleryItems: [
-                                    ...(draft.galleryItems || []),
-                                    {
-                                      id: `world_${Date.now()}`,
-                                      title: 'Nouveau Lookbook',
-                                      caption: 'KIKI JONES Campaign',
-                                      imageUrl: draft.heroImageUrl,
-                                      tag: 'Lookbook',
-                                    },
-                                  ],
-                                })
-                              }
-                              className="px-3 py-1.5 rounded-none bg-black text-white font-bold inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Ajouter Visuel</span>
-                            </button>
-                          </div>
-                          {(draft.galleryItems || []).map((item, gIdx) => (
-                            <div
-                              key={item.id}
-                              className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-[#F7F7F7] p-2.5"
-                            >
-                              <input
-                                value={item.title}
-                                onChange={(e) => {
-                                  const next = [...draft.galleryItems];
-                                  next[gIdx] = { ...item, title: e.target.value };
-                                  setDraft({ ...draft, galleryItems: next });
-                                }}
-                                placeholder="Titre"
-                                className="md:col-span-3 rounded-none bg-white px-2.5 py-2 focus:outline-none"
-                              />
-                              <input
-                                value={item.tag}
-                                onChange={(e) => {
-                                  const next = [...draft.galleryItems];
-                                  next[gIdx] = { ...item, tag: e.target.value };
-                                  setDraft({ ...draft, galleryItems: next });
-                                }}
-                                placeholder="Tag"
-                                className="md:col-span-2 rounded-none bg-white px-2.5 py-2 focus:outline-none"
-                              />
-                              <input
-                                value={item.caption}
-                                onChange={(e) => {
-                                  const next = [...draft.galleryItems];
-                                  next[gIdx] = { ...item, caption: e.target.value };
-                                  setDraft({ ...draft, galleryItems: next });
-                                }}
-                                placeholder="Légende"
-                                className="md:col-span-3 rounded-none bg-white px-2.5 py-2 font-light focus:outline-none"
-                              />
-                              <div className="md:col-span-3 flex gap-1.5">
-                                <input
-                                  value={item.imageUrl}
-                                  onChange={(e) => {
-                                    const next = [...draft.galleryItems];
-                                    next[gIdx] = { ...item, imageUrl: e.target.value };
-                                    setDraft({ ...draft, galleryItems: next });
-                                  }}
-                                  placeholder="Image URL"
-                                  className="flex-1 min-w-0 rounded-none bg-white px-2.5 py-2 font-light focus:outline-none"
-                                />
-                                <label className="px-2.5 py-2 rounded-none bg-black text-white font-bold inline-flex items-center cursor-pointer shrink-0">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    disabled={uploadingField !== null}
-                                    onChange={(e) =>
-                                      handleUploadField(
-                                        `gallery_${gIdx}`,
-                                        e.target.files?.[0],
-                                        (url) => {
-                                          setDraft((prev) => {
-                                            const next = [...prev.galleryItems];
-                                            next[gIdx] = { ...next[gIdx], imageUrl: url };
-                                            return { ...prev, galleryItems: next };
-                                          });
-                                        }
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDraft({
-                                    ...draft,
-                                    galleryItems: draft.galleryItems.filter((_, i) => i !== gIdx),
-                                  })
-                                }
-                                className="md:col-span-1 text-black/60 hover:text-black justify-self-end cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* ANNOUNCEMENT BAR, NEWSLETTER & FOOTER SETTINGS */}
-        <div className="bg-white p-6 space-y-4 text-xs rounded-none">
-          <h2 className="font-editorial text-2xl text-black">
-            Bannière d&apos;Annonce, Newsletter &amp; Contact
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center gap-4">
-              <label className="flex items-center gap-2 font-bold cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(draft.campaignBannerEnabled)}
-                  onChange={(e) =>
-                    setDraft({ ...draft, campaignBannerEnabled: e.target.checked })
+        {/* TAB 2: NAVIGATION */}
+        {subTab === 'navigation' && (
+          <div className="p-5 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-black">
+                  {tr('Menu principal de l’en-tête', 'Main header navigation')}
+                </h2>
+                <p className="text-xs text-black/50 mt-0.5">
+                  {tr('Modifiez les libellés FR/EN, les liens et la visibilité du menu.', 'Edit FR/EN labels, destinations, and link visibility.')}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNavItems((prev) => [
+                      ...prev,
+                      {
+                        id: sanitizeId(`nav_${Date.now()}`),
+                        labelFr: 'NOUVEAU LIEN',
+                        labelEn: 'NEW LINK',
+                        href: '/shop',
+                        visible: true,
+                      },
+                    ])
                   }
-                  className="accent-black"
-                />
-                <span>Afficher la bannière d&apos;annonce en haut</span>
-              </label>
+                  className="px-3.5 py-2 border border-[#E8E8E8] hover:border-black text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{tr('Ajouter un lien', 'Add link')}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleSaveNavigation}
+                  className="px-4 py-2 bg-black text-white text-xs font-medium hover:bg-black/85 disabled:opacity-50 cursor-pointer"
+                >
+                  {tr('Enregistrer le menu', 'Save menu')}
+                </button>
+              </div>
+            </div>
+
+            <div className="border border-[#E8E8E8] divide-y divide-[#F0F0F0] text-xs">
+              {navItems.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className={`p-3 grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center ${
+                    !item.visible ? 'opacity-50' : ''
+                  }`}
+                >
+                  <div className="md:col-span-3">
+                    <input
+                      type="text"
+                      value={item.labelFr}
+                      onChange={(e) => {
+                        const copy = [...navItems];
+                        copy[idx] = { ...item, labelFr: e.target.value };
+                        setNavItems(copy);
+                      }}
+                      placeholder="Libellé FR"
+                      className="w-full border border-[#E8E8E8] focus:border-black px-2.5 py-1.5 focus:outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <input
+                      type="text"
+                      value={item.labelEn}
+                      onChange={(e) => {
+                        const copy = [...navItems];
+                        copy[idx] = { ...item, labelEn: e.target.value };
+                        setNavItems(copy);
+                      }}
+                      placeholder="Label EN"
+                      className="w-full border border-[#E8E8E8] focus:border-black px-2.5 py-1.5 focus:outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-4">
+                    <input
+                      type="text"
+                      value={item.href}
+                      onChange={(e) => {
+                        const copy = [...navItems];
+                        copy[idx] = { ...item, href: e.target.value };
+                        setNavItems(copy);
+                      }}
+                      placeholder="/shop"
+                      className="w-full border border-[#E8E8E8] focus:border-black px-2.5 py-1.5 focus:outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => {
+                        const copy = [...navItems];
+                        const [m] = copy.splice(idx, 1);
+                        copy.splice(idx - 1, 0, m);
+                        setNavItems(copy);
+                      }}
+                      className="p-1.5 text-black/50 hover:text-black disabled:opacity-25 cursor-pointer"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === navItems.length - 1}
+                      onClick={() => {
+                        const copy = [...navItems];
+                        const [m] = copy.splice(idx, 1);
+                        copy.splice(idx + 1, 0, m);
+                        setNavItems(copy);
+                      }}
+                      className="p-1.5 text-black/50 hover:text-black disabled:opacity-25 cursor-pointer"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const copy = [...navItems];
+                        copy[idx] = { ...item, visible: !item.visible };
+                        setNavItems(copy);
+                      }}
+                      className="p-1.5 text-black/55 hover:text-black cursor-pointer"
+                    >
+                      {item.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNavItems((prev) => prev.filter((_, i) => i !== idx))}
+                      className="p-1.5 text-black/40 hover:text-black cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: HERO & BANNERS */}
+        {subTab === 'banners' && (
+          <div className="p-5 space-y-6 text-xs max-w-3xl">
+            {/* Announcement Bar */}
+            <div className="space-y-3 pb-6 border-b border-[#E8E8E8]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-black">
+                    {tr('Barre d’annonce promotionnelle', 'Promotional announcement bar')}
+                  </h2>
+                  <p className="text-[11px] text-black/50 mt-0.5">
+                    {tr('Affichée en haut de la page d’accueil lorsque activée.', 'Displayed at the top of the homepage when enabled.')}
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(draft.campaignBannerEnabled)}
+                    onChange={(e) => setDraft({ ...draft, campaignBannerEnabled: e.target.checked })}
+                    className="accent-black"
+                  />
+                  <span className="font-medium">{tr('Activer', 'Enable')}</span>
+                </label>
+              </div>
               <input
+                type="text"
                 value={draft.campaignBannerText || ''}
-                onChange={(e) =>
-                  setDraft({ ...draft, campaignBannerText: e.target.value })
-                }
-                placeholder="Texte d'annonce"
-                className="flex-1 rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
+                onChange={(e) => setDraft({ ...draft, campaignBannerText: e.target.value })}
+                placeholder={tr('Ex : Livraison offerte dès 75 000 XOF — Code KIKIJONES10', 'e.g. Free delivery over 75,000 XOF — Code KIKIJONES10')}
+                className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
               />
             </div>
 
-            <label className="block space-y-1">
-              <span className="font-bold uppercase tracking-wider text-black/60">
-                Titre Newsletter (Pied de page)
-              </span>
-              <input
-                value={draft.newsletterTitle}
-                onChange={(e) => setDraft({ ...draft, newsletterTitle: e.target.value })}
-                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="font-bold uppercase tracking-wider text-black/60">
-                Sous-texte Newsletter
-              </span>
-              <input
-                value={draft.newsletterBody}
-                onChange={(e) => setDraft({ ...draft, newsletterBody: e.target.value })}
-                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 font-light focus:outline-none"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="font-bold uppercase tracking-wider text-black/60">
-                Email Support
-              </span>
-              <input
-                value={draft.supportEmail || ''}
-                onChange={(e) => setDraft({ ...draft, supportEmail: e.target.value })}
-                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="font-bold uppercase tracking-wider text-black/60">
-                Téléphone Support
-              </span>
-              <input
-                value={draft.supportPhone || ''}
-                onChange={(e) => setDraft({ ...draft, supportPhone: e.target.value })}
-                className="w-full rounded-none bg-[#F7F7F7] px-3 py-2 focus:outline-none"
-              />
-            </label>
-          </div>
-        </div>
+            {/* Hero Banner */}
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-black">
+                {tr('Bannière Hero principale', 'Main Hero banner')}
+              </h2>
 
-        <datalist id="quick-routes">
-          {QUICK_ROUTES.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
-            </option>
-          ))}
-        </datalist>
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-8 py-3.5 rounded-none bg-black text-white text-xs font-bold uppercase tracking-[0.18em] cursor-pointer disabled:opacity-50 hover:bg-black/85"
-          >
-            {saving ? 'Publication en cours...' : 'Enregistrer & Publier la Boutique'}
-          </button>
-        </div>
-      </form>
-
-      {/* CATEGORY CARDS QUICK EDITOR */}
-      <div className="bg-white p-6 space-y-4 text-xs rounded-none">
-        <h2 className="font-editorial text-2xl text-black">
-          Catégories &amp; Visuels de la Grille Supérieure
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {categories.map((cat) => (
-            <div key={cat.id} className="bg-[#F7F7F7] p-4 flex gap-4 items-start rounded-none">
-              <div className="w-16 bg-white shrink-0 overflow-hidden">
-                <img
-                  src={cat.imageUrl}
-                  alt={cat.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-auto block"
-                />
-              </div>
-              <div className="flex-1 space-y-2 min-w-0">
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Titre principal', 'Headline')}</span>
                 <input
-                  defaultValue={cat.name}
-                  key={`${cat.id}_name_${cat.name}`}
-                  onBlur={(e) => {
-                    if (e.target.value.trim() && e.target.value !== cat.name) {
-                      handleUpdateCategory(cat, { name: e.target.value.trim() });
-                    }
-                  }}
-                  className="w-full rounded-none bg-white px-2.5 py-1.5 font-bold text-sm focus:outline-none"
+                  type="text"
+                  value={draft.heroHeadline}
+                  onChange={(e) => setDraft({ ...draft, heroHeadline: e.target.value })}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
                 />
-                <div className="flex gap-2">
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Sous-titre', 'Subheadline')}</span>
+                <input
+                  type="text"
+                  value={draft.heroSubheadline}
+                  onChange={(e) => setDraft({ ...draft, heroSubheadline: e.target.value })}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
+                />
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-black/60">{tr('Bouton principal', 'Primary CTA label')}</span>
                   <input
-                    defaultValue={cat.imageUrl}
-                    key={`${cat.id}_${cat.imageUrl}`}
-                    onBlur={(e) => {
-                      if (e.target.value !== cat.imageUrl) {
-                        handleUpdateCategory(cat, { imageUrl: e.target.value });
-                      }
-                    }}
-                    className="flex-1 min-w-0 rounded-none bg-white px-2.5 py-1.5 font-light text-[11px] focus:outline-none"
+                    type="text"
+                    value={draft.heroCtaLabel || ''}
+                    onChange={(e) => setDraft({ ...draft, heroCtaLabel: e.target.value })}
+                    className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
                   />
-                  <label className="px-2.5 py-1.5 rounded-none bg-black text-white font-bold inline-flex items-center gap-1 cursor-pointer shrink-0 hover:bg-black/85">
-                    <Upload className="w-3 h-3" />
-                    <span>{uploadingField === `cat_${cat.id}` ? '...' : 'Importer'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={uploadingField !== null}
-                      onChange={(e) =>
-                        handleUploadField(`cat_${cat.id}`, e.target.files?.[0], (url) =>
-                          handleUpdateCategory(cat, { imageUrl: url })
-                        )
-                      }
-                    />
-                  </label>
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-black/60">{tr('Lien principal', 'Primary CTA link')}</span>
+                  <input
+                    type="text"
+                    value={draft.heroCtaHref || ''}
+                    onChange={(e) => setDraft({ ...draft, heroCtaHref: e.target.value })}
+                    className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-black/60 block">{tr('Image Hero', 'Hero image')}</span>
+                <input
+                  type="text"
+                  value={draft.heroImageUrl}
+                  onChange={(e) => setDraft({ ...draft, heroImageUrl: e.target.value })}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
+                />
+                <div className="grid grid-cols-6 gap-2 pt-1">
+                  {PRESET_IMAGES.slice(0, 6).map((url) => (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() => setDraft({ ...draft, heroImageUrl: url })}
+                      className={`aspect-[3/4] border overflow-hidden cursor-pointer ${
+                        draft.heroImageUrl === url ? 'border-black ring-1 ring-black' : 'border-[#E8E8E8]'
+                      }`}
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover object-top" />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {/* TAB 4: PREVIEW */}
+        {subTab === 'preview' && (
+          <div className="p-6 space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="border border-[#E8E8E8] p-4">
+                <p className="text-[10.5px] uppercase tracking-[0.1em] text-black/45">
+                  {tr('Sections actives', 'Visible sections')}
+                </p>
+                <p className="text-xl font-semibold tabular-nums text-black mt-1">
+                  {sectionsList.filter((s) => !s.startsWith('hidden:')).length} / {sectionsList.length}
+                </p>
+              </div>
+              <div className="border border-[#E8E8E8] p-4">
+                <p className="text-[10.5px] uppercase tracking-[0.1em] text-black/45">
+                  {tr('Liens de navigation', 'Navigation links')}
+                </p>
+                <p className="text-xl font-semibold tabular-nums text-black mt-1">
+                  {navItems.filter((n) => n.visible).length}
+                </p>
+              </div>
+              <div className="border border-[#E8E8E8] p-4">
+                <p className="text-[10.5px] uppercase tracking-[0.1em] text-black/45">
+                  {tr('Barre d’annonce', 'Announcement bar')}
+                </p>
+                <p className="text-xl font-semibold text-black mt-1">
+                  {draft.campaignBannerEnabled ? tr('Active', 'Active') : tr('Inactive', 'Off')}
+                </p>
+              </div>
+            </div>
+
+            <div className="border border-[#E8E8E8] bg-[#FAFAFA] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-black">{draft.heroHeadline}</h3>
+                <p className="text-xs text-black/55 mt-0.5">{draft.heroSubheadline}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenLiveStore}
+                className="px-4 py-2.5 bg-black text-white text-xs font-medium inline-flex items-center gap-2 hover:bg-black/85 cursor-pointer self-start sm:self-auto"
+              >
+                <span>{tr('Ouvrir la boutique en direct', 'Open live storefront')}</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Add Section Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/35" onClick={() => setAddModalOpen(false)} />
+          <div className="relative bg-white border border-[#E8E8E8] w-full max-w-2xl max-h-[88vh] overflow-y-auto z-10 p-6 space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E8E8E8]">
+              <h2 className="text-sm font-semibold text-black">
+                {tr('Ajouter une section à la page d’accueil', 'Add section to homepage')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setAddModalOpen(false)}
+                className="p-1 text-black/60 hover:text-black cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Ready-made store sections */}
+            <div className="space-y-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/45">
+                {tr('Blocs prêts à l’emploi', 'Ready-made blocks')}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {builtinSectionCatalog.map((b) => (
+                  <button
+                    key={b.key}
+                    type="button"
+                    onClick={() => addBuiltinSection(b.key)}
+                    className="text-left p-3 border border-[#E8E8E8] hover:border-black transition-colors cursor-pointer"
+                  >
+                    <p className="text-xs font-medium text-black">{tr(b.labelFr, b.labelEn)}</p>
+                    <p className="text-[11px] text-black/50 mt-0.5">{tr(b.descFr, b.descEn)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Editorial Banner */}
+            <form onSubmit={addCustomSection} className="space-y-3 pt-4 border-t border-[#E8E8E8] text-xs">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/45">
+                {tr('Créer une bannière personnalisée', 'Create custom banner')}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-black/60">{tr('Mise en page', 'Layout')}</span>
+                  <select
+                    value={customForm.layout}
+                    onChange={(e) => setCustomForm({ ...customForm, layout: e.target.value as any })}
+                    className="w-full border border-[#E8E8E8] px-3 py-2 bg-white focus:border-black focus:outline-none"
+                  >
+                    <option value="banner">{tr('Bannière pleine largeur', 'Full-width banner')}</option>
+                    <option value="duo">{tr('Double bloc (2 colonnes)', 'Dual split (2 columns)')}</option>
+                  </select>
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-black/60">{tr('Titre', 'Title')}</span>
+                  <input
+                    type="text"
+                    required
+                    value={customForm.title}
+                    onChange={(e) => setCustomForm({ ...customForm, title: e.target.value })}
+                    placeholder={tr('Ex : Capsule Soleil', 'e.g. Sun Capsule')}
+                    className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-black/60">{tr('Bouton (CTA)', 'CTA label')}</span>
+                  <input
+                    type="text"
+                    value={customForm.ctaLabel}
+                    onChange={(e) => setCustomForm({ ...customForm, ctaLabel: e.target.value })}
+                    className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-black/60">{tr('Lien de destination', 'Destination link')}</span>
+                  <input
+                    type="text"
+                    value={customForm.ctaHref}
+                    onChange={(e) => setCustomForm({ ...customForm, ctaHref: e.target.value })}
+                    className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Image URL', 'Image URL')}</span>
+                <input
+                  type="text"
+                  value={customForm.imageUrl}
+                  onChange={(e) => setCustomForm({ ...customForm, imageUrl: e.target.value })}
+                  className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+                />
+              </label>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-black text-white font-medium hover:bg-black/85 cursor-pointer"
+              >
+                {tr('Ajouter la bannière', 'Add banner')}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Custom Section Modal */}
+      {editingCustom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/35" onClick={() => setEditingCustomId(null)} />
+          <div className="relative bg-white border border-[#E8E8E8] w-full max-w-md p-6 space-y-4 z-10 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E8E8E8]">
+              <h2 className="text-sm font-semibold text-black">
+                {tr('Modifier la section', 'Edit section')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingCustomId(null)}
+                className="p-1 text-black/60 hover:text-black cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <label className="block space-y-1">
+              <span className="text-black/60">{tr('Titre', 'Title')}</span>
+              <input
+                type="text"
+                value={editingCustom.title}
+                onChange={(e) => updateEditingCustom({ title: e.target.value })}
+                className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-black/60">{tr('Texte', 'Body')}</span>
+              <textarea
+                rows={2}
+                value={editingCustom.body || ''}
+                onChange={(e) => updateEditingCustom({ body: e.target.value })}
+                className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none resize-none"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block space-y-1">
+                <span className="text-black/60">CTA</span>
+                <input
+                  type="text"
+                  value={editingCustom.ctaLabel || ''}
+                  onChange={(e) => updateEditingCustom({ ctaLabel: e.target.value })}
+                  className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Lien', 'Link')}</span>
+                <input
+                  type="text"
+                  value={editingCustom.ctaHref || ''}
+                  onChange={(e) => updateEditingCustom({ ctaHref: e.target.value })}
+                  className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+                />
+              </label>
+            </div>
+            <label className="block space-y-1">
+              <span className="text-black/60">{tr('Image URL', 'Image URL')}</span>
+              <input
+                type="text"
+                value={editingCustom.imageUrl}
+                onChange={(e) => updateEditingCustom({ imageUrl: e.target.value })}
+                className="w-full border border-[#E8E8E8] px-3 py-2 focus:border-black focus:outline-none"
+              />
+            </label>
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingCustomId(null)}
+                className="px-4 py-2 bg-black text-white font-medium cursor-pointer"
+              >
+                {tr('Terminer', 'Done')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

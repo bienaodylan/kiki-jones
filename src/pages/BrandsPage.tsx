@@ -1,10 +1,13 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { BRAND_LINES } from '../lib/navigationData';
+import { useLanguage } from '../context/LanguageContext';
+import { getLocalizedBrands } from '../lib/i18n';
 
 export function BrandsPage() {
   const { products, navigate } = useStore();
+  const { lang, tr } = useLanguage();
+  const brands = getLocalizedBrands(lang);
 
   return (
     <main className="pt-[88px] lg:pt-[96px] pb-12 bg-white text-black min-h-screen">
@@ -13,25 +16,28 @@ export function BrandsPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-black/45">
-              KIKI JONES &middot; House of Brands
+              {tr('KIKI JONES · Nos Maisons', 'KIKI JONES · House of Brands')}
             </p>
             <h1 className="font-editorial text-3xl sm:text-5xl text-black leading-[1.04]">
-              Shop by Brand
+              {tr('Acheter par Marque', 'Shop by Brand')}
             </h1>
             <p className="text-xs sm:text-sm font-light text-black/65 leading-relaxed">
-              Six distinct KIKI JONES labels built for modern warm-climate style — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.
+              {tr(
+                'Six marques KIKI JONES pensées pour un style contemporain sous les climats chauds — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
+                'Six distinct KIKI JONES labels built for modern warm-climate style — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
+              )}
             </p>
           </div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50 tabular-nums">
-            {BRAND_LINES.length} Signature Labels
+            {brands.length} {tr('Marques Signatures', 'Signature Labels')}
           </p>
         </div>
       </section>
 
-      {/* Edge-to-Edge Full-Bleed Brand Campaigns (3 Symmetrical 50/50 Rows for 6 Brands) */}
+      {/* Edge-to-Edge Full-Bleed Brand Campaigns */}
       <section className="w-full bg-black">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-          {BRAND_LINES.map((brand) => {
+          {brands.map((brand) => {
             const count = products.filter((p) => p.brandSlug === brand.slug).length;
             return (
               <div
@@ -48,7 +54,7 @@ export function BrandsPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
                 <div className="absolute bottom-6 left-5 right-5 md:bottom-10 md:left-10 z-10 max-w-xl space-y-2.5">
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">
-                    {brand.tagline} &middot; {count} Pieces
+                    {brand.tagline} &middot; {count} {tr('pièces', 'Pieces')}
                   </p>
                   <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase tracking-[-0.02em] text-white leading-[1.02]">
                     {brand.name}
@@ -65,7 +71,7 @@ export function BrandsPage() {
                       }}
                       className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white/90 transition-colors cursor-pointer"
                     >
-                      <span>Shop {brand.name}</span>
+                      <span>{tr(`Découvrir ${brand.name}`, `Shop ${brand.name}`)}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>

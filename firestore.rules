@@ -353,7 +353,8 @@ service cloud.firestore {
     // Customer profiles & addresses (PII isolated)
     match /users/{uid} {
       allow get: if isOwner(uid) || isAdmin();
-      allow list: if isAdmin() || (isSignedIn() && existing().uid == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow list: if isAdmin();
       allow create: if isVerifiedUser() && isOwner(uid) && isValidId(uid) &&
         isValidUserProfile(incoming()) &&
         incoming().createdAt == request.time &&
@@ -377,8 +378,9 @@ service cloud.firestore {
 
     // Categories
     match /categories/{categoryId} {
-      allow get: if existing().isActive == true || isAdmin();
-      allow list: if existing().isActive == true || isAdmin();
+      allow get: if resource.data.isActive == true || isAdmin();
+      allow list: if resource.data.isActive == true;
+      allow list: if isAdmin();
       allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
       allow update: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) &&
@@ -388,8 +390,9 @@ service cloud.firestore {
 
     // Products
     match /products/{productId} {
-      allow get: if existing().status == 'published' || isAdmin();
-      allow list: if existing().status == 'published' || isAdmin();
+      allow get: if resource.data.status == 'published' || isAdmin();
+      allow list: if resource.data.status == 'published';
+      allow list: if isAdmin();
       allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
       allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) &&
@@ -399,8 +402,9 @@ service cloud.firestore {
 
     // Variants (publicly readable active stock/pricing, admin-only mutations)
     match /variants/{variantId} {
-      allow get: if existing().isActive == true || isAdmin();
-      allow list: if existing().isActive == true || isAdmin();
+      allow get: if resource.data.isActive == true || isAdmin();
+      allow list: if resource.data.isActive == true;
+      allow list: if isAdmin();
       allow create: if isAdmin() && isValidId(variantId) && isValidVariant(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
       allow update: if isAdmin() && isValidId(variantId) && isValidVariant(incoming()) &&
@@ -422,8 +426,9 @@ service cloud.firestore {
 
     // Orders (PII isolated; server/authenticated creation)
     match /orders/{orderId} {
-      allow get: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
-      allow list: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isAdmin();
       allow create: if isValidId(orderId) && isValidOrderCreate(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time &&
         (isAdmin() || (isSignedIn() && incoming().userId == request.auth.uid));
@@ -435,7 +440,9 @@ service cloud.firestore {
 
     // Payments, Webhooks, Refunds (Admin & server-side only)
     match /payments/{paymentId} {
-      allow get, list: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isAdmin();
       allow create, update: if isAdmin() && isValidId(paymentId);
     }
 
@@ -451,8 +458,9 @@ service cloud.firestore {
 
     // Promotions
     match /promotions/{promoId} {
-      allow get: if existing().isActive == true || isAdmin();
-      allow list: if existing().isActive == true || isAdmin();
+      allow get: if resource.data.isActive == true || isAdmin();
+      allow list: if resource.data.isActive == true;
+      allow list: if isAdmin();
       allow create: if isAdmin() && isValidId(promoId) && isValidPromotion(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
       allow update: if isAdmin() && isValidId(promoId) && isValidPromotion(incoming()) &&

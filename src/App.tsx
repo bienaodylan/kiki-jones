@@ -1,6 +1,7 @@
 import React from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
@@ -70,11 +71,13 @@ function AppRouter() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <StoreProvider>
-          <AppRouter />
-        </StoreProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <StoreProvider>
+            <AppRouter />
+          </StoreProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }
