@@ -1,0 +1,472 @@
+{
+  "entities": {
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Administrator role assignment record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 254 },
+        "role": { "type": "string", "enum": ["super_admin", "merchandising", "operations"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Customer profile document with personal information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 254 },
+        "fullName": { "type": "string", "maxLength": 160 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "CustomerAddress": {
+      "title": "CustomerAddress",
+      "description": "Saved customer shipping address.",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string", "maxLength": 60 },
+        "recipientName": { "type": "string", "maxLength": 160 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "street": { "type": "string", "maxLength": 240 },
+        "city": { "type": "string", "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 100 },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["label", "recipientName", "phone", "street", "city", "country", "isDefault", "createdAt"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Storefront product category.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 80 },
+        "slug": { "type": "string", "maxLength": 100, "pattern": "^[a-z0-9\\-]+$" },
+        "description": { "type": "string", "maxLength": 500 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "sortOrder": { "type": "integer" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "slug", "description", "imageUrl", "sortOrder", "isActive", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Catalog product metadata.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 160 },
+        "slug": { "type": "string", "maxLength": 180, "pattern": "^[a-z0-9\\-]+$" },
+        "description": { "type": "string", "maxLength": 4000 },
+        "categoryId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "categoryName": { "type": "string", "maxLength": 80 },
+        "sku": { "type": "string", "maxLength": 64 },
+        "externalShopifyHandle": { "type": "string", "maxLength": 180 },
+        "images": { "type": "array" },
+        "runwayModelImageUrl": { "type": "string", "maxLength": 500 },
+        "colors": { "type": "array" },
+        "sizes": { "type": "array" },
+        "regularPriceXof": { "type": "integer" },
+        "promoPriceXof": { "type": "integer" },
+        "lowStockThreshold": { "type": "integer" },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "isNewDrop": { "type": "boolean" },
+        "newDropOrder": { "type": "integer" },
+        "isFeatured": { "type": "boolean" },
+        "featuredOrder": { "type": "integer" },
+        "isPreorder": { "type": "boolean" },
+        "preorderLimit": { "type": "integer" },
+        "preorderEstimateDate": { "type": "string", "maxLength": 40 },
+        "seoTitle": { "type": "string", "maxLength": 160 },
+        "seoDescription": { "type": "string", "maxLength": 320 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "slug",
+        "description",
+        "categoryId",
+        "categoryName",
+        "sku",
+        "images",
+        "colors",
+        "sizes",
+        "regularPriceXof",
+        "lowStockThreshold",
+        "status",
+        "isNewDrop",
+        "newDropOrder",
+        "isFeatured",
+        "featuredOrder",
+        "isPreorder",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProductVariant": {
+      "title": "ProductVariant",
+      "description": "Sellable product variant with independent inventory.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sku": { "type": "string", "maxLength": 80 },
+        "color": { "type": "string", "maxLength": 60 },
+        "colorHex": { "type": "string", "maxLength": 20 },
+        "size": { "type": "string", "maxLength": 30 },
+        "priceXof": { "type": "integer" },
+        "compareAtPriceXof": { "type": "integer" },
+        "stockQty": { "type": "integer" },
+        "reservedQty": { "type": "integer" },
+        "lowStockThreshold": { "type": "integer" },
+        "weightGrams": { "type": "integer" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "productId",
+        "sku",
+        "color",
+        "colorHex",
+        "size",
+        "priceXof",
+        "stockQty",
+        "reservedQty",
+        "lowStockThreshold",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "InventoryMovement": {
+      "title": "InventoryMovement",
+      "description": "Audit log of inventory adjustments and order movements.",
+      "type": "object",
+      "properties": {
+        "variantId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "productId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sku": { "type": "string", "maxLength": 80 },
+        "type": { "type": "string", "enum": ["addition", "reduction", "correction", "reservation", "release", "sale", "import"] },
+        "deltaQty": { "type": "integer" },
+        "previousQty": { "type": "integer" },
+        "newQty": { "type": "integer" },
+        "reason": { "type": "string", "maxLength": 300 },
+        "referenceId": { "type": "string", "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 254 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["variantId", "productId", "sku", "type", "deltaQty", "previousQty", "newQty", "reason", "actorEmail", "createdAt"]
+    },
+    "InventoryReservation": {
+      "title": "InventoryReservation",
+      "description": "Checkout variant stock reservation with expiration.",
+      "type": "object",
+      "properties": {
+        "variantId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "productId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "qty": { "type": "integer" },
+        "status": { "type": "string", "enum": ["active", "consumed", "released", "expired"] },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["variantId", "productId", "orderId", "qty", "status", "expiresAt", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer commerce order in XOF.",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string", "maxLength": 40 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 160 },
+        "customerEmail": { "type": "string", "maxLength": 254 },
+        "customerPhone": { "type": "string", "maxLength": 40 },
+        "shippingAddress": { "type": "object" },
+        "deliveryMethod": { "type": "string", "maxLength": 80 },
+        "shippingFeeXof": { "type": "integer" },
+        "promoCode": { "type": "string", "maxLength": 40 },
+        "discountXof": { "type": "integer" },
+        "subtotalXof": { "type": "integer" },
+        "totalXof": { "type": "integer" },
+        "currency": { "type": "string", "enum": ["XOF"] },
+        "paymentMethod": { "type": "string", "enum": ["wave", "orange_money", "mobile_money", "visa", "mastercard"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "awaiting_verification", "paid", "failed", "refunded"] },
+        "fulfillmentStatus": { "type": "string", "enum": ["unfulfilled", "processing", "shipped", "delivered", "cancelled"] },
+        "items": { "type": "array" },
+        "trackingNumber": { "type": "string", "maxLength": 120 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "orderNumber",
+        "customerName",
+        "customerEmail",
+        "customerPhone",
+        "shippingAddress",
+        "deliveryMethod",
+        "shippingFeeXof",
+        "discountXof",
+        "subtotalXof",
+        "totalXof",
+        "currency",
+        "paymentMethod",
+        "paymentStatus",
+        "fulfillmentStatus",
+        "items",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment transaction record linked to an order.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "provider": { "type": "string", "enum": ["wave", "orange_money", "mobile_money", "visa", "mastercard"] },
+        "amountXof": { "type": "integer" },
+        "currency": { "type": "string", "enum": ["XOF"] },
+        "status": { "type": "string", "enum": ["pending", "awaiting_verification", "paid", "failed", "refunded"] },
+        "providerReference": { "type": "string", "maxLength": 160 },
+        "webhookVerified": { "type": "boolean" },
+        "idempotencyKey": { "type": "string", "maxLength": 160 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "provider", "amountXof", "currency", "status", "webhookVerified", "idempotencyKey", "createdAt", "updatedAt"]
+    },
+    "PaymentWebhookEvent": {
+      "title": "PaymentWebhookEvent",
+      "description": "Idempotent record of verified payment provider webhooks.",
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string", "maxLength": 40 },
+        "eventId": { "type": "string", "maxLength": 160 },
+        "signatureValid": { "type": "boolean" },
+        "orderId": { "type": "string", "maxLength": 128 },
+        "processedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["provider", "eventId", "signatureValid", "processedAt"]
+    },
+    "Refund": {
+      "title": "Refund",
+      "description": "Refund record issued against an order.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "amountXof": { "type": "integer" },
+        "reason": { "type": "string", "maxLength": 300 },
+        "status": { "type": "string", "enum": ["pending", "processed", "failed"] },
+        "createdBy": { "type": "string", "maxLength": 254 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "amountXof", "reason", "status", "createdBy", "createdAt"]
+    },
+    "Promotion": {
+      "title": "Promotion",
+      "description": "Marketing discount code configuration.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 40, "pattern": "^[A-Z0-9_\\-]+$" },
+        "type": { "type": "string", "enum": ["percentage", "fixed"] },
+        "value": { "type": "integer" },
+        "minOrderXof": { "type": "integer" },
+        "maxUses": { "type": "integer" },
+        "usedCount": { "type": "integer" },
+        "startsAt": { "type": "string", "maxLength": 40 },
+        "endsAt": { "type": "string", "maxLength": 40 },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "type", "value", "minOrderXof", "maxUses", "usedCount", "isActive", "createdAt", "updatedAt"]
+    },
+    "StorefrontConfig": {
+      "title": "StorefrontConfig",
+      "description": "Dynamic storefront CMS configuration for homepage sections, hero, gallery, and store settings.",
+      "type": "object",
+      "properties": {
+        "cmsVersion": { "type": "integer" },
+        "heroImageUrl": { "type": "string", "maxLength": 500 },
+        "heroHeadline": { "type": "string", "maxLength": 200 },
+        "heroSubheadline": { "type": "string", "maxLength": 300 },
+        "heroCtaLabel": { "type": "string", "maxLength": 60 },
+        "heroCtaHref": { "type": "string", "maxLength": 200 },
+        "heroSecondaryCtaLabel": { "type": "string", "maxLength": 60 },
+        "heroSecondaryCtaHref": { "type": "string", "maxLength": 200 },
+        "nextDropLeftTitle": { "type": "string", "maxLength": 160 },
+        "nextDropLeftBody": { "type": "string", "maxLength": 400 },
+        "nextDropLeftCtaLabel": { "type": "string", "maxLength": 60 },
+        "nextDropLeftCtaHref": { "type": "string", "maxLength": 200 },
+        "nextDropLeftImageUrl": { "type": "string", "maxLength": 500 },
+        "nextDropRightTitle": { "type": "string", "maxLength": 160 },
+        "nextDropRightBody": { "type": "string", "maxLength": 400 },
+        "nextDropRightCtaLabel": { "type": "string", "maxLength": 60 },
+        "nextDropRightCtaHref": { "type": "string", "maxLength": 200 },
+        "nextDropRightImageUrl": { "type": "string", "maxLength": 500 },
+        "brandIntroEyebrow": { "type": "string", "maxLength": 120 },
+        "brandIntroTitle": { "type": "string", "maxLength": 200 },
+        "brandIntroBody": { "type": "string", "maxLength": 1000 },
+        "brandIntroImageUrl": { "type": "string", "maxLength": 500 },
+        "brandIntroCtaLabel": { "type": "string", "maxLength": 60 },
+        "brandIntroCtaHref": { "type": "string", "maxLength": 200 },
+        "brandIntroSecondaryCtaLabel": { "type": "string", "maxLength": 60 },
+        "brandIntroSecondaryCtaHref": { "type": "string", "maxLength": 200 },
+        "sectionOrder": { "type": "array" },
+        "collectionBanners": { "type": "array" },
+        "customSections": { "type": "array" },
+        "galleryItems": { "type": "array" },
+        "newsletterTitle": { "type": "string", "maxLength": 160 },
+        "newsletterBody": { "type": "string", "maxLength": 400 },
+        "campaignBannerText": { "type": "string", "maxLength": 200 },
+        "campaignBannerEnabled": { "type": "boolean" },
+        "standardShippingXof": { "type": "integer" },
+        "expressShippingXof": { "type": "integer" },
+        "freeShippingThresholdXof": { "type": "integer" },
+        "supportEmail": { "type": "string", "maxLength": 254 },
+        "supportPhone": { "type": "string", "maxLength": 40 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "heroImageUrl",
+        "heroHeadline",
+        "heroSubheadline",
+        "brandIntroTitle",
+        "brandIntroBody",
+        "brandIntroImageUrl",
+        "sectionOrder",
+        "galleryItems",
+        "newsletterTitle",
+        "newsletterBody",
+        "standardShippingXof",
+        "expressShippingXof",
+        "freeShippingThresholdXof",
+        "updatedAt"
+      ]
+    },
+    "NewsletterSubscriber": {
+      "title": "NewsletterSubscriber",
+      "description": "Newsletter subscription entry.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 254 },
+        "source": { "type": "string", "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "source", "createdAt"]
+    },
+    "ImportJob": {
+      "title": "ImportJob",
+      "description": "Product CSV import execution summary.",
+      "type": "object",
+      "properties": {
+        "filename": { "type": "string", "maxLength": 200 },
+        "format": { "type": "string", "enum": ["shopify", "mireza"] },
+        "mode": { "type": "string", "enum": ["create_only", "update_only", "upsert", "skip_existing"] },
+        "totalRows": { "type": "integer" },
+        "createdCount": { "type": "integer" },
+        "updatedCount": { "type": "integer" },
+        "skippedCount": { "type": "integer" },
+        "errorCount": { "type": "integer" },
+        "actorEmail": { "type": "string", "maxLength": 254 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["filename", "format", "mode", "totalRows", "createdCount", "updatedCount", "skippedCount", "errorCount", "actorEmail", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Administrative audit log entry.",
+      "type": "object",
+      "properties": {
+        "actorEmail": { "type": "string", "maxLength": 254 },
+        "action": { "type": "string", "maxLength": 80 },
+        "entityType": { "type": "string", "maxLength": 80 },
+        "entityId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorEmail", "action", "entityType", "entityId", "details", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Administrator RBAC documents."
+    },
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Customer account profiles."
+    },
+    "/users/{uid}/addresses/{addressId}": {
+      "schema": { "$ref": "#/entities/CustomerAddress" },
+      "description": "Customer saved addresses."
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Storefront product categories."
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Product catalog documents."
+    },
+    "/variants/{variantId}": {
+      "schema": { "$ref": "#/entities/ProductVariant" },
+      "description": "Sellable variant inventory records."
+    },
+    "/inventory_movements/{movementId}": {
+      "schema": { "$ref": "#/entities/InventoryMovement" },
+      "description": "Variant inventory audit movements."
+    },
+    "/inventory_reservations/{reservationId}": {
+      "schema": { "$ref": "#/entities/InventoryReservation" },
+      "description": "Checkout stock reservations."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer orders."
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Payment intent and transaction logs."
+    },
+    "/payment_webhook_events/{eventId}": {
+      "schema": { "$ref": "#/entities/PaymentWebhookEvent" },
+      "description": "Idempotent webhook processing records."
+    },
+    "/refunds/{refundId}": {
+      "schema": { "$ref": "#/entities/Refund" },
+      "description": "Refund records."
+    },
+    "/promotions/{promoId}": {
+      "schema": { "$ref": "#/entities/Promotion" },
+      "description": "Discount and promotion codes."
+    },
+    "/storefront_config/{docId}": {
+      "schema": { "$ref": "#/entities/StorefrontConfig" },
+      "description": "Storefront CMS configuration."
+    },
+    "/newsletter_subscribers/{subId}": {
+      "schema": { "$ref": "#/entities/NewsletterSubscriber" },
+      "description": "Newsletter subscription emails."
+    },
+    "/import_jobs/{jobId}": {
+      "schema": { "$ref": "#/entities/ImportJob" },
+      "description": "Product CSV import execution logs."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Administrative action audit history."
+    }
+  }
+}

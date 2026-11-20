@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-kj-white: #FFFFFF;
+  --color-kj-black: #000000;
+  --color-kj-surface: #F5F5F5;
+  --color-kj-muted: #737373;
+  --color-kj-border: #E5E5E5;
+
+  --font-display: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-weight: 300;
+    background-color: #FFFFFF;
+    color: #000000;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #FFFFFF;
+    color: #000000;
+    overflow-x: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+.font-editorial {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

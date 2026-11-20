@@ -1,0 +1,8 @@
+{
+  "name": "kikijones",
+  "description": "KIKI JONES — Contemporary fashion destination offering modern clothing, collections, and accessories for women, men, girls, and boys.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
