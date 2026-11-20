@@ -98,7 +98,9 @@ service cloud.firestore {
           'externalShopifyHandle', 'images', 'runwayModelImageUrl', 'colors', 'sizes', 'regularPriceXof',
           'promoPriceXof', 'lowStockThreshold', 'status', 'isNewDrop', 'newDropOrder',
           'isFeatured', 'featuredOrder', 'isPreorder', 'preorderLimit',
-          'preorderEstimateDate', 'seoTitle', 'seoDescription', 'createdAt', 'updatedAt'
+          'preorderEstimateDate', 'seoTitle', 'seoDescription',
+          'audience', 'subCategory', 'brandSlug', 'brandName', 'collectionSlugs',
+          'createdAt', 'updatedAt'
         ]) &&
         data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
         data.slug is string && data.slug.size() >= 1 && data.slug.size() <= 180 &&
@@ -124,6 +126,11 @@ service cloud.firestore {
         (!('preorderEstimateDate' in data) || data.preorderEstimateDate == null || (data.preorderEstimateDate is string && data.preorderEstimateDate.size() <= 40)) &&
         (!('seoTitle' in data) || data.seoTitle == null || (data.seoTitle is string && data.seoTitle.size() <= 160)) &&
         (!('seoDescription' in data) || data.seoDescription == null || (data.seoDescription is string && data.seoDescription.size() <= 320)) &&
+        (!('audience' in data) || data.audience == null || data.audience in ['women', 'men', 'girls', 'boys', 'unisex']) &&
+        (!('subCategory' in data) || data.subCategory == null || (data.subCategory is string && data.subCategory.size() <= 40)) &&
+        (!('brandSlug' in data) || data.brandSlug == null || (data.brandSlug is string && data.brandSlug.size() <= 40)) &&
+        (!('brandName' in data) || data.brandName == null || (data.brandName is string && data.brandName.size() <= 60)) &&
+        (!('collectionSlugs' in data) || data.collectionSlugs == null || (data.collectionSlugs is list && data.collectionSlugs.size() <= 10 && (data.collectionSlugs.size() == 0 || data.collectionSlugs[0] is string))) &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
     }

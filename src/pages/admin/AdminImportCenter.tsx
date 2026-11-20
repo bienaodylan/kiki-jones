@@ -6,6 +6,7 @@ import { db } from '../../lib/firebase';
 import { Category, ImportJob, Product, ProductVariant } from '../../types/commerce';
 import { formatXOF, getColorHex, sanitizeId, slugify, formatTimestamp } from '../../lib/format';
 import { recordImportJob, logAudit } from '../../lib/firestoreService';
+import { classifyProductBilingual } from '../../lib/productClassifier';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface AdminImportCenterProps {
@@ -336,11 +337,19 @@ export function AdminImportCenter({
           });
           updated++;
         } else {
+          const detected = classifyProductBilingual({
+            name: grp.title,
+            description: grp.description,
+            categoryName: matchedCat?.name || grp.categoryName,
+            categoryId: matchedCat?.id || 'cat_women',
+            isNewDrop: false,
+            isFeatured: false,
+          });
           batch.set(prodRef, {
             name: grp.title,
             slug: slugify(grp.handle || grp.title),
             description: grp.description,
-            categoryId: matchedCat?.id || 'cat_set',
+            categoryId: matchedCat?.id || 'cat_women',
             categoryName: matchedCat?.name || grp.categoryName,
             sku: grp.variants[0]?.sku || grp.handle.toUpperCase(),
             externalShopifyHandle: grp.handle,
@@ -360,6 +369,11 @@ export function AdminImportCenter({
             preorderEstimateDate: null,
             seoTitle: `${grp.title} — KIKI JONES`,
             seoDescription: grp.description.slice(0, 155),
+            audience: detected.audience,
+            subCategory: detected.subCategory,
+            brandSlug: detected.brandSlug,
+            brandName: detected.brandName,
+            collectionSlugs: detected.collectionSlugs,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });

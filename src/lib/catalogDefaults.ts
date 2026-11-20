@@ -1,5 +1,6 @@
 import { AudienceSlug, Product, StorefrontConfig } from '../types/commerce';
 import { KJ_IMAGES } from './navigationData';
+import { classifyProductBilingual, getBrandNameBySlug } from './productClassifier';
 
 export const KIKI_JONES_IMAGES = {
   hero: KJ_IMAGES.heroCampaign,
@@ -3246,13 +3247,17 @@ export const LEGACY_PLACEHOLDER_PRODUCT_IDS: string[] = [
 export function enrichProductMetadata(product: Product): Product {
   const seed = ALL_SEED_PRODUCTS.find((s) => s.id === product.id || s.slug === product.slug);
   if (seed) {
+    const resolvedBrandSlug = product.brandSlug || seed.brandSlug;
     return {
       ...product,
       audience: product.audience || seed.audience,
       subCategory: product.subCategory || seed.subCategory,
-      brandSlug: product.brandSlug || seed.brandSlug,
-      brandName: product.brandName || seed.brandName,
-      collectionSlugs: product.collectionSlugs || seed.collectionSlugs,
+      brandSlug: resolvedBrandSlug,
+      brandName: product.brandName || (product.brandSlug ? getBrandNameBySlug(product.brandSlug) : seed.brandName),
+      collectionSlugs:
+        Array.isArray(product.collectionSlugs) && product.collectionSlugs.length > 0
+          ? product.collectionSlugs
+          : seed.collectionSlugs,
       styleTags: product.styleTags || seed.styleTags,
       isBestSeller: product.isBestSeller ?? seed.isBestSeller ?? false,
       isTrending: product.isTrending ?? seed.isTrending ?? false,
@@ -3260,71 +3265,32 @@ export function enrichProductMetadata(product: Product): Product {
     };
   }
 
-  const catLower = (product.categoryName || product.categoryId || '').toLowerCase();
-  const nameLower = (product.name || '').toLowerCase();
+  const detected = classifyProductBilingual({
+    name: product.name,
+    description: product.description,
+    categoryName: product.categoryName,
+    categoryId: product.categoryId,
+    isNewDrop: product.isNewDrop,
+    isFeatured: product.isFeatured,
+  });
 
-  let audience: AudienceSlug = 'women';
-  if (catLower.includes('men') && !catLower.includes('women')) audience = 'men';
-  else if (catLower.includes('girl')) audience = 'girls';
-  else if (catLower.includes('boy')) audience = 'boys';
-  else if (catLower.includes('access')) audience = 'unisex';
-
-  let subCategory = 'tops';
-  if (nameLower.includes('heel') || nameLower.includes('pump') || nameLower.includes('loafer') || nameLower.includes('sneaker') || nameLower.includes('shoe') || nameLower.includes('sandal')) {
-    subCategory = 'shoes';
-  } else if (nameLower.includes('sunglass') || nameLower.includes('glass')) {
-    subCategory = 'sunglasses';
-  } else if (nameLower.includes('romper') || nameLower.includes('jumpsuit')) {
-    subCategory = 'jumpsuits';
-  } else if (nameLower.includes('biker') || nameLower.includes('sport') || nameLower.includes('active')) {
-    subCategory = 'activewear';
-  } else if (nameLower.includes('jort') || nameLower.includes('micro short')) {
-    subCategory = 'bottoms';
-  } else if (nameLower.includes('dress') || nameLower.includes('gown') || nameLower.includes('skirt')) {
-    subCategory = 'dresses';
-  } else if (nameLower.includes('jean') || nameLower.includes('denim')) {
-    subCategory = 'jeans';
-  } else if (nameLower.includes('pant') || nameLower.includes('trouser') || nameLower.includes('cargo')) {
-    subCategory = 'pants';
-  } else if (nameLower.includes('set') || nameLower.includes('short')) {
-    subCategory = 'matching-sets';
-  } else if (nameLower.includes('shirt') || nameLower.includes('polo')) {
-    subCategory = 'shirts';
-  } else if (nameLower.includes('bag') || nameLower.includes('clutch') || nameLower.includes('tote')) {
-    subCategory = 'bags';
-  } else if (nameLower.includes('earring') || nameLower.includes('bracelet') || nameLower.includes('chain') || nameLower.includes('jewel')) {
-    subCategory = 'jewelry';
-  } else if (nameLower.includes('corset') || nameLower.includes('bodysuit') || nameLower.includes('top') || nameLower.includes('tee')) {
-    subCategory = 'tops';
-  }
-
-  let brandSlug = 'kiki-luxe';
-  let brandName = 'Kiki Luxe';
-  if (subCategory === 'activewear') {
-    brandSlug = 'kiki-sport';
-    brandName = 'Kiki Sport';
-  } else if (audience === 'men') {
-    brandSlug = 'kiki-men';
-    brandName = 'Kiki Men';
-  } else if (audience === 'girls' || audience === 'boys') {
-    brandSlug = 'kiki-kids';
-    brandName = 'Kiki Kids';
-  } else if (nameLower.includes('sculpt') || nameLower.includes('corset') || nameLower.includes('bodysuit') || nameLower.includes('sneaker') || nameLower.includes('jort')) {
-    brandSlug = 'kiki-sculpt';
-    brandName = 'Kiki Sculpt';
-  } else if (nameLower.includes('curve') || nameLower.includes('lounge')) {
-    brandSlug = 'kiki-curve';
-    brandName = 'Kiki Curve';
-  }
+  const resolvedBrandSlug = product.brandSlug || detected.brandSlug;
+  const resolvedBrandName =
+    product.brandName ||
+    (product.brandSlug ? getBrandNameBySlug(product.brandSlug) : detected.brandName);
+  const resolvedCollections =
+    Array.isArray(product.collectionSlugs) && product.collectionSlugs.length > 0
+      ? product.collectionSlugs
+      : detected.collectionSlugs;
 
   return {
     ...product,
-    audience: product.audience || audience,
-    subCategory: product.subCategory || subCategory,
-    brandSlug: product.brandSlug || brandSlug,
-    brandName: product.brandName || brandName,
-    collectionSlugs: product.collectionSlugs || (product.isNewDrop ? ['essentials', 'after-dark'] : ['essentials']),
-    styleTags: product.styleTags || [brandName],
+    audience: product.audience || detected.audience,
+    subCategory: product.subCategory || detected.subCategory,
+    brandSlug: resolvedBrandSlug,
+    brandName: resolvedBrandName,
+    collectionSlugs: resolvedCollections,
+    styleTags: product.styleTags || [resolvedBrandName],
     isBestSeller: product.isBestSeller ?? Boolean(product.isFeatured),
     isTrending: product.isTrending ?? Boolean(product.isNewDrop),
   };

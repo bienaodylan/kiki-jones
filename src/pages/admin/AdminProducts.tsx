@@ -11,8 +11,9 @@ import {
   FileSpreadsheet,
   X,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
-import { Category, ImportJob, Product, ProductStatus, ProductVariant } from '../../types/commerce';
+import { AudienceSlug, Category, ImportJob, Product, ProductStatus, ProductVariant } from '../../types/commerce';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatXOF, getAvailableStock, getColorHex, sanitizeId, slugify } from '../../lib/format';
@@ -22,6 +23,15 @@ import {
   deleteProductAdmin,
   saveProductAndVariants,
 } from '../../lib/firestoreService';
+import { enrichProductMetadata } from '../../lib/catalogDefaults';
+import {
+  AUDIENCE_OPTIONS,
+  BRAND_OPTIONS,
+  classifyProductBilingual,
+  COLLECTION_OPTIONS,
+  getBrandNameBySlug,
+  SUBCATEGORY_OPTIONS,
+} from '../../lib/productClassifier';
 import { KJ_IMAGES } from '../../lib/navigationData';
 import { AdminImportCenter } from './AdminImportCenter';
 
@@ -79,6 +89,7 @@ export function AdminProducts({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [showImagePresets, setShowImagePresets] = useState(false);
+  const [manualClassification, setManualClassification] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -97,14 +108,44 @@ export function AdminProducts({
     seoTitle: '',
     seoDescription: '',
     images: [] as string[],
+    audience: 'women' as AudienceSlug,
+    subCategory: 'tops',
+    brandSlug: 'kiki-luxe',
+    collectionSlugs: ['essentials'] as string[],
   });
 
   const [editVariants, setEditVariants] = useState<EditableVariant[]>([]);
 
+  const computeClassification = (input: {
+    name: string;
+    description: string;
+    categoryId: string;
+    isNewDrop: boolean;
+    isFeatured: boolean;
+  }) => {
+    const cat = categories.find((c) => c.id === input.categoryId);
+    return classifyProductBilingual({
+      name: input.name,
+      description: input.description,
+      categoryName: cat?.name,
+      categoryId: input.categoryId,
+      isNewDrop: input.isNewDrop,
+      isFeatured: input.isFeatured,
+    });
+  };
+
   const openCreateEditor = () => {
     const defaultCat = categories[0];
+    const defaultCatId = defaultCat?.id || 'cat_women';
     const baseSku = `KJ-${Date.now().toString().slice(-5)}`;
+    const initialDetected = classifyProductBilingual({
+      categoryName: defaultCat?.name,
+      categoryId: defaultCatId,
+      isNewDrop: true,
+      isFeatured: false,
+    });
     setEditingId(null);
+    setManualClassification(false);
     setShowAdvanced(false);
     setShowImagePresets(false);
     setNewImageUrl('');
@@ -112,7 +153,7 @@ export function AdminProducts({
       name: '',
       slug: '',
       description: '',
-      categoryId: defaultCat?.id || 'cat_women',
+      categoryId: defaultCatId,
       sku: baseSku,
       regularPriceXof: 25000,
       promoPriceXof: '',
@@ -125,6 +166,10 @@ export function AdminProducts({
       seoTitle: '',
       seoDescription: '',
       images: [KJ_IMAGES.heroCampaign],
+      audience: initialDetected.audience,
+      subCategory: initialDetected.subCategory,
+      brandSlug: initialDetected.brandSlug,
+      collectionSlugs: initialDetected.collectionSlugs,
     });
     setEditVariants([
       {
@@ -177,7 +222,9 @@ export function AdminProducts({
 
   const openEditEditor = (product: Product) => {
     const pVars = variants.filter((v) => v.productId === product.id);
+    const enriched = enrichProductMetadata(product);
     setEditingId(product.id);
+    setManualClassification(true);
     setShowAdvanced(false);
     setShowImagePresets(false);
     setNewImageUrl('');
@@ -198,6 +245,13 @@ export function AdminProducts({
       seoTitle: product.seoTitle || '',
       seoDescription: product.seoDescription || '',
       images: product.images || [],
+      audience: enriched.audience || 'women',
+      subCategory: enriched.subCategory || 'tops',
+      brandSlug: enriched.brandSlug || 'kiki-luxe',
+      collectionSlugs:
+        Array.isArray(enriched.collectionSlugs) && enriched.collectionSlugs.length > 0
+          ? enriched.collectionSlugs
+          : ['essentials'],
     });
     setEditVariants(
       pVars.length > 0
@@ -331,6 +385,7 @@ export function AdminProducts({
         weightGrams: v.weightGrams ?? 250,
         isActive: v.isActive,
       }));
+      const enriched = enrichProductMetadata(product);
       await saveProductAndVariants(
         null,
         {
@@ -358,6 +413,11 @@ export function AdminProducts({
           preorderEstimateDate: product.preorderEstimateDate ?? null,
           seoTitle: product.seoTitle ?? null,
           seoDescription: product.seoDescription ?? null,
+          audience: enriched.audience || 'women',
+          subCategory: enriched.subCategory || 'tops',
+          brandSlug: enriched.brandSlug || 'kiki-luxe',
+          brandName: enriched.brandName || getBrandNameBySlug(enriched.brandSlug),
+          collectionSlugs: enriched.collectionSlugs || ['essentials'],
         },
         copyVars,
         actorEmail
@@ -469,6 +529,11 @@ export function AdminProducts({
           preorderEstimateDate: form.isPreorder && form.preorderEstimateDate ? form.preorderEstimateDate : null,
           seoTitle: form.seoTitle.trim() || `${form.name.trim()} — KIKI JONES`,
           seoDescription: (form.seoDescription.trim() || form.description.trim()).slice(0, 300),
+          audience: form.audience,
+          subCategory: form.subCategory,
+          brandSlug: form.brandSlug,
+          brandName: getBrandNameBySlug(form.brandSlug),
+          collectionSlugs: form.collectionSlugs.slice(0, 10),
         },
         finalVars,
         actorEmail
@@ -546,7 +611,27 @@ export function AdminProducts({
                   type="text"
                   required
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  onChange={(e) => {
+                    const nextName = e.target.value;
+                    setForm((prev) => {
+                      if (manualClassification) return { ...prev, name: nextName };
+                      const detected = computeClassification({
+                        name: nextName,
+                        description: prev.description,
+                        categoryId: prev.categoryId,
+                        isNewDrop: prev.isNewDrop,
+                        isFeatured: prev.isFeatured,
+                      });
+                      return {
+                        ...prev,
+                        name: nextName,
+                        audience: detected.audience,
+                        subCategory: detected.subCategory,
+                        brandSlug: detected.brandSlug,
+                        collectionSlugs: detected.collectionSlugs,
+                      };
+                    });
+                  }}
                   placeholder={tr('Ex : Robe Midi Drapée Noir', 'e.g. Draped Midi Dress Black')}
                   className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
                 />
@@ -557,7 +642,27 @@ export function AdminProducts({
                 <textarea
                   rows={4}
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onChange={(e) => {
+                    const nextDesc = e.target.value;
+                    setForm((prev) => {
+                      if (manualClassification) return { ...prev, description: nextDesc };
+                      const detected = computeClassification({
+                        name: prev.name,
+                        description: nextDesc,
+                        categoryId: prev.categoryId,
+                        isNewDrop: prev.isNewDrop,
+                        isFeatured: prev.isFeatured,
+                      });
+                      return {
+                        ...prev,
+                        description: nextDesc,
+                        audience: detected.audience,
+                        subCategory: detected.subCategory,
+                        brandSlug: detected.brandSlug,
+                        collectionSlugs: detected.collectionSlugs,
+                      };
+                    });
+                  }}
                   placeholder={tr('Coupe, matière et détails essentiels...', 'Fit, fabric, and key styling details...')}
                   className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none resize-none"
                 />
@@ -888,7 +993,27 @@ export function AdminProducts({
                 <span className="font-medium text-black">{tr('Collection / Catégorie', 'Collection / Category')}</span>
                 <select
                   value={form.categoryId}
-                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  onChange={(e) => {
+                    const nextCatId = e.target.value;
+                    setForm((prev) => {
+                      if (manualClassification) return { ...prev, categoryId: nextCatId };
+                      const detected = computeClassification({
+                        name: prev.name,
+                        description: prev.description,
+                        categoryId: nextCatId,
+                        isNewDrop: prev.isNewDrop,
+                        isFeatured: prev.isFeatured,
+                      });
+                      return {
+                        ...prev,
+                        categoryId: nextCatId,
+                        audience: detected.audience,
+                        subCategory: detected.subCategory,
+                        brandSlug: detected.brandSlug,
+                        collectionSlugs: detected.collectionSlugs,
+                      };
+                    });
+                  }}
                   className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 bg-white focus:outline-none"
                 >
                   {categories.map((c) => (
@@ -898,6 +1023,141 @@ export function AdminProducts({
                   ))}
                 </select>
               </label>
+            </div>
+
+            {/* Mega-Menu & Storefront Routing Control */}
+            <div className="bg-white border border-[#E8E8E8] p-5 space-y-4 text-xs">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="font-medium text-black block">
+                    {tr('Classement Méga-Menu', 'Mega-Menu Placement')}
+                  </span>
+                  <span className="text-[11px] text-black/45 block mt-0.5">
+                    {manualClassification
+                      ? tr('Mode manuel (contrôle direct)', 'Manual override active')
+                      : tr('Détection auto FR/EN active', 'Bilingual FR/EN auto-detect')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const detected = computeClassification({
+                      name: form.name,
+                      description: form.description,
+                      categoryId: form.categoryId,
+                      isNewDrop: form.isNewDrop,
+                      isFeatured: form.isFeatured,
+                    });
+                    setForm((prev) => ({
+                      ...prev,
+                      audience: detected.audience,
+                      subCategory: detected.subCategory,
+                      brandSlug: detected.brandSlug,
+                      collectionSlugs: detected.collectionSlugs,
+                    }));
+                    setManualClassification(false);
+                    onToast(
+                      tr(
+                        'Classement détecté automatiquement (FR/EN).',
+                        'Mega-menu placement auto-detected (FR/EN).'
+                      ),
+                      'default'
+                    );
+                  }}
+                  className="px-2.5 py-1.5 border border-[#E8E8E8] hover:border-black bg-[#FAFAFA] text-[11px] font-medium inline-flex items-center gap-1 shrink-0 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>{tr('Auto-détecter', 'Auto-detect')}</span>
+                </button>
+              </div>
+
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Rayon (Audience)', 'Department (Audience)')}</span>
+                <select
+                  value={form.audience}
+                  onChange={(e) => {
+                    setManualClassification(true);
+                    setForm({ ...form, audience: e.target.value as AudienceSlug });
+                  }}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 bg-white focus:outline-none"
+                >
+                  {AUDIENCE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {tr(opt.labelFr, opt.labelEn)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Sous-catégorie (Méga-Menu)', 'Sub-category (Mega-Menu)')}</span>
+                <select
+                  value={form.subCategory}
+                  onChange={(e) => {
+                    setManualClassification(true);
+                    setForm({ ...form, subCategory: e.target.value });
+                  }}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 bg-white focus:outline-none"
+                >
+                  {SUBCATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {tr(opt.labelFr, opt.labelEn)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-black/60">{tr('Marque KIKI JONES', 'KIKI JONES Brand Line')}</span>
+                <select
+                  value={form.brandSlug}
+                  onChange={(e) => {
+                    setManualClassification(true);
+                    setForm({ ...form, brandSlug: e.target.value });
+                  }}
+                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 bg-white focus:outline-none"
+                >
+                  {BRAND_OPTIONS.map((opt) => (
+                    <option key={opt.slug} value={opt.slug}>
+                      {tr(opt.labelFr, opt.labelEn)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="space-y-1.5 pt-1 border-t border-[#F0F0F0]">
+                <span className="text-black/60 block">
+                  {tr('Collections éditoriales', 'Editorial Collections')}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {COLLECTION_OPTIONS.map((col) => {
+                    const active = form.collectionSlugs.includes(col.value);
+                    return (
+                      <button
+                        key={col.value}
+                        type="button"
+                        onClick={() => {
+                          setManualClassification(true);
+                          setForm((prev) => {
+                            const exists = prev.collectionSlugs.includes(col.value);
+                            const next = exists
+                              ? prev.collectionSlugs.filter((s) => s !== col.value)
+                              : [...prev.collectionSlugs, col.value];
+                            return { ...prev, collectionSlugs: next };
+                          });
+                        }}
+                        className={`px-2.5 py-1 text-[11px] border transition-colors cursor-pointer ${
+                          active
+                            ? 'bg-black text-white border-black font-medium'
+                            : 'bg-white text-black/65 border-[#E8E8E8] hover:border-black'
+                        }`}
+                      >
+                        {tr(col.labelFr, col.labelEn)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <div className="bg-white border border-[#E8E8E8] p-5 space-y-4 text-xs">

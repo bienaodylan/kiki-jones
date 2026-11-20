@@ -14,6 +14,7 @@ import {
   translateLabel,
 } from '../lib/i18n';
 import { AudienceSlug } from '../types/commerce';
+import { normalizeText, SUBCATEGORY_ALIASES } from '../lib/productClassifier';
 
 type CatalogAudience = 'women' | 'men' | 'girls' | 'boys' | 'accessories';
 
@@ -235,42 +236,22 @@ export function CatalogPage({
       if (normalized === 'trending' || normalized === 'trending-now') return Boolean(p.isTrending || p.isFeatured);
       if (normalized === 'back-in-stock') return !getProductAvailability(p, getProductVariants(p.id)).isSoldOut;
 
-      const hay = [
-        p.subCategory || '',
-        p.name,
-        p.description,
-        ...(p.styleTags || []),
-        ...(p.collectionSlugs || []),
-      ]
-        .join(' ')
-        .toLowerCase();
+      const hay = normalizeText(
+        [
+          p.subCategory || '',
+          p.name,
+          p.description,
+          ...(p.styleTags || []),
+          ...(p.collectionSlugs || []),
+        ].join(' ')
+      );
 
       if (p.subCategory?.toLowerCase() === normalized) return true;
       if ((p.collectionSlugs || []).includes(normalized)) return true;
-      if ((p.styleTags || []).some((t) => t.toLowerCase().includes(normalized))) return true;
+      if ((p.styleTags || []).some((t) => normalizeText(t).includes(normalized))) return true;
 
-      // Smart alias matching for mega menu categories
-      const aliases: Record<string, string[]> = {
-        tops: ['top', 'shirt', 'blouse', 'tee', 't-shirt', 'knit'],
-        't-shirts': ['tee', 't-shirt', 'jersey', 'polo'],
-        polos: ['polo', 'shirt', 'tee'],
-        shirts: ['shirt', 'poplin', 'overshirt', 'blouse'],
-        blouses: ['blouse', 'shirt', 'top'],
-        dresses: ['dress', 'gown', 'slip', 'kaftan'],
-        jumpsuits: ['romper', 'jumpsuit'],
-        activewear: ['biker', 'sport', 'active', 'tricot', 'seamless'],
-        bottoms: ['jort', 'short', 'skirt', 'micro'],
-        jeans: ['jean', 'denim'],
-        pants: ['pant', 'trouser', 'cargo', 'jean', 'denim'],
-        shorts: ['short', 'jort', 'biker', 'bermuda'],
-        skirts: ['skirt', 'dress'],
-        'matching-sets': ['set', 'co-ord', 'suit'],
-        shoes: ['shoe', 'heel', 'pump', 'loafer', 'sneaker', 'sandal', 'stiletto'],
-        bags: ['bag', 'tote', 'crossbody', 'backpack', 'clutch'],
-        sunglasses: ['sunglasses', 'frame', 'eyewear', 'glasses'],
-        jewelry: ['jewelry', 'chain', 'ring', 'bracelet', 'earring'],
-      };
-      const terms = aliases[normalized] || [normalized.replace(/-/g, ' ')];
+      // Smart bilingual (FR + EN) alias matching for mega menu categories
+      const terms = SUBCATEGORY_ALIASES[normalized] || [normalizeText(normalized.replace(/-/g, ' '))];
       return terms.some((t) => hay.includes(t));
     };
 
@@ -292,7 +273,8 @@ export function CatalogPage({
         if (effectiveAudience === 'accessories') {
           if (
             p.categoryId !== 'cat_accessories' &&
-            !['accessories', 'sunglasses', 'bags', 'jewelry'].includes(p.subCategory || '')
+            p.audience !== 'unisex' &&
+            !['accessories', 'sunglasses', 'bags', 'jewelry', 'watches'].includes(p.subCategory || '')
           ) {
             return false;
           }

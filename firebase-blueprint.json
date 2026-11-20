@@ -87,6 +87,11 @@
         "preorderEstimateDate": { "type": "string", "maxLength": 40 },
         "seoTitle": { "type": "string", "maxLength": 160 },
         "seoDescription": { "type": "string", "maxLength": 320 },
+        "audience": { "type": "string", "enum": ["women", "men", "girls", "boys", "unisex"] },
+        "subCategory": { "type": "string", "maxLength": 40 },
+        "brandSlug": { "type": "string", "maxLength": 40 },
+        "brandName": { "type": "string", "maxLength": 60 },
+        "collectionSlugs": { "type": "array" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
