@@ -9,6 +9,12 @@ import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { GoogleGenAI, Type } from '@google/genai';
 import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
+import {
+  detectMissingMenusFromInventory,
+  DynamicSubMenu,
+  MenuSuggestion,
+} from './src/lib/menuDiscovery';
+import { MegaMenuKey } from './src/lib/navigationData';
 
 dotenv.config();
 
@@ -409,6 +415,197 @@ ${message.trim()}`;
       res.status(502).json({
         error: error?.message || 'AI Store Assistant request failed.',
       });
+    }
+  });
+
+  // Protected Admin Smart Inventory-to-Menu Detector (Taxonomy + Optional Gemini 4 Hydrogen)
+  app.post('/api/admin/analyze-menus', requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const {
+        products: clientProducts = [],
+        existingDynamic = [],
+        dismissedSlugs = [],
+      } = req.body || {};
+
+      let liveProducts: any[] = [];
+      let source: 'firestore' | 'client_snapshot' = 'client_snapshot';
+
+      try {
+        const snap = await adminDb.collection('products').get();
+        if (!snap.empty) {
+          liveProducts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+          source = 'firestore';
+        }
+      } catch {
+        // Fallback to authenticated admin's client snapshot when ADC is not attached in preview
+      }
+
+      if (liveProducts.length === 0 && Array.isArray(clientProducts)) {
+        liveProducts = clientProducts;
+      }
+
+      const activeProducts = liveProducts.filter((p) => p && p.status !== 'archived');
+      const safeExisting: DynamicSubMenu[] = Array.isArray(existingDynamic) ? existingDynamic : [];
+      const safeDismissed: string[] = Array.isArray(dismissedSlugs)
+        ? dismissedSlugs.map(String)
+        : [];
+
+      const taxonomySuggestions = detectMissingMenusFromInventory(
+        activeProducts,
+        safeExisting,
+        safeDismissed
+      );
+
+      let aiEnhanced = false;
+      const mergedSuggestions: MenuSuggestion[] = [...taxonomySuggestions];
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey && activeProducts.length > 0) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+          });
+
+          const existingSlugs = new Set<string>([
+            ...safeExisting.map((e) => e.slug.toLowerCase()),
+            ...safeDismissed.map((s) => s.toLowerCase()),
+            ...taxonomySuggestions.map((t) => t.slug.toLowerCase()),
+          ]);
+
+          const compactInventory = activeProducts.slice(0, 120).map((p) => ({
+            id: String(p.id || ''),
+            name: String(p.name || ''),
+            audience: String(p.audience || ''),
+            subCategory: String(p.subCategory || ''),
+            styleTags: Array.isArray(p.styleTags) ? p.styleTags.slice(0, 5) : [],
+            description: String(p.description || '').slice(0, 140),
+          }));
+
+          const aiResp = await ai.models.generateContent({
+            model: 'gemini-4-hydrogen',
+            contents: `Analyze this warm-climate luxury fashion inventory for KIKI JONES and identify up to 4 ADDITIONAL distinct garment cuts, styles, or silhouettes that exist in the inventory (e.g., flared jeans, halter tops, linen trousers, cut-out dresses, mesh shirts, etc.) and deserve their own sub-menu, EXCLUDING any slug in this list: ${JSON.stringify(Array.from(existingSlugs))}.
+
+INVENTORY:
+${JSON.stringify(compactInventory)}`,
+            config: {
+              systemInstruction:
+                'You are a fashion merchandiser for KIKI JONES (warm-climate Africa luxury fashion, zero winter wear). Only suggest sub-menus genuinely backed by at least 1 real product in the provided inventory JSON. Return valid JSON only.',
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  suggestions: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        slug: { type: Type.STRING },
+                        labelFr: { type: Type.STRING },
+                        labelEn: { type: Type.STRING },
+                        parentMegaMenuKey: {
+                          type: Type.STRING,
+                          enum: [
+                            'dresses',
+                            'bottoms',
+                            'tops',
+                            'matching-sets',
+                            'shoes',
+                            'accessories',
+                            'sport',
+                            'women',
+                            'men',
+                            'curve',
+                            'kids',
+                            'categories',
+                          ],
+                        },
+                        matchedProductIds: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING },
+                        },
+                        reasonFr: { type: Type.STRING },
+                        reasonEn: { type: Type.STRING },
+                      },
+                      required: [
+                        'slug',
+                        'labelFr',
+                        'labelEn',
+                        'parentMegaMenuKey',
+                        'matchedProductIds',
+                        'reasonFr',
+                        'reasonEn',
+                      ],
+                    },
+                  },
+                },
+                required: ['suggestions'],
+              },
+            },
+          });
+
+          const parsed = JSON.parse(aiResp.text || '{}');
+          if (Array.isArray(parsed.suggestions)) {
+            aiEnhanced = true;
+            const byId = new Map<string, any>(activeProducts.map((p) => [String(p.id), p]));
+
+            for (const item of parsed.suggestions) {
+              const cleanSlug = String(item.slug || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9-]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 48);
+              if (!cleanSlug || existingSlugs.has(cleanSlug)) continue;
+
+              const verifiedProducts = Array.isArray(item.matchedProductIds)
+                ? item.matchedProductIds
+                    .map((id: string) => byId.get(String(id)))
+                    .filter(Boolean)
+                : [];
+
+              if (verifiedProducts.length === 0) continue;
+
+              const inferredDivisions = Array.from(
+                new Set(
+                  verifiedProducts.map((p: any) => {
+                    if (p.brandSlug === 'kiki-curve') return 'curve';
+                    if (p.brandSlug === 'kiki-sport' || p.subCategory === 'activewear') return 'sport';
+                    if (p.audience === 'men') return 'men';
+                    if (p.audience === 'girls' || p.audience === 'boys') return 'kids';
+                    return 'women';
+                  })
+                )
+              ) as MenuSuggestion['divisions'];
+
+              existingSlugs.add(cleanSlug);
+              mergedSuggestions.push({
+                slug: cleanSlug,
+                labelFr: String(item.labelFr || cleanSlug).slice(0, 56),
+                labelEn: String(item.labelEn || item.labelFr || cleanSlug).slice(0, 56),
+                href: `/category/${cleanSlug}`,
+                parentMegaMenuKey: (item.parentMegaMenuKey as MegaMenuKey) || 'categories',
+                divisions: inferredDivisions.length > 0 ? inferredDivisions : ['women'],
+                matchedCount: verifiedProducts.length,
+                sampleProducts: verifiedProducts.slice(0, 3).map((p: any) => String(p.name || '')),
+                reasonFr: String(item.reasonFr || ''),
+                reasonEn: String(item.reasonEn || ''),
+                source: 'ai',
+              });
+            }
+          }
+        } catch {
+          // Non-fatal: deterministic taxonomy suggestions are always returned
+        }
+      }
+
+      res.json({
+        analyzedProductsCount: activeProducts.length,
+        suggestions: mergedSuggestions,
+        aiEnhanced,
+        source,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || 'Inventory menu analysis failed.' });
     }
   });
 

@@ -49,7 +49,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.16, ease: 'easeOut' }}
         className={`flex-1 w-full ${
-          showsBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : 'pb-safe'
+          showsBottomNav ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'pb-safe'
         }`}
       >
         {children}

@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
-import { MegaMenuKey } from '../../lib/navigationData';
+import { DivisionKey, MegaMenuColumn, MegaMenuKey } from '../../lib/navigationData';
 import { useLanguage } from '../../context/LanguageContext';
 import { useStore } from '../../context/StoreContext';
 import { getMegaMenuLocalized } from '../../lib/i18n';
 import { getSectionImage } from '../../lib/storefrontMedia';
+import {
+  extractDynamicSubMenus,
+  FASHION_SUB_TAXONOMY,
+} from '../../lib/menuDiscovery';
 
 const MEGA_MENU_SLOT_MAP: Partial<Record<MegaMenuKey, string>> = {
   women: 'audience:women',
@@ -37,9 +41,53 @@ export function MegaMenu({
   onMouseEnter,
   onMouseLeave,
 }: MegaMenuProps) {
-  const { lang } = useLanguage();
+  const { lang, tr } = useLanguage();
   const { storefrontConfig } = useStore();
   const config = getMegaMenuLocalized(activeKey, lang);
+
+  // Merge admin-approved dynamic sub-menus into the active desktop mega-menu
+  const enrichedColumns: MegaMenuColumn[] = useMemo(() => {
+    if (!config) return [];
+    const dynamicMenus = extractDynamicSubMenus(storefrontConfig);
+    if (dynamicMenus.length === 0) return config.columns;
+
+    const existingHrefs = new Set(
+      config.columns.flatMap((c) => c.links.map((l) => l.href.toLowerCase()))
+    );
+
+    const matchingDynamic = dynamicMenus.filter((dm) => {
+      if (existingHrefs.has(dm.href.toLowerCase())) return false;
+      if (dm.parentMegaMenuKey === config.key) return true;
+      if (config.key === 'categories') return true;
+      if (['women', 'curve', 'men', 'sport', 'kids'].includes(config.key)) {
+        const rule = FASHION_SUB_TAXONOMY.find((r) => r.slug === dm.slug);
+        return rule ? rule.divisions.includes(config.key as DivisionKey) : false;
+      }
+      return false;
+    });
+
+    if (matchingDynamic.length === 0) return config.columns;
+
+    const dynamicLinks = matchingDynamic.slice(0, 8).map((dm) => ({
+      label: lang === 'fr' ? dm.labelFr : dm.labelEn,
+      href: dm.href,
+    }));
+
+    if (config.columns.length < 4) {
+      return [
+        ...config.columns,
+        {
+          heading: tr('Coupes & Styles', 'Cuts & Styles'),
+          links: dynamicLinks,
+        },
+      ];
+    }
+
+    return config.columns.map((col, idx) =>
+      idx === 0 ? { ...col, links: [...col.links, ...dynamicLinks] } : col
+    );
+  }, [config, storefrontConfig, lang, tr]);
+
   const editorialImageUrl = config
     ? MEGA_MENU_SLOT_MAP[config.key]
       ? getSectionImage(storefrontConfig, MEGA_MENU_SLOT_MAP[config.key]!, config.editorial.imageUrl)
@@ -76,7 +124,7 @@ export function MegaMenu({
               <div className="grid grid-cols-12 gap-8 items-start">
                 {/* Category Columns */}
                 <div className="col-span-9 grid grid-cols-4 gap-x-8 gap-y-6">
-                  {config.columns.map((column) => (
+                  {enrichedColumns.map((column) => (
                     <div key={column.heading} className="space-y-3.5">
                       <h3 className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black pb-2 border-b border-black/10">
                         {column.heading}

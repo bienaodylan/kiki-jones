@@ -37,6 +37,10 @@ import { AdminPromotions } from './AdminPromotions';
 import { AdminStorefront } from './AdminStorefront';
 import { AdminSettings } from './AdminSettings';
 import { AdminAiAssistant } from '../../components/admin/AdminAiAssistant';
+import {
+  detectMissingMenusFromInventory,
+  extractDynamicSubMenus,
+} from '../../lib/menuDiscovery';
 
 type AdminTab =
   | 'overview'
@@ -69,6 +73,7 @@ export function AdminDashboard() {
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [openCreateProduct, setOpenCreateProduct] = useState(false);
   const [openCreateCollection, setOpenCreateCollection] = useState(false);
+  const [menuSuggestionTick, setMenuSuggestionTick] = useState(0);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [adminCategories, setAdminCategories] = useState<Category[]>([]);
@@ -204,6 +209,26 @@ export function AdminDashboard() {
 
   const pendingOrdersCount = orders.filter((o) => o.fulfillmentStatus === 'unfulfilled').length;
 
+  let dismissedMenuSlugs: string[] = [];
+  try {
+    const raw =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem('kikijones_dismissed_menu_suggestions_v1')
+        : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) dismissedMenuSlugs = parsed.map(String);
+    }
+  } catch {
+    dismissedMenuSlugs = [];
+  }
+  void menuSuggestionTick;
+  const pendingMenuSuggestionsCount = detectMissingMenusFromInventory(
+    allProductsAdmin,
+    extractDynamicSubMenus(storefrontConfig),
+    dismissedMenuSlugs
+  ).length;
+
   const navItems: {
     id: AdminTab;
     label: string;
@@ -221,7 +246,12 @@ export function AdminDashboard() {
     { id: 'collections', label: tr('Collections', 'Collections'), icon: Layers },
     { id: 'customers', label: tr('Clients', 'Customers'), icon: Users },
     { id: 'promotions', label: tr('Promotions', 'Promotions'), icon: Tag },
-    { id: 'storefront', label: tr('Boutique', 'Store'), icon: LayoutTemplate },
+    {
+      id: 'storefront',
+      label: tr('Boutique', 'Store'),
+      icon: LayoutTemplate,
+      count: pendingMenuSuggestionsCount > 0 ? pendingMenuSuggestionsCount : undefined,
+    },
     { id: 'settings', label: tr('Paramètres', 'Settings'), icon: Settings },
   ];
 
@@ -437,9 +467,11 @@ export function AdminDashboard() {
             <AdminStorefront
               config={storefrontConfig}
               categories={effectiveAdminCategories}
+              products={allProductsAdmin}
               actorEmail={actorEmail}
               onOpenAiAssistant={() => setAiOpen(true)}
               onOpenLiveStore={() => navigate('/')}
+              onSuggestionsChanged={() => setMenuSuggestionTick((t) => t + 1)}
               onToast={toast}
             />
           )}

@@ -17,6 +17,11 @@ import {
 import { AudienceSlug } from '../types/commerce';
 import { normalizeText, SUBCATEGORY_ALIASES } from '../lib/productClassifier';
 import { getSectionImage, hasCustomSectionImage } from '../lib/storefrontMedia';
+import {
+  extractDynamicSubMenus,
+  findDynamicMenuMeta,
+  matchesDynamicMenuSlug,
+} from '../lib/menuDiscovery';
 
 type CatalogAudience = 'women' | 'men' | 'girls' | 'boys' | 'accessories';
 
@@ -140,6 +145,10 @@ export function CatalogPage({
   const localizedBrands = useMemo(() => getLocalizedBrands(lang), [lang]);
   const localizedCategories = useMemo(() => getLocalizedCategories(lang), [lang]);
   const localizedCollections = useMemo(() => getLocalizedCollections(lang), [lang]);
+  const dynamicSubMenus = useMemo(
+    () => extractDynamicSubMenus(storefrontConfig),
+    [storefrontConfig]
+  );
 
   const [selectedAudience, setSelectedAudience] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
@@ -253,6 +262,7 @@ export function CatalogPage({
       if (p.subCategory?.toLowerCase() === normalized) return true;
       if ((p.collectionSlugs || []).includes(normalized)) return true;
       if ((p.styleTags || []).some((t) => normalizeText(t).includes(normalized))) return true;
+      if (matchesDynamicMenuSlug(p, normalized, dynamicSubMenus)) return true;
 
       // Smart bilingual (FR + EN) alias matching for mega menu categories
       const terms = SUBCATEGORY_ALIASES[normalized] || [normalizeText(normalized.replace(/-/g, ' '))];
@@ -414,6 +424,7 @@ export function CatalogPage({
     availabilityFilter,
     sortBy,
     getProductVariants,
+    dynamicSubMenus,
   ]);
 
   const resetFilters = () => {
@@ -517,6 +528,18 @@ export function CatalogPage({
           : '',
       };
     }
+    const dynamicMeta =
+      mode === 'category' && categorySlug
+        ? findDynamicMenuMeta(categorySlug, dynamicSubMenus)
+        : null;
+    if (dynamicMeta) {
+      return {
+        eyebrow: tr('Coupes & Styles · KIKI JONES', 'Cuts & Styles · KIKI JONES'),
+        title: lang === 'fr' ? dynamicMeta.labelFr : dynamicMeta.labelEn,
+        description: lang === 'fr' ? dynamicMeta.descFr : dynamicMeta.descEn,
+        bannerImage: '',
+      };
+    }
     return {
       eyebrow: tr('Boutique KIKI JONES', 'KIKI JONES Store'),
       title:
@@ -539,6 +562,7 @@ export function CatalogPage({
     activeCategoryObj,
     categorySlug,
     storefrontConfig,
+    dynamicSubMenus,
     lang,
     tr,
   ]);

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import {
   DivisionKey,
   KJ_IMAGES,
@@ -15,23 +15,28 @@ import {
 import { useLanguage } from '../../context/LanguageContext';
 import { useStore } from '../../context/StoreContext';
 import { getSectionImage } from '../../lib/storefrontMedia';
+import {
+  extractDynamicSubMenus,
+  FASHION_SUB_TAXONOMY,
+  DynamicSubMenu,
+} from '../../lib/menuDiscovery';
 
-interface VisualCard {
-  id: string;
-  label: string;
-  href: string;
-  imageUrl?: string;
-  slot?: string;
-  isSaleGraphic?: boolean;
-}
-
-interface DirectoryRow {
+interface DirectoryTile {
   id: string;
   label: string;
   href: string;
   megaMenuKey?: MegaMenuKey;
-  accentSale?: boolean;
-  isNew?: boolean;
+  isHighlight?: boolean;
+}
+
+interface DivisionHeroMeta {
+  eyebrow: string;
+  title: string;
+  ctaLabel: string;
+  href: string;
+  imageUrl: string;
+  slot: string;
+  quickShortcuts: { label: string; href: string }[];
 }
 
 interface MobileShopDirectoryProps {
@@ -84,27 +89,27 @@ export function MobileShopDirectory({
       {
         key: 'women',
         label: tr('Femme', 'Women'),
-        searchHint: tr('Rechercher dans Femme...', "Search within Women's clothing"),
+        searchHint: tr('Rechercher dans Femme...', 'Search Women...'),
       },
       {
         key: 'curve',
         label: 'Curve',
-        searchHint: tr('Rechercher dans Curve...', "Search within Curve's clothing"),
+        searchHint: tr('Rechercher dans Curve...', 'Search Curve...'),
       },
       {
         key: 'men',
         label: tr('Homme', 'Men'),
-        searchHint: tr('Rechercher dans Homme...', "Search within Men's clothing"),
+        searchHint: tr('Rechercher dans Homme...', 'Search Men...'),
       },
       {
         key: 'sport',
         label: 'Sport',
-        searchHint: tr('Rechercher dans Sport...', 'Search within Sport & Activewear'),
+        searchHint: tr('Rechercher dans Sport...', 'Search Sport...'),
       },
       {
         key: 'kids',
         label: tr('Enfants', 'Kids'),
-        searchHint: tr('Rechercher dans Enfants...', "Search within Kids' clothing"),
+        searchHint: tr('Rechercher dans Enfants...', 'Search Kids...'),
       },
     ],
     [tr]
@@ -113,197 +118,118 @@ export function MobileShopDirectory({
   const activeDivisionMeta =
     divisions.find((d) => d.key === selectedDivision) || divisions[0];
 
-  // Editorial visual carousel tailored per division (strictly warm-climate, real Fashion Nova assets)
-  const visualCards: VisualCard[] = useMemo(() => {
+  // Single architectural hero showcase per division (distinctly KIKI JONES, zero raw thumbnail clutter)
+  const divisionHero: DivisionHeroMeta = useMemo(() => {
     switch (selectedDivision) {
       case 'curve':
-        return [
-          {
-            id: 'curve-best',
-            label: tr('Meilleures ventes', 'Best Sellers'),
-            href: '/brand/kiki-curve',
-            imageUrl: KJ_IMAGES.curveMiniCampaign,
-            slot: 'brand:kiki-curve',
-          },
-          {
-            id: 'curve-formal',
-            label: tr('Soirée & Gala', 'Formal & Gowns'),
-            href: '/collection/formal',
-            imageUrl: KJ_IMAGES.curveGownCampaign,
-            slot: 'collection:formal',
-          },
-          {
-            id: 'curve-sets',
-            label: tr('Ensembles', 'Matching Sets'),
-            href: '/category/matching-sets',
-            imageUrl: KJ_IMAGES.curveSetFeature,
-            slot: 'category:matching-sets',
-          },
-          {
-            id: 'curve-sale',
-            label: tr('Soldes', 'Sale'),
-            href: '/sale',
-            isSaleGraphic: true,
-          },
-          {
-            id: 'curve-sculpt',
-            label: 'Kiki Sculpt',
-            href: '/brand/kiki-sculpt',
-            imageUrl: KJ_IMAGES.sculptFeature,
-            slot: 'brand:kiki-sculpt',
-          },
-        ];
+        return {
+          eyebrow: tr('Édition Curve', 'Curve Edit'),
+          title: 'KIKI CURVE',
+          ctaLabel: tr('Explorer la sélection', 'Explore Edit'),
+          href: '/brand/kiki-curve',
+          imageUrl: KJ_IMAGES.curveMiniCampaign,
+          slot: 'brand:kiki-curve',
+          quickShortcuts: [
+            { label: tr('Tout Curve', 'All Curve'), href: '/brand/kiki-curve' },
+            { label: tr('Soirée & Gala', 'Formal'), href: '/collection/formal' },
+            { label: tr('Ensembles', 'Sets'), href: '/category/matching-sets' },
+            { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
+            { label: tr('Soldes', 'Sale'), href: '/sale' },
+          ],
+        };
       case 'men':
-        return [
-          {
-            id: 'men-best',
-            label: tr('Meilleures ventes', 'Best Sellers'),
-            href: '/men/best-sellers',
-            imageUrl: KJ_IMAGES.menEditorial,
-            slot: 'audience:men',
-          },
-          {
-            id: 'men-shirts',
-            label: tr('Chemises Soirée', 'Night-Out Shirts'),
-            href: '/men/shirts',
-            imageUrl: KJ_IMAGES.menMeshShirt,
-            slot: 'category:shirts',
-          },
-          {
-            id: 'men-street',
-            label: 'Street Heat',
-            href: '/collection/street-collection',
-            imageUrl: KJ_IMAGES.menStreetDenim,
-            slot: 'collection:street-collection',
-          },
-          {
-            id: 'men-sale',
-            label: tr('Soldes', 'Sale'),
-            href: '/sale',
-            isSaleGraphic: true,
-          },
-          {
-            id: 'men-shoes',
-            label: tr('Mocassins', 'Loafers'),
-            href: '/men/shoes',
-            imageUrl: KJ_IMAGES.menShoesFeature,
-            slot: 'category:shoes',
-          },
-        ];
+        return {
+          eyebrow: tr('Univers Homme', 'Menswear'),
+          title: 'KIKI MEN',
+          ctaLabel: tr('Explorer la sélection', 'Explore Edit'),
+          href: '/men',
+          imageUrl: KJ_IMAGES.menEditorial,
+          slot: 'audience:men',
+          quickShortcuts: [
+            { label: tr('Nouveautés', 'New In'), href: '/men/new-in' },
+            { label: tr('Meilleures ventes', 'Best Sellers'), href: '/men/best-sellers' },
+            { label: tr('Chemises', 'Shirts'), href: '/men/shirts' },
+            { label: 'Street Heat', href: '/collection/street-collection' },
+            { label: tr('Soldes', 'Sale'), href: '/sale' },
+          ],
+        };
       case 'sport':
-        return [
-          {
-            id: 'sport-best',
-            label: tr('Meilleures ventes', 'Best Sellers'),
-            href: '/brand/kiki-sport',
-            imageUrl: KJ_IMAGES.sportFeature,
-            slot: 'brand:kiki-sport',
-          },
-          {
-            id: 'sport-men',
-            label: tr('Sport Homme', 'Men Sport'),
-            href: '/men/activewear',
-            imageUrl: KJ_IMAGES.menSportFeature,
-            slot: 'collection:sport',
-          },
-          {
-            id: 'sport-biker',
-            label: tr('Cyclistes', 'Biker Shorts'),
-            href: '/category/activewear',
-            imageUrl: KJ_IMAGES.activeShortsFeature,
-            slot: 'category:activewear',
-          },
-          {
-            id: 'sport-sale',
-            label: tr('Soldes', 'Sale'),
-            href: '/sale',
-            isSaleGraphic: true,
-          },
-          {
-            id: 'sport-sculpt',
-            label: 'Kiki Sculpt',
-            href: '/brand/kiki-sculpt',
-            imageUrl: KJ_IMAGES.sculptBodysuitFeature,
-            slot: 'brand:kiki-sculpt',
-          },
-        ];
+        return {
+          eyebrow: tr('Studio & Performance', 'Studio & Performance'),
+          title: 'KIKI SPORT',
+          ctaLabel: tr('Explorer la sélection', 'Explore Edit'),
+          href: '/brand/kiki-sport',
+          imageUrl: KJ_IMAGES.sportFeature,
+          slot: 'brand:kiki-sport',
+          quickShortcuts: [
+            { label: tr('Tout Sport', 'All Sport'), href: '/brand/kiki-sport' },
+            { label: tr('Sport Homme', 'Men Sport'), href: '/men/activewear' },
+            { label: tr('Cyclistes', 'Biker Shorts'), href: '/category/activewear' },
+            { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
+            { label: tr('Soldes', 'Sale'), href: '/sale' },
+          ],
+        };
       case 'kids':
-        return [
-          {
-            id: 'kids-girls',
-            label: tr('Filles', 'Girls'),
-            href: '/girls',
-            imageUrl: KJ_IMAGES.girlsEditorial,
-            slot: 'audience:girls',
-          },
-          {
-            id: 'kids-boys',
-            label: tr('Garçons', 'Boys'),
-            href: '/boys',
-            imageUrl: KJ_IMAGES.boysEditorial,
-            slot: 'audience:boys',
-          },
-          {
-            id: 'kids-sets',
-            label: tr('Ensembles', 'Matching Sets'),
-            href: '/brand/kiki-kids',
-            imageUrl: KJ_IMAGES.girlsEditorial,
-            slot: 'brand:kiki-kids',
-          },
-          {
-            id: 'kids-sale',
-            label: tr('Soldes', 'Sale'),
-            href: '/sale',
-            isSaleGraphic: true,
-          },
-        ];
+        return {
+          eyebrow: tr('Filles & Garçons', 'Girls & Boys'),
+          title: 'KIKI KIDS',
+          ctaLabel: tr('Explorer la sélection', 'Explore Edit'),
+          href: '/brand/kiki-kids',
+          imageUrl: KJ_IMAGES.girlsEditorial,
+          slot: 'brand:kiki-kids',
+          quickShortcuts: [
+            { label: tr('Filles', 'Girls'), href: '/girls' },
+            { label: tr('Garçons', 'Boys'), href: '/boys' },
+            { label: tr('Ensembles', 'Matching Sets'), href: '/brand/kiki-kids' },
+            { label: tr('Soldes', 'Sale'), href: '/sale' },
+          ],
+        };
       case 'women':
       default:
-        return [
-          {
-            id: 'women-best',
-            label: tr('Meilleures ventes', 'Best Sellers'),
-            href: '/women',
-            imageUrl: KJ_IMAGES.heroCampaign,
-            slot: 'audience:women',
-          },
-          {
-            id: 'women-new',
-            label: tr('Nouveautés', 'New In'),
-            href: '/new-in',
-            imageUrl: KJ_IMAGES.womenSatinEvening,
-            slot: 'brand:kiki-luxe',
-          },
-          {
-            id: 'women-afterdark',
-            label: 'After Dark',
-            href: '/collection/after-dark',
-            imageUrl: KJ_IMAGES.womenCorsetCargo,
-            slot: 'collection:after-dark',
-          },
-          {
-            id: 'women-sale',
-            label: tr('Soldes', 'Sale'),
-            href: '/sale',
-            isSaleGraphic: true,
-          },
-          {
-            id: 'women-resort',
-            label: tr('Soleil & Resort', 'Sun & Resort'),
-            href: '/collection/summer-drop',
-            imageUrl: KJ_IMAGES.womenResortSet,
-            slot: 'collection:summer-drop',
-          },
-        ];
+        return {
+          eyebrow: tr('Silhouettes Femme', 'Womenswear'),
+          title: tr('NOUVELLE SAISON', 'NEW SEASON'),
+          ctaLabel: tr('Découvrir Femme', 'Explore Women'),
+          href: '/women',
+          imageUrl: KJ_IMAGES.heroCampaign,
+          slot: 'audience:women',
+          quickShortcuts: [
+            { label: tr('Nouveautés', 'New In'), href: '/new-in' },
+            { label: 'After Dark', href: '/collection/after-dark' },
+            { label: tr('Soleil & Resort', 'Resort'), href: '/collection/summer-drop' },
+            { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+            { label: tr('Soldes', 'Sale'), href: '/sale' },
+          ],
+        };
     }
   }, [selectedDivision, tr]);
 
-  // Build detailed Shop rows directly from the division's desktop floating subnav + mega menu
-  const shopRows: DirectoryRow[] = useMemo(() => {
-    const subItems = getFloatingSubnav(selectedDivision, lang);
-    const rows: DirectoryRow[] = [];
+  const resolvedHeroImage = getSectionImage(
+    storefrontConfig,
+    divisionHero.slot,
+    divisionHero.imageUrl
+  );
 
-    // Lead with the division's full overview + New In + Sale highlight + all categories
+  // Dynamic admin-approved sub-menus from inventory detector
+  const allDynamicSubMenus = useMemo(
+    () => extractDynamicSubMenus(storefrontConfig),
+    [storefrontConfig]
+  );
+
+  const divisionDynamicMenus: DynamicSubMenu[] = useMemo(() => {
+    return allDynamicSubMenus.filter((menu) => {
+      if (menu.parentMegaMenuKey === selectedDivision) return true;
+      const rule = FASHION_SUB_TAXONOMY.find((r) => r.slug === menu.slug);
+      if (rule) return rule.divisions.includes(selectedDivision);
+      return selectedDivision === 'women';
+    });
+  }, [allDynamicSubMenus, selectedDivision]);
+
+  // Preserve 100% of existing division categories & mega-menu entry points
+  const categoryTiles: DirectoryTile[] = useMemo(() => {
+    const subItems = getFloatingSubnav(selectedDivision, lang);
+    const tiles: DirectoryTile[] = [];
+
     const divisionAllHref: Record<DivisionKey, string> = {
       women: '/women',
       curve: '/brand/kiki-curve',
@@ -313,21 +239,21 @@ export function MobileShopDirectory({
     };
 
     const divisionAllLabel: Record<DivisionKey, string> = {
-      women: tr('Tout voir · Femme', 'Shop All Women'),
-      curve: tr('Tout voir · Curve', 'Shop All Curve'),
-      men: tr('Tout voir · Homme', 'Shop All Men'),
-      sport: tr('Tout voir · Sport', 'Shop All Sport'),
-      kids: tr('Tout voir · Enfants', 'Shop All Kids'),
+      women: tr('Tout · Femme', 'All Women'),
+      curve: tr('Tout · Curve', 'All Curve'),
+      men: tr('Tout · Homme', 'All Men'),
+      sport: tr('Tout · Sport', 'All Sport'),
+      kids: tr('Tout · Enfants', 'All Kids'),
     };
 
-    rows.push({
+    tiles.push({
       id: `all-${selectedDivision}`,
       label: divisionAllLabel[selectedDivision],
       href: divisionAllHref[selectedDivision],
       megaMenuKey: selectedDivision,
     });
 
-    const seenLabels = new Set<string>([divisionAllLabel[selectedDivision].toLowerCase()]);
+    const seen = new Set<string>([divisionAllLabel[selectedDivision].toLowerCase()]);
 
     for (const item of subItems) {
       const lower = item.label.toLowerCase();
@@ -343,42 +269,48 @@ export function MobileShopDirectory({
       ) {
         continue;
       }
-      if (seenLabels.has(lower)) continue;
-      seenLabels.add(lower);
+      if (seen.has(lower)) continue;
+      seen.add(lower);
 
-      const isNew =
-        item.href === '/new-in' ||
-        item.href.endsWith('/new-in') ||
-        item.href === '/collection/after-dark';
-
-      rows.push({
+      tiles.push({
         id: `${selectedDivision}-${item.label}`,
         label: item.label,
         href: item.href,
         megaMenuKey: item.megaMenuKey,
-        accentSale: Boolean(item.highlight),
-        isNew,
+        isHighlight: Boolean(item.highlight),
       });
     }
 
-    return rows;
+    return tiles;
   }, [selectedDivision, lang, tr]);
 
-  // Division's desktop MegaMenu columns (for full parity on mobile)
   const divisionMega = useMemo(
     () => getMegaMenuLocalized(selectedDivision, lang),
     [selectedDivision, lang]
   );
 
-  // Localized brands & collections for the lower sections
   const brands = useMemo(() => getLocalizedBrands(lang), [lang]);
   const collections = useMemo(() => getLocalizedCollections(lang), [lang]);
 
-  // Drill-down sub-menu data (Level 2)
+  // Level-2 Drill-Down (exact Desktop MegaMenu parity + dynamic sub-menus for that parent key)
   const drillConfig = useMemo(
     () => getMegaMenuLocalized(drillMenuKey, lang),
     [drillMenuKey, lang]
   );
+
+  const drillDynamicMenus = useMemo(() => {
+    if (!drillConfig) return [];
+    return allDynamicSubMenus.filter((m) => {
+      if (m.parentMegaMenuKey === drillConfig.key) return true;
+      if (
+        ['women', 'curve', 'men', 'sport', 'kids'].includes(drillConfig.key)
+      ) {
+        const rule = FASHION_SUB_TAXONOMY.find((r) => r.slug === m.slug);
+        return rule ? rule.divisions.includes(drillConfig.key as DivisionKey) : false;
+      }
+      return false;
+    });
+  }, [drillConfig, allDynamicSubMenus]);
 
   const drillEditorialImage = useMemo(() => {
     if (!drillConfig) return '';
@@ -407,12 +339,12 @@ export function MobileShopDirectory({
 
   return (
     <div className="flex flex-col min-h-0">
-      {/* Horizontal Division Tabs with Crisp Bold Black Underline (Matches Inspiration) */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-black/[0.08]">
+      {/* Sticky Architectural Division Switcher + Minimal Scoped Search */}
+      <div className="sticky top-0 z-10 bg-white/88 backdrop-blur-xl border-b border-black/[0.08] px-4 pt-3 pb-3 space-y-2.5">
         <div
           role="tablist"
           aria-label={tr('Univers KIKI JONES', 'KIKI JONES Divisions')}
-          className="flex items-center justify-between px-3 sm:px-4 overflow-x-auto no-scrollbar"
+          className="flex items-center gap-1 p-1 rounded-full bg-[#F2F2F2] overflow-x-auto no-scrollbar"
         >
           {divisions.map((div) => {
             const active = selectedDivision === div.key;
@@ -423,57 +355,54 @@ export function MobileShopDirectory({
                 role="tab"
                 aria-selected={active}
                 onClick={() => handleDivisionChange(div.key)}
-                className={`relative min-h-[44px] px-2.5 py-2.5 text-[11px] uppercase tracking-[0.11em] whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                className={`relative flex-1 min-w-[60px] min-h-[34px] px-2.5 rounded-full text-[10.5px] uppercase tracking-[0.11em] whitespace-nowrap transition-colors cursor-pointer ${
                   active
-                    ? 'font-bold text-black'
-                    : 'font-medium text-black/55 hover:text-black'
+                    ? 'text-white font-bold'
+                    : 'text-black/60 font-medium hover:text-black'
                 }`}
               >
-                {div.label}
                 {active && (
                   <motion.span
-                    layoutId="mobile-division-underline"
+                    layoutId="kiki-editorial-division-pill"
                     transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                    className="absolute left-1 right-1 bottom-0 h-[2.5px] bg-black"
+                    className="absolute inset-0 rounded-full bg-black"
                   />
                 )}
+                <span className="relative z-10">{div.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Scoped Capsule Search Bar */}
         {showSearchBar && (
-          <div className="px-4 py-2.5">
-            <form
-              onSubmit={handleSearchSubmit}
-              className="flex items-center gap-2.5 rounded-full border border-black/15 bg-white/85 backdrop-blur-md px-3.5 min-h-[42px] focus-within:border-black transition-colors"
-            >
-              <Search className="w-[17px] h-[17px] text-black/45 shrink-0" strokeWidth={1.7} />
-              <input
-                type="text"
-                value={queryValue}
-                onChange={(e) => setQueryValue(e.target.value)}
-                placeholder={activeDivisionMeta.searchHint}
-                aria-label={activeDivisionMeta.searchHint}
-                className="flex-1 bg-transparent text-[13.5px] font-light text-black placeholder:text-black/45 focus:outline-none py-1.5"
-              />
-              {queryValue && (
-                <button
-                  type="button"
-                  onClick={() => setQueryValue('')}
-                  aria-label={tr('Effacer', 'Clear search')}
-                  className="p-1 text-black/50 hover:text-black cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </form>
-          </div>
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex items-center gap-2.5 rounded-xl border border-black/[0.1] bg-[#F7F7F7]/90 px-3.5 min-h-[40px] focus-within:border-black focus-within:bg-white transition-colors"
+          >
+            <Search className="w-4 h-4 text-black/45 shrink-0" strokeWidth={1.7} />
+            <input
+              type="text"
+              value={queryValue}
+              onChange={(e) => setQueryValue(e.target.value)}
+              placeholder={activeDivisionMeta.searchHint}
+              aria-label={activeDivisionMeta.searchHint}
+              className="flex-1 bg-transparent text-[13px] font-normal text-black placeholder:text-black/45 focus:outline-none py-1"
+            />
+            {queryValue && (
+              <button
+                type="button"
+                onClick={() => setQueryValue('')}
+                aria-label={tr('Effacer', 'Clear search')}
+                className="p-1 text-black/50 hover:text-black cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </form>
         )}
       </div>
 
-      {/* Level 1 (Main Division Directory) vs Level 2 (Desktop-Parity Sub-Menu Drill-Down) */}
+      {/* Level 1 (Editorial KIKI JONES Index) vs Level 2 (Full Desktop-Parity Drill-Down) */}
       <AnimatePresence mode="wait" initial={false}>
         {drillConfig ? (
           <motion.div
@@ -489,7 +418,7 @@ export function MobileShopDirectory({
               <button
                 type="button"
                 onClick={() => setDrillMenuKey(null)}
-                className="inline-flex items-center gap-1.5 min-h-[40px] pr-3 text-xs font-bold uppercase tracking-[0.14em] text-black hover:opacity-65 transition-opacity cursor-pointer"
+                className="inline-flex items-center gap-1.5 min-h-[38px] pr-3 text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:opacity-65 transition-opacity cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" strokeWidth={2} />
                 <span>{activeDivisionMeta.label}</span>
@@ -497,18 +426,18 @@ export function MobileShopDirectory({
               <button
                 type="button"
                 onClick={() => onNavigate(drillConfig.href)}
-                className="inline-flex items-center gap-1 min-h-[40px] text-[11px] font-bold uppercase tracking-[0.13em] text-black underline underline-offset-4 cursor-pointer"
+                className="inline-flex items-center gap-1 min-h-[38px] text-[10.5px] font-bold uppercase tracking-[0.14em] text-black underline underline-offset-4 cursor-pointer"
               >
                 <span>{tr('Tout voir', 'Shop All')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Compact Editorial Card (Exact parity with Desktop MegaMenu right panel) */}
+            {/* Editorial Spotlight Banner */}
             <button
               type="button"
               onClick={() => onNavigate(drillConfig.editorial.href)}
-              className="group relative w-full h-[144px] overflow-hidden bg-[#F5F5F5] text-left cursor-pointer block"
+              className="group relative w-full h-[142px] overflow-hidden bg-[#F5F5F5] text-left cursor-pointer block"
             >
               <img
                 src={drillEditorialImage}
@@ -516,26 +445,48 @@ export function MobileShopDirectory({
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
               <div className="absolute inset-0 p-4 flex flex-col justify-end text-white">
-                <p className="text-[9.5px] font-bold uppercase tracking-[0.2em] text-white/80">
+                <p className="text-[9.5px] font-bold uppercase tracking-[0.2em] text-white/75">
                   {drillConfig.editorial.eyebrow}
                 </p>
                 <p className="font-editorial text-xl leading-tight mt-0.5">
                   {drillConfig.editorial.title}
                 </p>
-                <span className="inline-flex items-center gap-1.5 mt-1.5 text-[10px] font-bold uppercase tracking-[0.16em]">
+                <span className="inline-flex items-center gap-1.5 mt-1 text-[10px] font-bold uppercase tracking-[0.16em]">
                   {drillConfig.editorial.ctaLabel}
                   <ArrowRight className="w-3 h-3" />
                 </span>
               </div>
             </button>
 
+            {/* Dynamic Inventory-Discovered Styles for this parent menu */}
+            {drillDynamicMenus.length > 0 && (
+              <div className="space-y-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">
+                  {tr('Coupes & Styles détectés', 'Cuts & Styles')}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {drillDynamicMenus.map((dm) => (
+                    <button
+                      key={dm.id}
+                      type="button"
+                      onClick={() => onNavigate(dm.href)}
+                      className="min-h-[42px] px-3 py-2 border border-black/15 bg-[#FAFAFA] hover:border-black flex items-center justify-between gap-2 text-left text-[12.5px] font-medium text-black cursor-pointer transition-colors"
+                    >
+                      <span className="truncate">{lang === 'fr' ? dm.labelFr : dm.labelEn}</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-black/45 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* All Columns from Desktop MegaMenu */}
-            <div className="space-y-6">
+            <div className="space-y-5">
               {drillConfig.columns.map((column) => (
                 <div key={column.heading} className="space-y-1.5">
-                  <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black/45 pb-1.5 border-b border-black/[0.08]">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/45 pb-1.5 border-b border-black/[0.08]">
                     {column.heading}
                   </p>
                   <div className="divide-y divide-black/[0.05]">
@@ -544,10 +495,10 @@ export function MobileShopDirectory({
                         key={`${column.heading}-${link.label}`}
                         type="button"
                         onClick={() => onNavigate(link.href)}
-                        className="w-full min-h-[44px] flex items-center justify-between py-2.5 text-left text-[14.5px] font-normal text-black/90 hover:text-black active:opacity-60 transition-opacity cursor-pointer"
+                        className="w-full min-h-[42px] flex items-center justify-between py-2 text-left text-[14px] font-normal text-black/90 hover:text-black active:opacity-60 transition-opacity cursor-pointer"
                       >
                         <span>{link.label}</span>
-                        <ChevronRight className="w-4 h-4 text-black/35 shrink-0" strokeWidth={1.6} />
+                        <ChevronRight className="w-4 h-4 text-black/30 shrink-0" strokeWidth={1.6} />
                       </button>
                     ))}
                   </div>
@@ -558,123 +509,176 @@ export function MobileShopDirectory({
         ) : (
           <motion.div
             key={`root-${selectedDivision}`}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -12 }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
-            className="py-4 space-y-6"
+            className="px-4 py-4 space-y-7"
           >
-            {/* Horizontal Editorial Visual Cards Strip (Matches Screenshot Proportions) */}
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory px-4">
-              {visualCards.map((card) => {
-                const resolvedImg = card.imageUrl
-                  ? card.slot
-                    ? getSectionImage(storefrontConfig, card.slot, card.imageUrl)
-                    : card.imageUrl
-                  : '';
-
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    onClick={() => onNavigate(card.href)}
-                    className="w-[108px] sm:w-[118px] shrink-0 snap-start text-left space-y-2 group cursor-pointer"
-                  >
-                    {card.isSaleGraphic ? (
-                      <div className="aspect-[3/4] w-full bg-black text-white flex items-center justify-center overflow-hidden px-1">
-                        <span className="font-bold text-[22px] tracking-[0.06em] uppercase leading-none">
-                          {tr('SOLDES', 'SALE')}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="aspect-[3/4] w-full bg-[#F5F5F5] overflow-hidden">
-                        <img
-                          src={resolvedImg}
-                          alt={card.label}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.04]"
-                        />
-                      </div>
-                    )}
-                    <p className="text-[13px] font-normal text-black leading-snug">
-                      {card.label}
+            {/* Architectural 16:9 Division Hero + Monochrome Quick-Access Strip */}
+            <section className="space-y-3">
+              <button
+                type="button"
+                onClick={() => onNavigate(divisionHero.href)}
+                className="group relative w-full aspect-[16/9] overflow-hidden bg-[#F5F5F5] text-left block cursor-pointer"
+              >
+                <img
+                  src={resolvedHeroImage}
+                  alt={divisionHero.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                <div className="absolute inset-x-3 bottom-3 px-3.5 py-2.5 bg-white/15 backdrop-blur-xl border border-white/25 flex items-center justify-between gap-3 text-white">
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/80">
+                      {divisionHero.eyebrow}
                     </p>
-                  </button>
-                );
-              })}
-            </div>
+                    <p className="font-editorial text-lg leading-tight truncate">
+                      {divisionHero.title}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.16em] shrink-0">
+                    <span>{tr('Voir', 'Shop')}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </button>
 
-            {/* Section 1: Two-Column "Boutique / Shop" Detailed Directory (Exact Inspiration Layout) */}
-            <section className="px-4 flex items-start gap-3">
-              <div className="w-[82px] shrink-0 pt-2.5">
-                <h3 className="text-[15px] font-medium text-black leading-snug">
-                  {tr('Boutique', 'Shop')}
-                </h3>
-              </div>
-              <div className="flex-1 min-w-0 divide-y divide-black/[0.05]">
-                {shopRows.map((row) => (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                {divisionHero.quickShortcuts.map((shortcut) => (
                   <button
-                    key={row.id}
+                    key={`${selectedDivision}-${shortcut.label}`}
+                    type="button"
+                    onClick={() => onNavigate(shortcut.href)}
+                    className="shrink-0 min-h-[34px] px-3 border border-black/15 bg-white hover:border-black hover:bg-black hover:text-white text-[10.5px] font-semibold uppercase tracking-[0.12em] text-black transition-colors cursor-pointer"
+                  >
+                    {shortcut.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* Chapter 01: Architectural 2-Column Category Grid (100% of existing menus preserved) */}
+            <section className="space-y-3">
+              <div className="flex items-baseline justify-between border-b border-black/10 pb-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[10px] font-bold tabular-nums tracking-[0.16em] text-black/40">
+                    01
+                  </span>
+                  <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
+                    {tr('Catégories', 'Categories')}
+                  </h3>
+                </div>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-black/40 tabular-nums">
+                  {categoryTiles.length}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {categoryTiles.map((tile) => (
+                  <button
+                    key={tile.id}
                     type="button"
                     onClick={() => {
-                      if (row.megaMenuKey) {
-                        setDrillMenuKey(row.megaMenuKey);
+                      if (tile.megaMenuKey) {
+                        setDrillMenuKey(tile.megaMenuKey);
                       } else {
-                        onNavigate(row.href);
+                        onNavigate(tile.href);
                       }
                     }}
-                    className="w-full min-h-[46px] flex items-center justify-between gap-2 py-2.5 text-left active:opacity-55 transition-opacity cursor-pointer"
+                    className={`group min-h-[50px] px-3 py-2.5 border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                      tile.isHighlight
+                        ? 'border-black bg-black text-white hover:bg-black/85'
+                        : 'border-black/[0.1] bg-white text-black hover:border-black hover:bg-[#FAFAFA]'
+                    }`}
                   >
-                    <span
-                      className={`text-[15px] leading-snug ${
-                        row.accentSale
-                          ? 'font-medium text-[#B91C1C]'
-                          : 'font-normal text-black'
-                      }`}
-                    >
-                      {row.label}
-                      {row.isNew && (
-                        <sup className="ml-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-black">
-                          {tr('NOUVEAU', 'NEW')}
-                        </sup>
-                      )}
+                    <span className="text-[12.5px] font-medium leading-snug line-clamp-2">
+                      {tile.label}
                     </span>
                     <ChevronRight
-                      className="w-[17px] h-[17px] text-black/40 shrink-0"
-                      strokeWidth={1.6}
+                      className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 ${
+                        tile.isHighlight ? 'text-white/75' : 'text-black/35'
+                      }`}
+                      strokeWidth={1.8}
                     />
                   </button>
                 ))}
               </div>
             </section>
 
-            {/* Section 2: Full Division Desktop Mega-Menu Columns (So NO sub-link is ever missing on mobile) */}
-            {divisionMega && (
-              <section className="px-4 pt-3 border-t border-black/[0.08] flex items-start gap-3">
-                <div className="w-[82px] shrink-0 pt-2.5">
-                  <h3 className="text-[15px] font-medium text-black leading-snug">
-                    {tr('Détails', 'Details')}
-                  </h3>
+            {/* Chapter 02: Dynamic Inventory-Detected Cuts & Styles (live from Admin approvals) */}
+            {divisionDynamicMenus.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-baseline justify-between border-b border-black/10 pb-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[10px] font-bold tabular-nums tracking-[0.16em] text-black/40">
+                      02
+                    </span>
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
+                      {tr('Coupes & Styles', 'Cuts & Styles')}
+                    </h3>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.14em] text-black/40 tabular-nums">
+                    {divisionDynamicMenus.length}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0 space-y-4">
+
+                <div className="grid grid-cols-2 gap-2">
+                  {divisionDynamicMenus.map((dm) => (
+                    <button
+                      key={dm.id}
+                      type="button"
+                      onClick={() => onNavigate(dm.href)}
+                      className="min-h-[44px] px-3 py-2 border border-black/[0.1] bg-[#FAFAFA] hover:border-black flex items-center justify-between gap-2 text-left text-[12.5px] font-medium text-black transition-colors cursor-pointer"
+                    >
+                      <span className="truncate">{lang === 'fr' ? dm.labelFr : dm.labelEn}</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-black/40 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Chapter 03: Full Division Desktop Mega-Menu Index (Zero missing sub-links) */}
+            {divisionMega && (
+              <section className="space-y-4">
+                <div className="flex items-baseline justify-between border-b border-black/10 pb-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[10px] font-bold tabular-nums tracking-[0.16em] text-black/40">
+                      {divisionDynamicMenus.length > 0 ? '03' : '02'}
+                    </span>
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
+                      {tr('Index détaillé', 'Detailed Index')}
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDrillMenuKey('categories')}
+                    className="text-[10px] font-bold uppercase tracking-[0.14em] text-black/60 hover:text-black underline underline-offset-4 cursor-pointer"
+                  >
+                    {tr('Toutes catégories', 'All Categories')}
+                  </button>
+                </div>
+
+                <div className="space-y-4">
                   {divisionMega.columns.map((col) => (
-                    <div key={col.heading} className="space-y-0.5">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-black/45 pt-2 pb-1">
+                    <div
+                      key={col.heading}
+                      className="border border-black/[0.08] bg-[#FAFAFA]/70 p-3.5 space-y-2.5"
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/50">
                         {col.heading}
                       </p>
-                      <div className="divide-y divide-black/[0.05]">
+                      <div className="flex flex-wrap gap-1.5">
                         {col.links.map((link) => (
                           <button
                             key={`${col.heading}-${link.label}`}
                             type="button"
                             onClick={() => onNavigate(link.href)}
-                            className="w-full min-h-[42px] flex items-center justify-between gap-2 py-2 text-left text-[14px] font-normal text-black/85 hover:text-black active:opacity-55 cursor-pointer"
+                            className="px-2.5 py-1.5 bg-white border border-black/[0.1] hover:border-black text-[12px] font-normal text-black transition-colors cursor-pointer"
                           >
-                            <span>{link.label}</span>
-                            <ChevronRight
-                              className="w-[16px] h-[16px] text-black/35 shrink-0"
-                              strokeWidth={1.6}
-                            />
+                            {link.label}
                           </button>
                         ))}
                       </div>
@@ -684,75 +688,99 @@ export function MobileShopDirectory({
               </section>
             )}
 
-            {/* Section 3: Maisons / Brands Directory */}
-            <section className="px-4 pt-3 border-t border-black/[0.08] flex items-start gap-3">
-              <div className="w-[82px] shrink-0 pt-2.5">
-                <h3 className="text-[15px] font-medium text-black leading-snug">
-                  {tr('Maisons', 'Brands')}
-                </h3>
+            {/* Chapter 04: Editorial Collections Lookbook Strip */}
+            <section className="space-y-3">
+              <div className="flex items-baseline justify-between border-b border-black/10 pb-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[10px] font-bold tabular-nums tracking-[0.16em] text-black/40">
+                    {divisionDynamicMenus.length > 0 ? '04' : '03'}
+                  </span>
+                  <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
+                    {tr('Collections', 'Collections')}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('/collections')}
+                  className="text-[10px] font-bold uppercase tracking-[0.14em] text-black/60 hover:text-black underline underline-offset-4 cursor-pointer"
+                >
+                  {tr('Tout voir', 'View All')}
+                </button>
               </div>
-              <div className="flex-1 min-w-0 divide-y divide-black/[0.05]">
+
+              <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4">
+                {collections.map((col) => {
+                  const colImg = getSectionImage(
+                    storefrontConfig,
+                    `collection:${col.slug}`,
+                    col.campaignImage
+                  );
+                  return (
+                    <button
+                      key={col.slug}
+                      type="button"
+                      onClick={() => onNavigate(`/collection/${col.slug}`)}
+                      className="w-[148px] shrink-0 snap-start text-left group cursor-pointer"
+                    >
+                      <div className="relative aspect-[4/5] w-full bg-[#F5F5F5] overflow-hidden">
+                        <img
+                          src={colImg}
+                          alt={col.title}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.04]"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                        <div className="absolute inset-x-2.5 bottom-2.5 text-white">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/75 truncate">
+                            {col.seasonTag}
+                          </p>
+                          <p className="text-[12.5px] font-semibold leading-tight truncate">
+                            {col.title}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Chapter 05: Maisons KIKI JONES Architectural 2-Col Grid */}
+            <section className="space-y-3 pb-2">
+              <div className="flex items-baseline justify-between border-b border-black/10 pb-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[10px] font-bold tabular-nums tracking-[0.16em] text-black/40">
+                    {divisionDynamicMenus.length > 0 ? '05' : '04'}
+                  </span>
+                  <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
+                    {tr('Maisons KIKI JONES', 'KIKI JONES Houses')}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDrillMenuKey('brands')}
+                  className="text-[10px] font-bold uppercase tracking-[0.14em] text-black/60 hover:text-black underline underline-offset-4 cursor-pointer"
+                >
+                  {tr('Explorer', 'Explore')}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
                 {brands.map((brand) => (
                   <button
                     key={brand.slug}
                     type="button"
                     onClick={() => onNavigate(`/brand/${brand.slug}`)}
-                    className="w-full min-h-[44px] flex items-center justify-between gap-2 py-2.5 text-left text-[14.5px] font-normal text-black active:opacity-55 cursor-pointer"
+                    className="px-3 py-3 border border-black/[0.1] bg-white hover:border-black text-left space-y-0.5 transition-colors cursor-pointer"
                   >
-                    <span>{brand.name}</span>
-                    <ChevronRight
-                      className="w-[16px] h-[16px] text-black/35 shrink-0"
-                      strokeWidth={1.6}
-                    />
+                    <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-black truncate">
+                      {brand.name}
+                    </p>
+                    <p className="text-[10.5px] font-light text-black/50 truncate">
+                      {brand.tagline}
+                    </p>
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setDrillMenuKey('brands')}
-                  className="w-full min-h-[44px] flex items-center justify-between gap-2 py-2.5 text-left text-[14px] font-medium text-black active:opacity-55 cursor-pointer"
-                >
-                  <span>{tr('Toutes les marques', 'Explore All Brands')}</span>
-                  <ChevronRight
-                    className="w-[16px] h-[16px] text-black/45 shrink-0"
-                    strokeWidth={1.7}
-                  />
-                </button>
-              </div>
-            </section>
-
-            {/* Section 4: Collections & All Categories */}
-            <section className="px-4 pt-3 border-t border-black/[0.08] flex items-start gap-3">
-              <div className="w-[82px] shrink-0 pt-2.5">
-                <h3 className="text-[15px] font-medium text-black leading-snug">
-                  {tr('Éditions', 'Edits')}
-                </h3>
-              </div>
-              <div className="flex-1 min-w-0 divide-y divide-black/[0.05]">
-                {collections.map((col) => (
-                  <button
-                    key={col.slug}
-                    type="button"
-                    onClick={() => onNavigate(`/collection/${col.slug}`)}
-                    className="w-full min-h-[44px] flex items-center justify-between gap-2 py-2.5 text-left text-[14.5px] font-normal text-black active:opacity-55 cursor-pointer"
-                  >
-                    <span>{col.title}</span>
-                    <ChevronRight
-                      className="w-[16px] h-[16px] text-black/35 shrink-0"
-                      strokeWidth={1.6}
-                    />
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setDrillMenuKey('categories')}
-                  className="w-full min-h-[44px] flex items-center justify-between gap-2 py-2.5 text-left text-[14px] font-medium text-black active:opacity-55 cursor-pointer"
-                >
-                  <span>{tr('Toutes les catégories', 'All Categories')}</span>
-                  <ChevronRight
-                    className="w-[16px] h-[16px] text-black/45 shrink-0"
-                    strokeWidth={1.7}
-                  />
-                </button>
               </div>
             </section>
           </motion.div>

@@ -52,14 +52,6 @@ export function MobileMenuDrawer({
     onClose();
   };
 
-  const divisionSuffix: Record<DivisionKey, string> = {
-    women: tr('FEMME', 'WOMEN'),
-    curve: 'CURVE',
-    men: tr('HOMME', 'MEN'),
-    sport: 'SPORT',
-    kids: tr('ENFANTS', 'KIDS'),
-  };
-
   return (
     <AnimatePresence>
       {open && (
@@ -79,18 +71,21 @@ export function MobileMenuDrawer({
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 330, damping: 35 }}
             aria-label={tr('Navigation mobile', 'Mobile Navigation')}
-            className="fixed top-0 left-0 bottom-0 w-full sm:max-w-[430px] bg-white/92 backdrop-blur-2xl backdrop-saturate-[1.85] text-black z-50 flex flex-col shadow-2xl pt-safe"
+            className="fixed top-0 left-0 bottom-0 w-full sm:max-w-[430px] bg-white/94 backdrop-blur-2xl backdrop-saturate-[1.85] text-black z-50 flex flex-col shadow-2xl pt-safe"
           >
-            {/* Header with Dynamic Division Wordmark (e.g. KIKI CURVE / KIKI FEMME) */}
-            <div className="px-4 h-[54px] border-b border-black/[0.08] bg-white/75 backdrop-blur-xl flex items-center justify-between shrink-0">
+            {/* Pure KIKI JONES Architectural Header */}
+            <div className="px-4 h-[54px] border-b border-black/[0.08] bg-white/80 backdrop-blur-xl flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={() => go('/')}
-                className="inline-flex items-baseline gap-0.5 text-[18px] tracking-[0.06em] uppercase text-black cursor-pointer"
+                className="inline-flex items-center gap-2 text-black cursor-pointer"
               >
-                <span className="font-bold">KIKI</span>
-                <span className="font-light tracking-[0.12em]">
-                  {divisionSuffix[selectedDivision]}
+                <span className="font-bold text-[15px] tracking-[0.26em] uppercase">
+                  KIKI JONES
+                </span>
+                <span className="h-3 w-px bg-black/20" />
+                <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-black/45">
+                  {tr('Menu', 'Index')}
                 </span>
               </button>
 
@@ -114,7 +109,7 @@ export function MobileMenuDrawer({
               </div>
             </div>
 
-            {/* Scrollable Detailed Directory (100% Desktop Mega-Menu Parity) */}
+            {/* Scrollable Editorial Directory (100% Desktop Mega-Menu Parity + Dynamic Sub-Menus) */}
             <div className="flex-1 overflow-y-auto overscroll-contain">
               <MobileShopDirectory
                 selectedDivision={selectedDivision}
@@ -124,7 +119,7 @@ export function MobileMenuDrawer({
             </div>
 
             {/* Bottom Account, Wishlist & Install Bar */}
-            <div className="px-4 pt-3 pb-[calc(0.85rem+env(safe-area-inset-bottom))] border-t border-black/[0.08] bg-white/80 backdrop-blur-xl space-y-2 shrink-0">
+            <div className="px-4 pt-3 pb-[calc(0.85rem+env(safe-area-inset-bottom))] border-t border-black/[0.08] bg-white/85 backdrop-blur-xl space-y-2 shrink-0">
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"

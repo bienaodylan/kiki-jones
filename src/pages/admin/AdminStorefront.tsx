@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowUp,
   ArrowDown,
@@ -14,10 +14,13 @@ import {
   Upload,
   Image as ImageIcon,
   RotateCcw,
+  RefreshCw,
+  Check,
 } from 'lucide-react';
 import {
   Category,
   CustomHomepageSection,
+  Product,
   StorefrontConfig,
   StoreNavigationItem,
 } from '../../types/commerce';
@@ -39,13 +42,25 @@ import {
   extractNavigationFromConfig,
   mergeNavigationIntoGalleryItems,
 } from '../../components/admin/AdminAiAssistant';
+import {
+  detectMissingMenusFromInventory,
+  DynamicSubMenu,
+  extractDynamicSubMenus,
+  MenuSuggestion,
+  mergeDynamicSubMenusIntoGallery,
+  PARENT_MENU_LABELS,
+} from '../../lib/menuDiscovery';
+
+const DISMISSED_MENUS_KEY = 'kikijones_dismissed_menu_suggestions_v1';
 
 interface AdminStorefrontProps {
   config: StorefrontConfig;
   categories: Category[];
+  products?: Product[];
   actorEmail: string;
   onOpenAiAssistant: () => void;
   onOpenLiveStore: () => void;
+  onSuggestionsChanged?: () => void;
   onToast: (msg: string, tone?: 'default' | 'error' | 'success') => void;
 }
 
@@ -53,12 +68,14 @@ type StoreSubTab = 'homepage' | 'banners' | 'navigation' | 'preview';
 
 export function AdminStorefront({
   config,
+  products = [],
   actorEmail,
   onOpenAiAssistant,
   onOpenLiveStore,
+  onSuggestionsChanged,
   onToast,
 }: AdminStorefrontProps) {
-  const { tr } = useLanguage();
+  const { lang, tr } = useLanguage();
   const { user, idToken } = useAuth();
   const [subTab, setSubTab] = useState<StoreSubTab>('homepage');
   const [bannerGroupTab, setBannerGroupTab] = useState<BannerGroupDefinition['id']>('homepage');
@@ -70,6 +87,21 @@ export function AdminStorefront({
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const [openLibrarySlot, setOpenLibrarySlot] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  // Intelligent inventory-to-menu discovery state
+  const [dismissedSlugs, setDismissedSlugs] = useState<string[]>(() => {
+    try {
+      const raw =
+        typeof window !== 'undefined' ? window.localStorage.getItem(DISMISSED_MENUS_KEY) : null;
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [serverSuggestions, setServerSuggestions] = useState<MenuSuggestion[] | null>(null);
+  const [analyzingMenus, setAnalyzingMenus] = useState(false);
+  const [aiEnhancedScan, setAiEnhancedScan] = useState(false);
 
   // Built-in section slide-over editor
   const [editingBuiltinKey, setEditingBuiltinKey] = useState<string | null>(null);
@@ -96,6 +128,115 @@ export function AdminStorefront({
     setDraft(config);
     setNavItems(extractNavigationFromConfig(config));
   }, [config]);
+
+  const dynamicSubMenus = useMemo(() => extractDynamicSubMenus(draft), [draft]);
+
+  const localMenuSuggestions = useMemo(
+    () => detectMissingMenusFromInventory(products, dynamicSubMenus, dismissedSlugs),
+    [products, dynamicSubMenus, dismissedSlugs]
+  );
+
+  const visibleSuggestions = useMemo(() => {
+    const existingSet = new Set(dynamicSubMenus.map((d) => d.slug.toLowerCase()));
+    const dismissedSet = new Set(dismissedSlugs.map((s) => s.toLowerCase()));
+    const base = serverSuggestions ?? localMenuSuggestions;
+    return base.filter(
+      (s) => !existingSet.has(s.slug.toLowerCase()) && !dismissedSet.has(s.slug.toLowerCase())
+    );
+  }, [serverSuggestions, localMenuSuggestions, dynamicSubMenus, dismissedSlugs]);
+
+  const persistDismissed = (next: string[]) => {
+    setDismissedSlugs(next);
+    try {
+      window.localStorage.setItem(DISMISSED_MENUS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage errors
+    }
+    onSuggestionsChanged?.();
+  };
+
+  const handleAnalyzeInventoryMenus = async () => {
+    setAnalyzingMenus(true);
+    try {
+      const token = user ? await user.getIdToken() : idToken;
+      const res = await fetch('/api/admin/analyze-menus', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          products,
+          existingDynamic: dynamicSubMenus,
+          dismissedSlugs,
+          lang,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Analysis failed');
+      const found: MenuSuggestion[] = Array.isArray(data.suggestions) ? data.suggestions : [];
+      setServerSuggestions(found);
+      setAiEnhancedScan(Boolean(data.aiEnhanced));
+      onToast(
+        tr(
+          `Analyse terminée (${data.analyzedProductsCount || products.length} produits) : ${found.length} menu(s) suggéré(s).`,
+          `Scan complete (${data.analyzedProductsCount || products.length} products): ${found.length} menu suggestion(s).`
+        ),
+        'success'
+      );
+    } catch (err: any) {
+      setServerSuggestions(null);
+      onToast(
+        err?.message || tr('Analyse locale utilisée (serveur indisponible).', 'Used local scan.'),
+        'error'
+      );
+    } finally {
+      setAnalyzingMenus(false);
+    }
+  };
+
+  const handleApproveSuggestion = async (suggestion: MenuSuggestion) => {
+    const nextDynamic: DynamicSubMenu[] = [
+      ...dynamicSubMenus.filter((d) => d.slug !== suggestion.slug),
+      {
+        id: `dyn_${suggestion.slug}`,
+        slug: suggestion.slug,
+        labelFr: suggestion.labelFr,
+        labelEn: suggestion.labelEn,
+        href: suggestion.href,
+        parentMegaMenuKey: suggestion.parentMegaMenuKey,
+      },
+    ];
+    const nextConfig: StorefrontConfig = {
+      ...draft,
+      galleryItems: mergeDynamicSubMenusIntoGallery(draft.galleryItems, nextDynamic),
+    };
+    await persistConfig(
+      nextConfig,
+      tr(
+        `Sous-menu « ${suggestion.labelFr} » publié sur le site et mobile.`,
+        `Sub-menu "${suggestion.labelEn}" published to web and mobile.`
+      )
+    );
+    onSuggestionsChanged?.();
+  };
+
+  const handleDismissSuggestion = (slug: string) => {
+    persistDismissed(Array.from(new Set([...dismissedSlugs, slug])));
+  };
+
+  const handleRemoveDynamicSubMenu = async (slug: string) => {
+    const nextDynamic = dynamicSubMenus.filter((d) => d.slug !== slug);
+    const nextConfig: StorefrontConfig = {
+      ...draft,
+      galleryItems: mergeDynamicSubMenusIntoGallery(draft.galleryItems, nextDynamic),
+    };
+    await persistConfig(
+      nextConfig,
+      tr('Sous-menu dynamique retiré.', 'Dynamic sub-menu removed.')
+    );
+    onSuggestionsChanged?.();
+  };
 
   const builtinSectionCatalog: {
     key: string;
@@ -610,20 +751,29 @@ export function AdminStorefront({
           {[
             { id: 'homepage' as StoreSubTab, label: tr('Page d’accueil', 'Homepage') },
             { id: 'banners' as StoreSubTab, label: tr('Bannières & Images', 'Banners & Images') },
-            { id: 'navigation' as StoreSubTab, label: tr('Navigation', 'Navigation') },
+            {
+              id: 'navigation' as StoreSubTab,
+              label: tr('Navigation', 'Navigation'),
+              badge: visibleSuggestions.length > 0 ? visibleSuggestions.length : undefined,
+            },
             { id: 'preview' as StoreSubTab, label: tr('Aperçu', 'Preview') },
           ].map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setSubTab(t.id)}
-              className={`px-4 py-3 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
+              className={`px-4 py-3 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
                 subTab === t.id
                   ? 'border-black text-black font-semibold'
                   : 'border-transparent text-black/55 hover:text-black'
               }`}
             >
-              {t.label}
+              <span>{t.label}</span>
+              {t.badge !== undefined && (
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold tabular-nums bg-black text-white">
+                  {t.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -878,19 +1028,204 @@ export function AdminStorefront({
 
         {/* TAB 3: NAVIGATION */}
         {subTab === 'navigation' && (
-          <div className="p-5 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-black">
-                  {tr('Menu principal de l’en-tête', 'Main header navigation')}
-                </h2>
-                <p className="text-xs text-black/50 mt-0.5">
-                  {tr(
-                    'Modifiez les libellés FR/EN, les liens et la visibilité du menu.',
-                    'Edit FR/EN labels, destinations, and link visibility.'
+          <div className="p-5 space-y-8">
+            {/* Smart Backend Inventory-to-Menu Discovery Panel */}
+            <div className="border border-[#E8E8E8] bg-[#FAFAFA] p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-black">
+                      {tr(
+                        'Menus détectés depuis l’inventaire',
+                        'Smart Inventory Menu Detection'
+                      )}
+                    </h2>
+                    {visibleSuggestions.length > 0 && (
+                      <span className="px-2 py-0.5 bg-black text-white text-[10px] font-semibold tabular-nums">
+                        {visibleSuggestions.length}
+                      </span>
+                    )}
+                    {aiEnhancedScan && (
+                      <span className="px-2 py-0.5 border border-black/20 bg-white text-[10px] font-semibold uppercase tracking-[0.08em] text-black/70">
+                        IA
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-black/55 mt-0.5">
+                    {tr(
+                      'Le backend analyse automatiquement vos produits (jeans flare, baggy, robes maxi, corsets, cargos...) et vous propose les sous-menus manquants à publier en un clic.',
+                      'The backend reads your live inventory (flare jeans, baggy, maxi dresses, corsets, cargos...) and suggests missing sub-menus to publish in one click.'
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {dismissedSlugs.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => persistDismissed([])}
+                      className="px-2.5 py-2 border border-[#E8E8E8] bg-white hover:border-black text-[11px] font-medium text-black/70 hover:text-black cursor-pointer"
+                    >
+                      {tr('Réinitialiser ignorés', 'Restore dismissed')} ({dismissedSlugs.length})
+                    </button>
                   )}
-                </p>
+                  <button
+                    type="button"
+                    disabled={analyzingMenus}
+                    onClick={handleAnalyzeInventoryMenus}
+                    className="px-3.5 py-2 bg-black text-white text-xs font-medium hover:bg-black/85 disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${analyzingMenus ? 'animate-spin' : ''}`}
+                    />
+                    <span>
+                      {analyzingMenus
+                        ? tr('Analyse en cours...', 'Scanning...')
+                        : tr('Analyser l’inventaire', 'Scan inventory')}
+                    </span>
+                  </button>
+                </div>
               </div>
+
+              {visibleSuggestions.length === 0 ? (
+                <div className="border border-[#E8E8E8] bg-white px-4 py-5 text-xs text-black/55">
+                  {tr(
+                    'Aucun nouveau sous-menu manquant détecté pour le moment. Lancez « Analyser l’inventaire » après avoir ajouté de nouveaux vêtements.',
+                    'No missing sub-menus detected right now. Run "Scan inventory" whenever you add new garments.'
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {visibleSuggestions.slice(0, 10).map((s) => {
+                    const parentLabel = PARENT_MENU_LABELS[s.parentMegaMenuKey]
+                      ? tr(
+                          PARENT_MENU_LABELS[s.parentMegaMenuKey].fr,
+                          PARENT_MENU_LABELS[s.parentMegaMenuKey].en
+                        )
+                      : s.parentMegaMenuKey;
+
+                    return (
+                      <div
+                        key={s.slug}
+                        className="border border-[#E8E8E8] bg-white p-3.5 flex flex-col justify-between gap-3"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-semibold text-black">
+                                {lang === 'fr' ? s.labelFr : s.labelEn}
+                              </p>
+                              <p className="text-[11px] text-black/45">
+                                {tr('Dans', 'Inside')} :{' '}
+                                <span className="text-black/75 font-medium">{parentLabel}</span>
+                                {' · '}
+                                <span className="tabular-nums">
+                                  {s.matchedCount}{' '}
+                                  {tr(
+                                    s.matchedCount > 1 ? 'produits' : 'produit',
+                                    s.matchedCount > 1 ? 'products' : 'product'
+                                  )}
+                                </span>
+                              </p>
+                            </div>
+                            {s.source === 'ai' && (
+                              <span className="px-1.5 py-0.5 border border-black/15 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-black/70">
+                                IA
+                              </span>
+                            )}
+                          </div>
+
+                          {s.sampleProducts.length > 0 && (
+                            <p className="text-[11px] text-black/55 leading-snug line-clamp-2">
+                              {tr('Exemples', 'Matches')} : {s.sampleProducts.join(', ')}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#F0F0F0]">
+                          <span className="text-[10.5px] text-black/40 font-mono truncate">
+                            {s.href}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleDismissSuggestion(s.slug)}
+                              className="px-2.5 py-1.5 border border-[#E8E8E8] hover:border-black text-[11px] text-black/65 hover:text-black cursor-pointer"
+                            >
+                              {tr('Ignorer', 'Dismiss')}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={saving}
+                              onClick={() => handleApproveSuggestion(s)}
+                              className="px-2.5 py-1.5 bg-black text-white hover:bg-black/85 disabled:opacity-50 text-[11px] font-medium inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>{tr('Ajouter au menu', 'Add to menu')}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Active Approved Dynamic Sub-Menus */}
+              {dynamicSubMenus.length > 0 && (
+                <div className="pt-3 border-t border-[#E8E8E8] space-y-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/55">
+                    {tr('Sous-menus dynamiques publiés', 'Active Dynamic Sub-Menus')} (
+                    {dynamicSubMenus.length})
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {dynamicSubMenus.map((dm) => {
+                      const parentLabel = PARENT_MENU_LABELS[dm.parentMegaMenuKey]
+                        ? tr(
+                            PARENT_MENU_LABELS[dm.parentMegaMenuKey].fr,
+                            PARENT_MENU_LABELS[dm.parentMegaMenuKey].en
+                          )
+                        : dm.parentMegaMenuKey;
+                      return (
+                        <div
+                          key={dm.id}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E8E8E8] text-xs"
+                        >
+                          <span className="font-medium text-black">
+                            {lang === 'fr' ? dm.labelFr : dm.labelEn}
+                          </span>
+                          <span className="text-[10.5px] text-black/45">({parentLabel})</span>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => handleRemoveDynamicSubMenu(dm.slug)}
+                            title={tr('Retirer ce sous-menu', 'Remove sub-menu')}
+                            className="text-black/40 hover:text-black cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Existing Primary Header Navigation Editor */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-black">
+                    {tr('Menu principal de l’en-tête', 'Main header navigation')}
+                  </h2>
+                  <p className="text-xs text-black/50 mt-0.5">
+                    {tr(
+                      'Modifiez les libellés FR/EN, les liens et la visibilité du menu.',
+                      'Edit FR/EN labels, destinations, and link visibility.'
+                    )}
+                  </p>
+                </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1017,6 +1352,7 @@ export function AdminStorefront({
                   </div>
                 </div>
               ))}
+            </div>
             </div>
           </div>
         )}
