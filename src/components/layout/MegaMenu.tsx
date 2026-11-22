@@ -50,18 +50,18 @@ export function MegaMenu({
     <AnimatePresence>
       {config && (
         <>
-          {/* Subtle backdrop dim below header */}
+          {/* Frosted glass backdrop dim below header */}
           <motion.div
             key="mega-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
+            transition={{ duration: 0.18 }}
             onClick={onClose}
-            className="fixed inset-x-0 top-[88px] lg:top-[96px] bottom-0 bg-black/25 backdrop-blur-[1px] z-30"
+            className="fixed inset-x-0 top-[88px] lg:top-[96px] bottom-0 bg-black/25 backdrop-blur-md z-30"
           />
 
-          {/* Pure White Editorial Floating Mega Menu Panel */}
+          {/* Frosted Glassmorphic Editorial Floating Mega Menu Panel */}
           <motion.div
             key={`mega-panel-${config.key}`}
             initial={{ opacity: 0, y: -6 }}
@@ -70,7 +70,7 @@ export function MegaMenu({
             transition={{ duration: 0.18, ease: 'easeOut' }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
-            className="fixed inset-x-0 top-[88px] lg:top-[96px] z-40 bg-white border-b border-black/10 text-black shadow-[0_24px_48px_-24px_rgba(0,0,0,0.18)]"
+            className="fixed inset-x-0 top-[88px] lg:top-[96px] z-40 bg-white/78 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/10 text-black shadow-[0_32px_64px_-24px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-white/60"
           >
             <div className="max-w-[1440px] mx-auto px-6 xl:px-10 py-9">
               <div className="grid grid-cols-12 gap-8 items-start">
@@ -96,7 +96,7 @@ export function MegaMenu({
                                 onNavigate(link.href);
                                 onClose();
                               }}
-                              className="text-left text-[12.5px] font-light text-black/75 hover:text-black hover:underline underline-offset-4 transition-colors cursor-pointer leading-snug"
+                              className="text-left text-[12.5px] font-normal text-black/80 hover:text-black hover:underline underline-offset-4 transition-colors cursor-pointer leading-snug"
                             >
                               {link.label}
                             </button>

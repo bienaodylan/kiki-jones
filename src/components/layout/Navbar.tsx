@@ -200,10 +200,10 @@ export function Navbar() {
       <header
         onMouseLeave={scheduleCloseMegaMenu}
         onMouseEnter={cancelCloseMegaMenu}
-        className={`fixed top-0 left-0 right-0 z-40 transition-colors duration-250 ${
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
           isSolid
-            ? 'bg-white text-black shadow-[0_1px_0_rgba(0,0,0,0.08)]'
-            : 'bg-transparent text-white'
+            ? 'bg-white/72 backdrop-blur-2xl backdrop-saturate-[1.85] text-black shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-b border-black/[0.08]'
+            : 'bg-black/15 backdrop-blur-md text-white'
         }`}
       >
         {!isSolid && (
@@ -405,10 +405,10 @@ export function Navbar() {
         {/* ROW 2: Floating Sub-Navigation Ribbon */}
         <nav
           aria-label={tr('Collections rapides', 'Floating Collection Navigation')}
-          className={`relative border-t transition-colors duration-250 ${
+          className={`relative border-t transition-all duration-300 ${
             isSolid
-              ? 'bg-white/98 backdrop-blur-md border-black/10 border-b border-b-black/10 text-black'
-              : 'bg-black/25 backdrop-blur-sm border-white/15 text-white'
+              ? 'bg-white/45 backdrop-blur-2xl backdrop-saturate-[1.8] border-black/[0.07] text-black'
+              : 'bg-black/28 backdrop-blur-2xl backdrop-saturate-150 border-white/18 border-b border-b-white/10 text-white'
           }`}
         >
           <div className="max-w-[1440px] mx-auto px-3 sm:px-6 xl:px-10 h-9 lg:h-10 flex items-center lg:justify-center gap-4 sm:gap-5 xl:gap-6 overflow-x-auto no-scrollbar">

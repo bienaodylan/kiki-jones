@@ -71,7 +71,7 @@ export function AppBottomNavigation() {
   return (
     <nav
       aria-label={tr('Navigation principale de l’application', 'App primary navigation')}
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-black/10 pb-safe"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/78 backdrop-blur-2xl backdrop-saturate-[1.85] border-t border-black/[0.08] shadow-[0_-8px_28px_rgba(0,0,0,0.06)] pb-safe"
     >
       <div className="max-w-lg mx-auto grid grid-cols-5 items-center h-[58px]">
         {tabs.map((tab) => {

@@ -1,14 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { ArrowRight, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useExperienceMode } from '../context/ExperienceContext';
 import { ProductCard } from '../components/storefront/ProductCard';
-import { getSectionImage } from '../lib/storefrontMedia';
+import { MobileShopDirectory } from '../components/layout/MobileShopDirectory';
+import { DivisionKey } from '../lib/navigationData';
 import {
-  getLocalizedBrands,
-  getLocalizedCategories,
-  getLocalizedCollections,
   getSuggestedSearchCategories,
   getTrendingSearches,
 } from '../lib/i18n';
@@ -16,7 +14,6 @@ import {
 export function SearchPage({ initialQuery }: { initialQuery: string }) {
   const {
     products,
-    storefrontConfig,
     getProductVariants,
     navigate,
     recentSearches,
@@ -26,14 +23,12 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
   const { isAppMode } = useExperienceMode();
 
   const [inputValue, setInputValue] = useState(initialQuery);
+  const [selectedDivision, setSelectedDivision] = useState<DivisionKey>('women');
   const [audienceFilter, setAudienceFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recommended' | 'price-asc' | 'price-desc'>('recommended');
 
   const trendingSearches = useMemo(() => getTrendingSearches(lang), [lang]);
   const suggestedCategories = useMemo(() => getSuggestedSearchCategories(lang), [lang]);
-  const localizedBrands = useMemo(() => getLocalizedBrands(lang), [lang]);
-  const localizedCategories = useMemo(() => getLocalizedCategories(lang), [lang]);
-  const localizedCollections = useMemo(() => getLocalizedCollections(lang), [lang]);
 
   useEffect(() => {
     setInputValue(initialQuery);
@@ -80,6 +75,26 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
     }
   };
 
+  // In App Mode with no active query, present the full visual division-tabbed Shop Directory
+  if (isAppMode && !activeQuery) {
+    return (
+      <main className="pb-10 max-w-[1440px] mx-auto min-h-screen bg-white text-black">
+        <MobileShopDirectory
+          selectedDivision={selectedDivision}
+          onSelectDivision={setSelectedDivision}
+          onNavigate={navigate}
+          searchValue={inputValue}
+          onSearchChange={setInputValue}
+          onSearchSubmit={(clean) => {
+            setInputValue(clean);
+            navigate(`/search?q=${encodeURIComponent(clean)}`);
+          }}
+          showSearchBar
+        />
+      </main>
+    );
+  }
+
   return (
     <main
       className={`${
@@ -97,7 +112,7 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
           onSubmit={handleSubmit}
           className={
             isAppMode
-              ? 'flex items-center gap-2.5 bg-[#F5F5F5] border border-black/10 px-3.5 min-h-[46px]'
+              ? 'flex items-center gap-2.5 rounded-full bg-white border border-black/15 px-4 min-h-[44px]'
               : 'flex items-center gap-3 border-b border-black pb-3 max-w-3xl'
           }
         >
@@ -112,7 +127,7 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
             )}
             aria-label={tr('Recherche', 'Search query')}
             className={`flex-1 bg-transparent font-light text-black placeholder:text-black/40 focus:outline-none ${
-              isAppMode ? 'text-sm py-2.5' : 'text-xl sm:text-2xl'
+              isAppMode ? 'text-sm py-2' : 'text-xl sm:text-2xl'
             }`}
           />
           {inputValue && (
@@ -176,205 +191,9 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
         )}
       </div>
 
-      {/* Results or Discovery */}
+      {/* Results or Web Discovery */}
       {!activeQuery ? (
-        isAppMode ? (
-          <div className="py-5 space-y-8">
-            {/* Quick Shortcuts */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-              {[
-                { label: tr('Nouveautés', 'New In'), href: '/new-in' },
-                { label: tr('Soldes', 'Sale'), href: '/sale' },
-                { label: tr('Femme', 'Women'), href: '/women' },
-                { label: tr('Homme', 'Men'), href: '/men' },
-                { label: tr('Enfants', 'Kids'), href: '/brand/kiki-kids' },
-                { label: tr('Accessoires', 'Accessories'), href: '/accessories' },
-              ].map((s) => (
-                <button
-                  key={s.href}
-                  type="button"
-                  onClick={() => navigate(s.href)}
-                  className="min-h-[40px] px-4 border border-black/15 bg-white text-[11px] font-bold uppercase tracking-[0.14em] whitespace-nowrap shrink-0 hover:bg-black hover:text-white transition-colors cursor-pointer"
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Trending Searches */}
-            <section className="space-y-3">
-              <h2 className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-black/50">
-                {tr('Recherches tendances', 'Trending Searches')}
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {trendingSearches.map((term) => (
-                  <button
-                    key={term}
-                    type="button"
-                    onClick={() => {
-                      setInputValue(term);
-                      addRecentSearch(term);
-                      navigate(`/search?q=${encodeURIComponent(term)}`);
-                    }}
-                    className="min-h-[40px] px-3.5 py-2 bg-[#F5F5F5] text-xs font-medium text-black active:bg-black active:text-white transition-colors cursor-pointer"
-                  >
-                    {term}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Recent Searches */}
-            {recentSearches.length > 0 && (
-              <section className="space-y-2.5">
-                <h2 className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-black/50">
-                  {tr('Recherches récentes', 'Recent Searches')}
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {recentSearches.map((term) => (
-                    <button
-                      key={term}
-                      type="button"
-                      onClick={() => {
-                        setInputValue(term);
-                        navigate(`/search?q=${encodeURIComponent(term)}`);
-                      }}
-                      className="min-h-[38px] px-3.5 py-1.5 border border-black/15 text-xs font-light text-black/80 cursor-pointer"
-                    >
-                      {term}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Shop by Brand Horizontal Rail */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-black/50">
-                  {tr('Nos Maisons', 'Shop by Brand')}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => navigate('/brands')}
-                  className="text-[11px] font-bold uppercase tracking-[0.14em] text-black inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{tr('Tout voir', 'View All')}</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-3 px-3">
-                {localizedBrands.map((brand) => (
-                  <button
-                    key={brand.slug}
-                    type="button"
-                    onClick={() => navigate(`/brand/${brand.slug}`)}
-                    className="w-[146px] sm:w-[172px] shrink-0 snap-start text-left space-y-2 cursor-pointer"
-                  >
-                    <div className="aspect-[3/4] w-full bg-[#F5F5F5] overflow-hidden">
-                      <img
-                        src={getSectionImage(storefrontConfig, `brand:${brand.slug}`, brand.heroImage)}
-                        alt={brand.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover object-top"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.1em] text-black truncate">
-                        {brand.name}
-                      </p>
-                      <p className="text-[11px] font-light text-black/55 truncate">
-                        {brand.tagline}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Shop by Category Visual Grid */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-black/50">
-                  {tr('Par Catégorie', 'Browse Categories')}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => navigate('/categories')}
-                  className="text-[11px] font-bold uppercase tracking-[0.14em] text-black inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{tr('Tout voir', 'View All')}</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {localizedCategories.slice(0, 8).map((cat) => (
-                  <button
-                    key={cat.slug}
-                    type="button"
-                    onClick={() => navigate(`/category/${cat.slug}`)}
-                    className="relative aspect-[4/5] w-full overflow-hidden bg-black text-left cursor-pointer"
-                  >
-                    <img
-                      src={getSectionImage(storefrontConfig, `category:${cat.slug}`, cat.imageUrl)}
-                      alt={cat.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-top"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-white">
-                        {cat.name}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Collections Spotlight */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-black/50">
-                  Collections
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => navigate('/collections')}
-                  className="text-[11px] font-bold uppercase tracking-[0.14em] text-black inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{tr('Tout voir', 'View All')}</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {localizedCollections.slice(0, 3).map((col) => (
-                  <button
-                    key={col.slug}
-                    type="button"
-                    onClick={() => navigate(`/collection/${col.slug}`)}
-                    className="relative aspect-[16/10] w-full overflow-hidden bg-black text-left cursor-pointer"
-                  >
-                    <img
-                      src={getSectionImage(storefrontConfig, `collection:${col.slug}`, col.campaignImage)}
-                      alt={col.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-top"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute bottom-3.5 left-3.5 right-3.5 text-white">
-                      <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-white/75">
-                        {col.seasonTag}
-                      </p>
-                      <p className="text-base font-bold uppercase tracking-[0.04em]">{col.title}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-        ) : (
-          <div className="py-12 grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="py-12 grid grid-cols-1 md:grid-cols-3 gap-10">
             <div className="space-y-4">
               <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">
                 {tr('Recherches tendances', 'Trending Searches')}
@@ -444,7 +263,6 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
               </ul>
             </div>
           </div>
-        )
       ) : results.length === 0 ? (
         <div className="py-16 text-center space-y-5">
           <h2 className="font-editorial text-3xl text-black">
