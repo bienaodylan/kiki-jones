@@ -52,8 +52,8 @@ export function Footer() {
       : 'Early access to weekly drops and exclusive releases across Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Luxe, and Kiki Kids.';
 
   return (
-    <footer className="bg-white text-black border-t border-black/10 overflow-hidden">
-      <div className="max-w-[1440px] mx-auto px-5 md:px-10 pt-14 pb-10 grid grid-cols-2 md:grid-cols-12 gap-x-8 gap-y-10">
+    <footer className="w-full max-w-full bg-white text-black border-t border-black/10 overflow-x-clip">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-10 pt-12 pb-10 grid grid-cols-2 md:grid-cols-12 gap-x-6 sm:gap-x-8 gap-y-9">
         {/* Newsletter Column */}
         <div className="col-span-2 md:col-span-4 space-y-4 pr-0 md:pr-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black">
@@ -70,7 +70,7 @@ export function Footer() {
               )}
             </div>
           ) : (
-            <form onSubmit={handleSubscribe} className="flex items-center gap-2 max-w-sm">
+            <form onSubmit={handleSubscribe} className="flex items-center gap-2 w-full max-w-sm min-w-0">
               <input
                 type="email"
                 required
@@ -78,12 +78,12 @@ export function Footer() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={tr('Adresse e-mail', 'Email address')}
                 aria-label={tr('Adresse e-mail pour la newsletter', 'Email address for newsletter')}
-                className="flex-1 bg-white border border-black/25 rounded-full px-4 py-2.5 text-xs font-light text-black placeholder:text-black/40 focus:outline-none focus:border-black"
+                className="flex-1 min-w-0 w-full bg-white border border-black/25 rounded-full px-3.5 sm:px-4 py-2.5 text-xs font-light text-black placeholder:text-black/40 focus:outline-none focus:border-black"
               />
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                className="shrink-0 inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
               >
                 <span>
                   {submitting ? tr('Envoi...', 'Joining...') : tr("S'inscrire", 'Join')}
@@ -260,7 +260,7 @@ export function Footer() {
 
       {/* Legal & Currency Bar */}
       <div className="border-t border-black/10">
-        <div className="max-w-[1440px] mx-auto px-5 md:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-light text-black/55">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left text-[11px] font-light text-black/55">
           <p>
             &copy; {new Date().getFullYear()} KIKI JONES.{' '}
             {tr('Tous droits réservés.', 'All rights reserved.')}
@@ -272,8 +272,8 @@ export function Footer() {
       </div>
 
       {/* Giant Full-Width Editorial Wordmark Footer Signature */}
-      <div className="w-full px-3 md:px-6 pb-4 pt-2 select-none pointer-events-none">
-        <div className="w-full text-center font-bold uppercase tracking-[-0.045em] leading-[0.82] text-[13.8vw] text-black whitespace-nowrap">
+      <div className="w-full overflow-hidden px-3 md:px-6 pb-4 pt-2 select-none pointer-events-none">
+        <div className="w-full text-center font-bold uppercase tracking-[-0.045em] leading-[0.82] text-[13vw] sm:text-[13.5vw] text-black whitespace-nowrap">
           KIKI JONES
         </div>
       </div>

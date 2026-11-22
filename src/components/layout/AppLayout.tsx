@@ -28,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const showsBottomNav = route.page !== 'checkout' && route.page !== 'product';
 
   return (
-    <div className="min-h-dvh flex flex-col bg-white text-black font-light">
+    <div className="min-h-dvh w-full max-w-full overflow-x-clip flex flex-col bg-white text-black font-light">
       <AppHeader />
 
       {/* Preserved KIKI JONES full category & brand drawer menu */}
@@ -45,10 +45,10 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       <motion.div
         key={routeKey}
-        initial={shouldReduceMotion ? false : { opacity: 0.92, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.16, ease: 'easeOut' }}
-        className={`flex-1 w-full ${
+        initial={shouldReduceMotion ? false : { opacity: 0.94 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.14, ease: 'easeOut' }}
+        className={`flex-1 w-full max-w-full min-w-0 overflow-x-clip ${
           showsBottomNav ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'pb-safe'
         }`}
       >

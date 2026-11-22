@@ -162,7 +162,7 @@ export function ProductCard({ product, variants }: ProductCardProps) {
   const isSecondaryCutout = secondaryBg ? secondaryBg.hasTransparentOrWhiteBg : false;
 
   return (
-    <article className="group flex flex-col h-full bg-white">
+    <article className="group flex flex-col h-full w-full min-w-0 bg-white">
       {/* Uniform 4:5 Editorial Product Media Frame */}
       <div
         onClick={() => navigate(`/product/${product.slug}`)}
@@ -280,27 +280,27 @@ export function ProductCard({ product, variants }: ProductCardProps) {
       </div>
 
       {/* Product Typography, Price & Swatches */}
-      <div className="pt-2 pb-0.5 flex-1 flex flex-col justify-between gap-1">
-        <div className="space-y-0.5">
+      <div className="pt-2 pb-0.5 flex-1 min-w-0 flex flex-col justify-between gap-1">
+        <div className="space-y-0.5 min-w-0">
           {product.brandName && (
-            <p className="text-[9.5px] font-medium uppercase tracking-[0.14em] text-black/45">
+            <p className="text-[9.5px] font-medium uppercase tracking-[0.14em] text-black/45 truncate">
               {product.brandName}
             </p>
           )}
           <button
             type="button"
             onClick={() => navigate(`/product/${product.slug}`)}
-            className="text-left text-[11px] font-bold uppercase tracking-[0.05em] text-black leading-snug line-clamp-2 min-h-[2.2em] hover:opacity-65 transition-opacity cursor-pointer"
+            className="text-left text-[11px] font-bold uppercase tracking-[0.04em] text-black leading-snug line-clamp-2 min-h-[2.2em] hover:opacity-65 transition-opacity cursor-pointer w-full"
           >
             {product.name}
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-baseline gap-2 text-[11.5px] tabular-nums">
-            <span className="font-medium text-black">{formatXOF(displayPrice)}</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 min-w-0">
+          <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[11px] sm:text-[11.5px] tabular-nums min-w-0">
+            <span className="font-medium text-black whitespace-nowrap">{formatXOF(displayPrice)}</span>
             {availability.isOnSale && (
-              <span className="text-[10.5px] font-light text-black/45 line-through">
+              <span className="text-[10px] sm:text-[10.5px] font-light text-black/45 line-through whitespace-nowrap">
                 {formatXOF(product.regularPriceXof)}
               </span>
             )}

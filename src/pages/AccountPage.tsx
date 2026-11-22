@@ -175,22 +175,24 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
   return (
     <main
       className={`${
-        isAppMode ? 'pt-5 pb-12' : 'pt-28 pb-24'
-      } max-w-[1200px] mx-auto px-4 md:px-10 min-h-[75vh]`}
+        isAppMode ? 'pt-4 pb-12' : 'pt-[100px] lg:pt-[116px] pb-20'
+      } w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 min-h-[75vh] overflow-x-clip`}
     >
       <div className="pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/55">{user.email}</p>
-          <h1 className="font-editorial text-4xl text-black mt-1">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/55 truncate">
+            {user.email}
+          </p>
+          <h1 className="font-editorial text-2xl sm:text-4xl text-black mt-1">
             {tr('Mon compte', 'Client Account')}
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {isAdmin && (
             <button
               type="button"
               onClick={() => navigate('/admin')}
-              className="px-4 py-2.5 bg-black text-white text-xs font-bold uppercase tracking-[0.16em] cursor-pointer"
+              className="px-4 py-2.5 bg-black text-white text-xs font-bold uppercase tracking-[0.14em] cursor-pointer whitespace-nowrap"
             >
               {tr('Ouvrir l’administration', 'Open Admin Console')}
             </button>
@@ -198,7 +200,7 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
           <button
             type="button"
             onClick={() => logout()}
-            className="px-4 py-2.5 bg-[#F7F7F7] text-xs font-bold uppercase tracking-[0.16em] inline-flex items-center gap-2 hover:bg-black hover:text-white cursor-pointer"
+            className="px-4 py-2.5 bg-[#F7F7F7] text-xs font-bold uppercase tracking-[0.14em] inline-flex items-center gap-2 hover:bg-black hover:text-white cursor-pointer whitespace-nowrap"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>{tr('Déconnexion', 'Sign Out')}</span>
@@ -207,11 +209,11 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-8 mt-4">
+      <div className="flex gap-5 sm:gap-8 mt-2 overflow-x-auto no-scrollbar border-b border-black/10 pb-2">
         <button
           type="button"
           onClick={() => setTab('profile')}
-          className={`py-2 text-xs font-bold uppercase tracking-[0.18em] cursor-pointer ${
+          className={`py-2 text-xs font-bold uppercase tracking-[0.16em] whitespace-nowrap shrink-0 cursor-pointer ${
             tab === 'profile' ? 'text-black underline underline-offset-4' : 'text-black/50'
           }`}
         >
@@ -220,7 +222,7 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
         <button
           type="button"
           onClick={() => setTab('orders')}
-          className={`py-2 text-xs font-bold uppercase tracking-[0.18em] cursor-pointer ${
+          className={`py-2 text-xs font-bold uppercase tracking-[0.16em] whitespace-nowrap shrink-0 cursor-pointer ${
             tab === 'orders' ? 'text-black underline underline-offset-4' : 'text-black/50'
           }`}
         >
@@ -365,13 +367,13 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
             </div>
           ) : (
             orders.map((ord) => (
-              <div key={ord.id} className="bg-[#F7F7F7] p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-2">
-                  <div>
-                    <p className="text-sm font-bold text-black">{ord.orderNumber}</p>
+              <div key={ord.id} className="bg-[#F7F7F7] p-4 sm:p-6 space-y-4 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-black/10">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-black break-all">{ord.orderNumber}</p>
                     <p className="text-xs font-light text-black/60">{formatTimestamp(ord.createdAt)}</p>
                   </div>
-                  <div className="flex items-center gap-6 text-xs">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
                     <div>
                       <span className="text-black/60 font-bold uppercase tracking-wider block">
                         {tr('Paiement', 'Payment')}
@@ -384,21 +386,23 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
                       </span>
                       <span className="font-bold uppercase">{ord.fulfillmentStatus}</span>
                     </div>
-                    <div className="text-right">
+                    <div className="sm:text-right">
                       <span className="text-black/60 font-bold uppercase tracking-wider block">
                         Total
                       </span>
-                      <span className="font-bold tabular-nums">{formatXOF(ord.totalXof)}</span>
+                      <span className="font-bold tabular-nums whitespace-nowrap">
+                        {formatXOF(ord.totalXof)}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-2 text-xs font-light">
                   {ord.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <span>
+                    <div key={idx} className="flex items-baseline justify-between gap-3 min-w-0">
+                      <span className="min-w-0 flex-1 break-words">
                         {item.productName} ({item.color} / {item.size}) &times; {item.quantity}
                       </span>
-                      <span className="font-bold tabular-nums">
+                      <span className="font-bold tabular-nums whitespace-nowrap shrink-0">
                         {formatXOF(item.unitPriceXof * item.quantity)}
                       </span>
                     </div>

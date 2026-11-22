@@ -155,8 +155,8 @@ export function HomePage() {
     if (items.length === 0) return null;
     return (
       <section key={renderKey} className="w-full bg-white text-black py-10 md:py-14 border-b border-black/10">
-        <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex items-end justify-between gap-3">
-          <div>
+        <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">{eyebrow}</p>
             <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black mt-0.5">
               {heading}
@@ -165,7 +165,7 @@ export function HomePage() {
           <button
             type="button"
             onClick={() => navigate(ctaHref)}
-            className="px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
+            className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
           >
             {ctaLabel}
           </button>
@@ -618,7 +618,7 @@ export function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
               <div
                 onClick={() => navigate(storefrontConfig.nextDropLeftCtaHref || '/brand/kiki-kids')}
-                className="group relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black cursor-pointer border-r border-white/10"
+                className="group relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black cursor-pointer md:border-r md:border-white/10"
               >
                 <img
                   src={getSectionImage(
@@ -719,18 +719,18 @@ export function HomePage() {
                   {tr('Acheter par Marque', 'Shop by Brand')}
                 </h2>
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => navigate('/brands')}
-                  className="px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
+                  className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
                 >
                   {tr('Toutes les marques', 'All Brands')}
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/categories')}
-                  className="px-5 py-2 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer"
+                  className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer"
                 >
                   {tr('Toutes les catégories', 'All Categories')}
                 </button>
@@ -806,8 +806,8 @@ export function HomePage() {
       case 'featured_collections_grid':
         return (
           <section key={renderKey} className="w-full bg-white text-black py-10 md:py-14 border-b border-black/10">
-            <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex items-end justify-between gap-3">
-              <div>
+            <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
                   {tr('Éditions saisonnières', 'Seasonal Capsules')}
                 </p>
@@ -818,7 +818,7 @@ export function HomePage() {
               <button
                 type="button"
                 onClick={() => navigate('/collections')}
-                className="px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
+                className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
               >
                 {tr('Toutes les collections', 'All Collections')}
               </button>
@@ -860,7 +860,7 @@ export function HomePage() {
   );
 
   return (
-    <main className="bg-white">
+    <main className="w-full max-w-full overflow-x-clip bg-white">
       {storefrontConfig.campaignBannerEnabled && storefrontConfig.campaignBannerText && (
         <div
           className={

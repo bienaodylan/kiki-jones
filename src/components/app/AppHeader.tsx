@@ -97,8 +97,8 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/75 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.04)] pt-safe">
-      <div className="max-w-[1440px] mx-auto px-2 sm:px-4 h-[52px] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+    <header className="sticky top-0 z-30 w-full max-w-full overflow-x-clip bg-white/78 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.04)] pt-safe">
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-4 h-[52px] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
         {/* LEFT SLOT: Drawer Trigger on top-level tabs, Back + optional Drawer on nested screens */}
         <div className="flex items-center justify-start gap-0.5 min-w-0">
           {!isTopLevelTab ? (

@@ -78,7 +78,7 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
   // In App Mode with no active query, present the full visual division-tabbed Shop Directory
   if (isAppMode && !activeQuery) {
     return (
-      <main className="pb-10 max-w-[1440px] mx-auto min-h-screen bg-white text-black">
+      <main className="pb-10 w-full max-w-[1440px] mx-auto overflow-x-clip min-h-screen bg-white text-black">
         <MobileShopDirectory
           selectedDivision={selectedDivision}
           onSelectDivision={setSelectedDivision}
@@ -98,8 +98,8 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
   return (
     <main
       className={`${
-        isAppMode ? 'pt-3 pb-8' : 'pt-[88px] lg:pt-[96px] pb-10'
-      } max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 min-h-screen bg-white text-black`}
+        isAppMode ? 'pt-3 pb-10' : 'pt-[88px] lg:pt-[96px] pb-12'
+      } w-full max-w-[1440px] mx-auto px-4 sm:px-6 min-h-screen overflow-x-clip bg-white text-black`}
     >
       {/* Search Bar Header */}
       <div className={`${isAppMode ? 'pt-1 pb-4' : 'pt-4 pb-5'} border-b border-black/10 space-y-3.5`}>

@@ -11,11 +11,11 @@ interface WebLayoutProps {
 
 export function WebLayout({ children }: WebLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-white text-black font-light">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip flex flex-col bg-white text-black font-light">
       <Navbar />
       <CartDrawer />
       <SearchOverlay />
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 w-full max-w-full min-w-0 overflow-x-clip">{children}</div>
       <Footer />
       <OfflineIndicator />
     </div>

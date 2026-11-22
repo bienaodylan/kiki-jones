@@ -15,8 +15,8 @@ export function WishlistPage() {
   return (
     <main
       className={`${
-        isAppMode ? 'pt-3 pb-8' : 'pt-[88px] lg:pt-[96px] pb-10'
-      } max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 min-h-screen bg-white text-black`}
+        isAppMode ? 'pt-3 pb-10' : 'pt-[88px] lg:pt-[96px] pb-12'
+      } w-full max-w-[1440px] mx-auto px-4 sm:px-6 min-h-screen overflow-x-clip bg-white text-black`}
     >
       <div className="pt-4 pb-5 border-b border-black/10 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div className="space-y-1">

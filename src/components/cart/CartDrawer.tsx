@@ -32,10 +32,10 @@ export function CartDrawer() {
       />
       <aside
         aria-label={tr('Panier', 'Shopping Bag')}
-        className="relative w-full max-w-md bg-white h-full flex flex-col rounded-none shadow-2xl pt-safe"
+        className="relative w-full max-w-full sm:max-w-md bg-white h-full flex flex-col rounded-none shadow-2xl pt-safe overflow-x-hidden"
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-black/10 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-black/10 flex items-center justify-between gap-2">
           <div>
             <h2 className="font-editorial text-2xl text-black">
               {tr('Votre panier', 'Shopping Bag')}
@@ -55,7 +55,7 @@ export function CartDrawer() {
         </div>
 
         {/* Free Delivery Progress */}
-        <div className="px-6 py-3 bg-[#F5F5F5] space-y-2">
+        <div className="px-4 sm:px-6 py-3 bg-[#F5F5F5] space-y-2">
           <p className="text-xs font-light text-black">
             {remainingForFree === 0
               ? tr('Livraison standard offerte débloquée.', 'Complimentary standard delivery unlocked.')
@@ -73,7 +73,7 @@ export function CartDrawer() {
         </div>
 
         {/* Line Items */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 divide-y divide-black/10">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-5 divide-y divide-black/10">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-12 space-y-4">
               <p className="font-editorial text-2xl text-black">
@@ -98,7 +98,7 @@ export function CartDrawer() {
             </div>
           ) : (
             cart.map((item) => (
-              <div key={item.variantId} className="flex gap-4 py-4 first:pt-0">
+              <div key={item.variantId} className="flex gap-3 sm:gap-4 py-4 first:pt-0 min-w-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -140,8 +140,8 @@ export function CartDrawer() {
                     </p>
                     <p className="text-[11px] font-light text-black/45 mt-0.5">{item.sku}</p>
                   </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center border border-black/15">
+                  <div className="flex items-center justify-between gap-2 flex-wrap mt-3">
+                    <div className="flex items-center border border-black/15 shrink-0">
                       <button
                         type="button"
                         onClick={() => updateCartQty(item.variantId, item.quantity - 1)}
@@ -150,7 +150,7 @@ export function CartDrawer() {
                       >
                         <Minus className="w-3 h-3" />
                       </button>
-                      <span className="w-8 text-center text-xs tabular-nums font-bold">
+                      <span className="w-7 text-center text-xs tabular-nums font-bold">
                         {item.quantity}
                       </span>
                       <button
@@ -162,7 +162,7 @@ export function CartDrawer() {
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
-                    <span className="text-xs font-bold tabular-nums">
+                    <span className="text-xs font-bold tabular-nums whitespace-nowrap shrink-0 ml-auto">
                       {formatXOF(item.unitPriceXof * item.quantity)}
                     </span>
                   </div>
@@ -174,12 +174,12 @@ export function CartDrawer() {
 
         {/* Footer Actions */}
         {cart.length > 0 && (
-          <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] bg-[#F5F5F5] border-t border-black/10 space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-light text-black/75">
+          <div className="p-4 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] bg-[#F5F5F5] border-t border-black/10 space-y-4">
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="font-light text-black/75 min-w-0">
                 {tr('Sous-total estimé', 'Estimated Subtotal')}
               </span>
-              <span className="font-bold tabular-nums text-black">
+              <span className="font-bold tabular-nums text-black whitespace-nowrap shrink-0">
                 {formatXOF(cartSubtotalXof)}
               </span>
             </div>

@@ -254,11 +254,11 @@ export function ProductDetailPage({ slug }: { slug: string }) {
   return (
     <main
       className={`${
-        isAppMode ? 'pt-0 pb-28' : 'pt-[88px] lg:pt-[96px] pb-10'
-      } max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 bg-white text-black`}
+        isAppMode ? 'pt-0 pb-28' : 'pt-[88px] lg:pt-[96px] pb-12'
+      } w-full max-w-[1440px] mx-auto overflow-x-clip px-4 sm:px-6 bg-white text-black`}
     >
       {/* Mobile Full-Width Swipeable Image Gallery (< lg) */}
-      <div className="relative lg:hidden -mx-2.5 sm:-mx-4 mb-4">
+      <div className="relative lg:hidden -mx-4 sm:-mx-6 mb-4">
         <div
           ref={mobileGalleryRef}
           onScroll={(e) => {
@@ -376,12 +376,12 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                   {product.name}
                 </h1>
 
-                <div className="flex items-baseline gap-3 pt-0.5 tabular-nums">
-                  <span className="text-lg xl:text-xl font-bold text-black">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-0.5 tabular-nums">
+                  <span className="text-lg xl:text-xl font-bold text-black whitespace-nowrap">
                     {formatXOF(unitPrice)}
                   </span>
                   {compareAt && compareAt > unitPrice && (
-                    <span className="text-sm font-light text-black/45 line-through">
+                    <span className="text-sm font-light text-black/45 line-through whitespace-nowrap">
                       {formatXOF(compareAt)}
                     </span>
                   )}
@@ -601,17 +601,17 @@ export function ProductDetailPage({ slug }: { slug: string }) {
 
             {/* Quantity + Add to Bag + Save to Wishlist */}
             <div className="space-y-2.5 pt-1">
-              <div className="flex items-stretch gap-2">
-                <div className="flex items-center border border-black/15 px-1">
+              <div className="flex items-stretch gap-2 min-w-0">
+                <div className="flex items-center border border-black/15 px-0.5 sm:px-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
                     aria-label={tr('Diminuer la quantité', 'Decrease quantity')}
-                    className="w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
+                    className="w-9 sm:w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <span className="w-8 text-center text-sm font-bold tabular-nums">{qty}</span>
+                  <span className="w-7 sm:w-8 text-center text-sm font-bold tabular-nums">{qty}</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -620,7 +620,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                       )
                     }
                     aria-label={tr('Augmenter la quantité', 'Increase quantity')}
-                    className="w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
+                    className="w-9 sm:w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -630,7 +630,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                   type="button"
                   disabled={!canPurchase}
                   onClick={handleAdd}
-                  className="flex-1 py-3.5 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-black/85 transition-colors disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed"
+                  className="flex-1 min-w-0 py-3.5 px-3 sm:px-6 bg-black text-white text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.2em] hover:bg-black/85 transition-colors disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed truncate"
                 >
                   {canPurchase ? tr('Ajouter au panier', 'Add to Bag') : tr('Épuisé', 'Sold Out')}
                 </button>
@@ -766,10 +766,10 @@ export function ProductDetailPage({ slug }: { slug: string }) {
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-black/10 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="max-w-xl mx-auto flex items-center gap-3">
             <div className="min-w-0 shrink-0">
-              <p className="text-sm font-bold text-black tabular-nums leading-tight">
+              <p className="text-sm font-bold text-black tabular-nums whitespace-nowrap leading-tight">
                 {formatXOF(unitPrice)}
               </p>
-              <p className="text-[10.5px] font-light text-black/55 truncate max-w-[125px]">
+              <p className="text-[10.5px] font-light text-black/55 truncate max-w-[120px]">
                 {activeColorLabel} &middot; {activeVariant?.size || selectedSize}
               </p>
             </div>
@@ -777,7 +777,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
               type="button"
               disabled={!canPurchase}
               onClick={handleAdd}
-              className="flex-1 min-h-[48px] px-5 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] active:scale-[0.99] transition-transform disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed"
+              className="flex-1 min-w-0 min-h-[48px] px-4 sm:px-5 bg-black text-white text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.18em] active:scale-[0.99] transition-transform disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed truncate"
             >
               {canPurchase
                 ? tr('Ajouter au panier', 'Add to Bag')

@@ -154,7 +154,7 @@ export function Navbar() {
   const heroCenterY = Math.max(150, Math.round(viewport.height * 0.47 - 28));
   const dockEnd = Math.max(220, Math.round(viewport.height * 0.44));
   const logoY = useTransform(scrollY, [0, dockEnd], [heroCenterY, 0]);
-  const initialScale = viewport.width >= 1024 ? 2.15 : viewport.width >= 640 ? 1.8 : 1.45;
+  const initialScale = viewport.width >= 1024 ? 2.15 : viewport.width >= 640 ? 1.75 : 1.3;
   const logoScale = useTransform(scrollY, [0, dockEnd], [initialScale, 1]);
 
   const isSolid = !isHome || scrolledSolid || activeMegaMenu !== null;
@@ -200,9 +200,9 @@ export function Navbar() {
       <header
         onMouseLeave={scheduleCloseMegaMenu}
         onMouseEnter={cancelCloseMegaMenu}
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 w-full max-w-full overflow-x-clip z-40 transition-all duration-300 pt-safe ${
           isSolid
-            ? 'bg-white/72 backdrop-blur-2xl backdrop-saturate-[1.85] text-black shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-b border-black/[0.08]'
+            ? 'bg-white/75 backdrop-blur-2xl backdrop-saturate-[1.85] text-black shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-b border-black/[0.08]'
             : 'bg-black/15 backdrop-blur-md text-white'
         }`}
       >
@@ -211,7 +211,7 @@ export function Navbar() {
         )}
 
         {/* ROW 1: Primary Division Header + Centered Wordmark + Utilities + FR/EN Switcher */}
-        <div className="relative max-w-[1440px] mx-auto px-3 sm:px-6 xl:px-10 h-[52px] lg:h-[56px] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 lg:gap-4">
+        <div className="relative max-w-[1440px] mx-auto px-3.5 sm:px-6 xl:px-10 h-[52px] lg:h-[56px] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:gap-2 lg:gap-4">
           {/* LEFT ZONE: Mobile Controls (< lg) + Desktop Division Tabs (>= lg) */}
           <div className="flex items-center justify-start min-w-0">
             <div className="flex lg:hidden items-center gap-0.5">
@@ -286,7 +286,7 @@ export function Navbar() {
           </div>
 
           {/* CENTER ZONE: KIKI JONES Prominent Wordmark */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center min-w-0">
             {isHome && !shouldReduceMotion && activeMegaMenu === null ? (
               <motion.button
                 type="button"
@@ -296,7 +296,7 @@ export function Navbar() {
                   y: logoY,
                   scale: logoScale,
                 }}
-                className={`font-bold text-base sm:text-lg xl:text-xl tracking-[0.22em] sm:tracking-[0.26em] uppercase whitespace-nowrap shrink-0 leading-none cursor-pointer transition-colors ${
+                className={`font-bold text-[13.5px] sm:text-lg xl:text-xl tracking-[0.18em] sm:tracking-[0.26em] uppercase whitespace-nowrap shrink-0 leading-none cursor-pointer transition-colors ${
                   isSolid ? 'text-black' : 'text-white'
                 }`}
               >
@@ -307,7 +307,7 @@ export function Navbar() {
                 type="button"
                 onClick={() => navigate('/')}
                 aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
-                className={`font-bold text-base sm:text-lg xl:text-xl tracking-[0.22em] sm:tracking-[0.26em] uppercase whitespace-nowrap shrink-0 leading-none cursor-pointer transition-colors ${
+                className={`font-bold text-[13.5px] sm:text-lg xl:text-xl tracking-[0.18em] sm:tracking-[0.26em] uppercase whitespace-nowrap shrink-0 leading-none cursor-pointer transition-colors ${
                   isSolid ? 'text-black' : 'text-white'
                 }`}
               >
@@ -411,7 +411,7 @@ export function Navbar() {
               : 'bg-black/28 backdrop-blur-2xl backdrop-saturate-150 border-white/18 border-b border-b-white/10 text-white'
           }`}
         >
-          <div className="max-w-[1440px] mx-auto px-3 sm:px-6 xl:px-10 h-9 lg:h-10 flex items-center lg:justify-center gap-4 sm:gap-5 xl:gap-6 overflow-x-auto no-scrollbar">
+          <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 xl:px-10 h-9 lg:h-10 flex items-center lg:justify-center gap-4 sm:gap-5 xl:gap-6 overflow-x-auto no-scrollbar">
             {floatingItems.map((sub) => {
               const isSubMenuOpen = Boolean(sub.megaMenuKey && activeMegaMenu === sub.megaMenuKey);
               return (

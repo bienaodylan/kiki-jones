@@ -634,8 +634,8 @@ export function CatalogPage({
   return (
     <main
       className={`${
-        isAppMode ? 'pt-0 pb-10' : 'pt-[88px] lg:pt-[96px] pb-10'
-      } min-h-screen bg-white text-black`}
+        isAppMode ? 'pt-0 pb-10' : 'pt-[88px] lg:pt-[96px] pb-12'
+      } w-full max-w-full overflow-x-clip min-h-screen bg-white text-black`}
     >
       {/* Optional Widescreen Campaign / Section Banner Header */}
       {Boolean(pageMeta.bannerImage) && (
@@ -647,7 +647,7 @@ export function CatalogPage({
             className="w-full h-full object-cover object-top"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 pb-5 text-white space-y-1">
+          <div className="absolute inset-x-0 bottom-0 max-w-[1440px] mx-auto px-4 sm:px-6 pb-5 text-white space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/75">
               {pageMeta.eyebrow}
             </p>
@@ -661,7 +661,7 @@ export function CatalogPage({
         </div>
       )}
 
-      <div className="max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6">
         {/* Category Header */}
         <div className="pt-4 pb-3 border-b border-black/10 flex flex-col md:flex-row md:items-end justify-between gap-3">
           <div className="space-y-1 max-w-2xl">
@@ -690,12 +690,12 @@ export function CatalogPage({
           </div>
 
           {/* Sort + Filter Controls */}
-          <div className="flex items-center gap-2 self-start md:self-end shrink-0">
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-end shrink-0 max-w-full">
             <select
               aria-label={tr('Trier les produits', 'Sort products')}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="border border-black/15 bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-black focus:outline-none focus:border-black cursor-pointer"
+              className="border border-black/15 bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-black focus:outline-none focus:border-black cursor-pointer max-w-full"
             >
               <option value="recommended">{tr('Recommandés', 'Recommended')}</option>
               <option value="newest">{tr('Nouveautés', 'Newest')}</option>
@@ -707,7 +707,7 @@ export function CatalogPage({
             <button
               type="button"
               onClick={() => setFiltersOpen(true)}
-              className="inline-flex items-center gap-1.5 border border-black bg-black text-white px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 border border-black bg-black text-white px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer whitespace-nowrap"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>

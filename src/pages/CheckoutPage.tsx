@@ -328,15 +328,15 @@ export function CheckoutPage() {
   return (
     <main
       className={`${
-        isAppMode ? 'pt-5 pb-12' : 'pt-28 pb-24'
-      } max-w-[1440px] mx-auto px-4 md:px-10`}
+        isAppMode ? 'pt-4 pb-12' : 'pt-[100px] lg:pt-[116px] pb-20'
+      } w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 overflow-x-clip`}
     >
       <div className="pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">
             {tr('Paiement KIKI JONES', 'KIKI JONES Checkout')}
           </p>
-          <h1 className="font-editorial text-4xl text-black mt-1">
+          <h1 className="font-editorial text-2xl sm:text-4xl text-black mt-1">
             {tr('Livraison & Paiement', 'Delivery & Payment')}
           </h1>
         </div>
@@ -509,11 +509,11 @@ export function CheckoutPage() {
             </section>
 
             <section className="space-y-4 pt-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-editorial text-2xl text-black">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-editorial text-xl sm:text-2xl text-black">
                   {tr('3. Moyen de paiement (FCFA)', '3. Payment Method (XOF)')}
                 </h2>
-                <span className="inline-flex items-center gap-1 text-[11px] font-light text-black/60">
+                <span className="inline-flex items-center gap-1 text-[11px] font-light text-black/60 shrink-0">
                   <Lock className="w-3 h-3" />
                   {tr('Sécurisé par webhook', 'Webhook-Verified')}
                 </span>
@@ -583,74 +583,74 @@ export function CheckoutPage() {
           </div>
 
           {/* Right Summary */}
-          <div className="lg:col-span-5">
-            <div className="bg-[#F7F7F7] p-6 md:p-8 space-y-6 sticky top-24">
-              <h2 className="font-editorial text-2xl text-black">
+          <div className="lg:col-span-5 min-w-0 w-full">
+            <div className="bg-[#F7F7F7] p-4 sm:p-6 md:p-8 space-y-5 sticky top-24">
+              <h2 className="font-editorial text-xl sm:text-2xl text-black">
                 {tr('Résumé du panier', 'Bag Summary')}
               </h2>
 
               <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                 {cart.map((item) => (
-                  <div key={item.variantId} className="flex justify-between gap-3 text-xs">
-                    <div>
-                      <p className="font-bold text-black">{item.name}</p>
+                  <div key={item.variantId} className="flex items-start justify-between gap-3 text-xs min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-black break-words">{item.name}</p>
                       <p className="font-light text-black/60">
                         {item.color} / {item.size} &times; {item.quantity}
                       </p>
                     </div>
-                    <span className="tabular-nums font-bold">
+                    <span className="tabular-nums font-bold whitespace-nowrap shrink-0">
                       {formatXOF(item.unitPriceXof * item.quantity)}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex gap-2 min-w-0">
                 <input
                   type="text"
                   value={promoInput}
                   onChange={(e) => setPromoInput(e.target.value)}
                   placeholder={tr('Code promo (ex. KIKIJONES10)', 'Promo code (e.g. KIKIJONES10)')}
-                  className="flex-1 bg-white px-3 py-2.5 text-xs font-light uppercase focus:outline-none"
+                  className="flex-1 min-w-0 w-full bg-white px-3 py-2.5 text-xs font-light uppercase focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleApplyPromo}
-                  className="px-4 py-2.5 bg-white text-xs font-bold uppercase tracking-[0.14em] hover:bg-black hover:text-white cursor-pointer"
+                  className="shrink-0 px-4 py-2.5 bg-white text-xs font-bold uppercase tracking-[0.14em] hover:bg-black hover:text-white cursor-pointer whitespace-nowrap"
                 >
                   {tr('Appliquer', 'Apply')}
                 </button>
               </div>
 
               <div className="space-y-2.5 text-sm pt-2">
-                <div className="flex justify-between">
-                  <span className="font-light text-black/75">{tr('Sous-total', 'Subtotal')}</span>
-                  <span className="tabular-nums font-bold">{formatXOF(cartSubtotalXof)}</span>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-light text-black/75 min-w-0">{tr('Sous-total', 'Subtotal')}</span>
+                  <span className="tabular-nums font-bold whitespace-nowrap shrink-0">{formatXOF(cartSubtotalXof)}</span>
                 </div>
                 {discountXof > 0 && (
-                  <div className="flex justify-between text-black">
-                    <span className="font-light">
+                  <div className="flex items-baseline justify-between gap-3 text-black">
+                    <span className="font-light min-w-0">
                       {tr('Réduction', 'Discount')} ({appliedPromo?.code})
                     </span>
-                    <span className="tabular-nums font-bold">-{formatXOF(discountXof)}</span>
+                    <span className="tabular-nums font-bold whitespace-nowrap shrink-0">-{formatXOF(discountXof)}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="font-light text-black/75">{tr('Livraison', 'Shipping')}</span>
-                  <span className="tabular-nums font-light">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-light text-black/75 min-w-0">{tr('Livraison', 'Shipping')}</span>
+                  <span className="tabular-nums font-light whitespace-nowrap shrink-0">
                     {shippingFeeXof === 0 ? tr('Offerte', 'Complimentary') : formatXOF(shippingFeeXof)}
                   </span>
                 </div>
-                <div className="flex justify-between text-base font-bold pt-2">
-                  <span>Total</span>
-                  <span className="tabular-nums">{formatXOF(totalXof)}</span>
+                <div className="flex items-baseline justify-between gap-3 text-base font-bold pt-2">
+                  <span className="min-w-0">Total</span>
+                  <span className="tabular-nums whitespace-nowrap shrink-0">{formatXOF(totalXof)}</span>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-4 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-black/85 transition-colors disabled:opacity-50 cursor-pointer"
+                className="w-full min-h-[48px] py-3.5 px-4 sm:px-6 bg-black text-white text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.2em] hover:bg-black/85 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {submitting
                   ? tr('Réservation du stock...', 'Reserving Inventory...')

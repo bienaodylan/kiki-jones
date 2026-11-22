@@ -19,11 +19,11 @@ export function CollectionsPage() {
   return (
     <main
       className={`${
-        isAppMode ? 'pt-0 pb-10' : 'pt-[88px] lg:pt-[96px] pb-10'
-      } bg-white text-black min-h-screen`}
+        isAppMode ? 'pt-0 pb-10' : 'pt-[88px] lg:pt-[96px] pb-12'
+      } w-full max-w-full overflow-x-clip bg-white text-black min-h-screen`}
     >
       {/* Editorial Directory Header */}
-      <section className="max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 pt-5 pb-5 border-b border-black/10">
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-5 pb-5 border-b border-black/10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">
@@ -83,7 +83,7 @@ export function CollectionsPage() {
       )}
 
       {/* Editorial Collection Magazine Chapters */}
-      <div className="max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 py-6 space-y-8">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 space-y-8">
         {secondaryCollections.map((col, idx) => {
           const matchingProducts = products
             .filter((p) => (p.collectionSlugs || []).includes(col.slug))
