@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { Trash2, LogOut } from 'lucide-react';
+import { Trash2, LogOut, ChevronRight } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import {
   getUserProfile,
   updateUserProfile,
@@ -19,6 +20,7 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
   const { user, authReady, isAdmin, loginWithGoogle, logout } = useAuth();
   const { navigate, toast } = useStore();
   const { tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
 
   const [tab, setTab] = useState<'profile' | 'orders'>(defaultTab);
   const [fullName, setFullName] = useState('');
@@ -101,9 +103,35 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
     toast(tr('Adresse supprimée.', 'Address removed.'), 'default');
   };
 
+  const appInfoLinks = (
+    <section className="mt-10 pt-6 border-t border-black/10 space-y-2">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45 mb-2">
+        {tr('Service Client & Maison', 'Client Care & House Policies')}
+      </p>
+      <div className="divide-y divide-black/10 border-t border-b border-black/10">
+        {[
+          { label: tr('Livraison & Expédition', 'Shipping & Delivery'), href: '/legal/shipping' },
+          { label: tr('Retours & Échanges', 'Returns & Exchanges'), href: '/legal/returns' },
+          { label: tr('Confidentialité', 'Privacy Policy'), href: '/legal/privacy' },
+          { label: tr('Conditions de vente', 'Terms of Sale'), href: '/legal/terms' },
+        ].map((item) => (
+          <button
+            key={item.href}
+            type="button"
+            onClick={() => navigate(item.href)}
+            className="w-full min-h-[48px] flex items-center justify-between text-xs font-medium text-black/80 active:text-black cursor-pointer"
+          >
+            <span>{item.label}</span>
+            <ChevronRight className="w-4 h-4 text-black/40" />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+
   if (!authReady) {
     return (
-      <main className="pt-32 pb-24 max-w-4xl mx-auto px-5">
+      <main className={`${isAppMode ? 'pt-8 pb-12' : 'pt-32 pb-24'} max-w-4xl mx-auto px-4 sm:px-5`}>
         <p className="text-sm font-light text-black/60">
           {tr('Chargement du compte...', 'Loading account...')}
         </p>
@@ -113,12 +141,16 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
 
   if (!user) {
     return (
-      <main className="pt-32 pb-24 max-w-lg mx-auto px-5 min-h-[70vh] flex flex-col justify-center">
-        <div className="border border-black/20 bg-white p-8 md:p-10 space-y-6 text-center">
+      <main
+        className={`${
+          isAppMode ? 'pt-8 pb-12' : 'pt-32 pb-24'
+        } max-w-lg mx-auto px-4 sm:px-5 min-h-[70vh] flex flex-col justify-center`}
+      >
+        <div className="border border-black/20 bg-white p-7 md:p-10 space-y-6 text-center">
           <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-black/55">
             {tr('Espace Client', 'Client Account')}
           </p>
-          <h1 className="font-editorial text-4xl text-black">
+          <h1 className="font-editorial text-3xl sm:text-4xl text-black">
             {tr('Connexion KIKI JONES', 'Sign In to KIKI JONES')}
           </h1>
           <p className="text-sm font-light text-black/75 leading-relaxed">
@@ -130,17 +162,22 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
           <button
             type="button"
             onClick={() => loginWithGoogle()}
-            className="w-full py-4 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-black/85 cursor-pointer"
+            className="w-full min-h-[48px] py-4 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-black/85 cursor-pointer"
           >
             {tr('Continuer avec Google', 'Continue with Google')}
           </button>
         </div>
+        {isAppMode && appInfoLinks}
       </main>
     );
   }
 
   return (
-    <main className="pt-28 pb-24 max-w-[1200px] mx-auto px-5 md:px-10 min-h-[75vh]">
+    <main
+      className={`${
+        isAppMode ? 'pt-5 pb-12' : 'pt-28 pb-24'
+      } max-w-[1200px] mx-auto px-4 md:px-10 min-h-[75vh]`}
+    >
       <div className="pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/55">{user.email}</p>
@@ -378,6 +415,7 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
           )}
         </div>
       )}
+      {isAppMode && appInfoLinks}
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { subscribeNewsletter } from '../../lib/firestoreService';
+import { PWAInstallButton } from '../pwa/PWAInstallButton';
 
 export function Footer() {
   const { navigate, storefrontConfig, toast } = useStore();
@@ -94,6 +95,9 @@ export function Footer() {
           <div className="text-[11px] font-light text-black/50 space-y-0.5 pt-2">
             <p>{storefrontConfig.supportEmail || 'care@kikijones.com'}</p>
             <p>{storefrontConfig.supportPhone || '+225 07 00 00 00 00'}</p>
+          </div>
+          <div className="pt-2">
+            <PWAInstallButton variant="footer" />
           </div>
         </div>
 

@@ -2,16 +2,22 @@ import React from 'react';
 import { Heart, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { ProductCard } from '../components/storefront/ProductCard';
 
 export function WishlistPage() {
   const { products, wishlistIds, getProductVariants, navigate } = useStore();
   const { tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
 
   const savedProducts = products.filter((p) => wishlistIds.includes(p.id));
 
   return (
-    <main className="pt-[88px] lg:pt-[96px] pb-10 max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 min-h-screen bg-white text-black">
+    <main
+      className={`${
+        isAppMode ? 'pt-3 pb-8' : 'pt-[88px] lg:pt-[96px] pb-10'
+      } max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 min-h-screen bg-white text-black`}
+    >
       <div className="pt-4 pb-5 border-b border-black/10 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div className="space-y-1">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-black/45">

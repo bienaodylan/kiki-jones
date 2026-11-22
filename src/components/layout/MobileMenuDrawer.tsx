@@ -4,6 +4,7 @@ import { X, ChevronDown, ArrowRight, Heart, User, Shield, Globe } from 'lucide-r
 import { DivisionKey, MegaMenuKey, PRIMARY_NAV_ITEMS } from '../../lib/navigationData';
 import { useLanguage } from '../../context/LanguageContext';
 import { getFloatingSubnav, getMegaMenuLocalized, getPrimaryNavLabel } from '../../lib/i18n';
+import { PWAInstallButton } from '../pwa/PWAInstallButton';
 
 interface MobileMenuDrawerProps {
   open: boolean;
@@ -60,7 +61,7 @@ export function MobileMenuDrawer({
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 34 }}
             aria-label={tr('Navigation mobile', 'Mobile Navigation')}
-            className="fixed top-0 left-0 bottom-0 w-full max-w-[360px] bg-white text-black z-50 flex flex-col shadow-2xl"
+            className="fixed top-0 left-0 bottom-0 w-full max-w-[360px] bg-white text-black z-50 flex flex-col shadow-2xl pt-safe"
           >
             {/* Header */}
             <div className="px-5 h-14 border-b border-black/10 flex items-center justify-between shrink-0">
@@ -223,12 +224,12 @@ export function MobileMenuDrawer({
             </div>
 
             {/* Bottom Account & Utility Links */}
-            <div className="px-5 py-4 border-t border-black/10 bg-[#FAFAFA] space-y-2.5 shrink-0">
+            <div className="px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-black/10 bg-[#FAFAFA] space-y-2.5 shrink-0">
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => go('/account')}
-                  className="flex items-center justify-center gap-2 py-2.5 border border-black/15 bg-white text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:border-black cursor-pointer"
+                  className="min-h-[44px] flex items-center justify-center gap-2 py-2.5 border border-black/15 bg-white text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:border-black cursor-pointer"
                 >
                   <User className="w-3.5 h-3.5" />
                   {tr('Compte', 'Account')}
@@ -236,17 +237,18 @@ export function MobileMenuDrawer({
                 <button
                   type="button"
                   onClick={() => go('/wishlist')}
-                  className="flex items-center justify-center gap-2 py-2.5 border border-black/15 bg-white text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:border-black cursor-pointer"
+                  className="min-h-[44px] flex items-center justify-center gap-2 py-2.5 border border-black/15 bg-white text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:border-black cursor-pointer"
                 >
                   <Heart className="w-3.5 h-3.5" />
                   {tr('Favoris', 'Wishlist')} {wishlistCount > 0 ? `(${wishlistCount})` : ''}
                 </button>
               </div>
+              <PWAInstallButton variant="drawer" />
               {isAdmin && (
                 <button
                   type="button"
                   onClick={() => go('/admin')}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-black text-white text-[11px] font-bold uppercase tracking-[0.16em] cursor-pointer"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 bg-black text-white text-[11px] font-bold uppercase tracking-[0.16em] cursor-pointer"
                 >
                   <Shield className="w-3.5 h-3.5" />
                   {tr('Administration', 'Admin Studio')}

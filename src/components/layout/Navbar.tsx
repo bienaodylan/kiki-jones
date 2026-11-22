@@ -21,6 +21,8 @@ export function Navbar() {
     setCartOpen,
     wishlistCount,
     setSearchOpen,
+    mobileMenuOpen,
+    setMobileMenuOpen,
     storefrontConfig,
   } = useStore();
   const { isAdmin } = useAuth();
@@ -37,7 +39,6 @@ export function Navbar() {
   const [scrolledSolid, setScrolledSolid] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<MegaMenuKey | null>(null);
   const [hoveredDivision, setHoveredDivision] = useState<DivisionKey | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {

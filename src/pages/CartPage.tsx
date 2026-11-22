@@ -2,19 +2,25 @@ import React from 'react';
 import { Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { formatXOF } from '../lib/format';
 
 export function CartPage() {
   const { cart, updateCartQty, removeFromCart, cartSubtotalXof, storefrontConfig, navigate } =
     useStore();
   const { tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
 
   const freeThreshold = storefrontConfig.freeShippingThresholdXof || 75000;
   const shippingEstimate =
     cartSubtotalXof >= freeThreshold ? 0 : storefrontConfig.standardShippingXof || 3500;
 
   return (
-    <main className="pt-28 pb-24 max-w-[1440px] mx-auto px-5 md:px-10 min-h-[75vh]">
+    <main
+      className={`${
+        isAppMode ? 'pt-5 pb-10' : 'pt-28 pb-24'
+      } max-w-[1440px] mx-auto px-4 md:px-10 min-h-[75vh]`}
+    >
       <div className="pb-6 flex items-end justify-between">
         <div>
           <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">KIKI JONES</p>

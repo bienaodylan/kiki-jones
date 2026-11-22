@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { ProductCard } from '../components/storefront/ProductCard';
 import { formatXOF, getProductAvailability } from '../lib/format';
 import { INITIAL_CATEGORIES } from '../lib/catalogDefaults';
@@ -15,6 +16,7 @@ import {
 } from '../lib/i18n';
 import { AudienceSlug } from '../types/commerce';
 import { normalizeText, SUBCATEGORY_ALIASES } from '../lib/productClassifier';
+import { getSectionImage, hasCustomSectionImage } from '../lib/storefrontMedia';
 
 type CatalogAudience = 'women' | 'men' | 'girls' | 'boys' | 'accessories';
 
@@ -128,11 +130,13 @@ export function CatalogPage({
     products,
     categories,
     variants,
+    storefrontConfig,
     getProductVariants,
     loadingCatalog,
     navigate,
   } = useStore();
   const { lang, tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
   const localizedBrands = useMemo(() => getLocalizedBrands(lang), [lang]);
   const localizedCategories = useMemo(() => getLocalizedCategories(lang), [lang]);
   const localizedCollections = useMemo(() => getLocalizedCollections(lang), [lang]);
@@ -437,29 +441,36 @@ export function CatalogPage({
 
   const pageMeta = useMemo(() => {
     if (mode === 'brand' && activeBrandObj) {
+      const slotKey = `brand:${activeBrandObj.slug}`;
       return {
         eyebrow: `${tr('Par Marque', 'Shop by Brand')} · ${activeBrandObj.tagline}`,
         title: activeBrandObj.name,
         description: activeBrandObj.description,
-        bannerImage: '',
+        bannerImage: hasCustomSectionImage(storefrontConfig, slotKey)
+          ? getSectionImage(storefrontConfig, slotKey, activeBrandObj.heroImage)
+          : '',
       };
     }
     if (mode === 'category' && activeProductCategoryObj) {
+      const slotKey = `category:${activeProductCategoryObj.slug}`;
       return {
         eyebrow: `${tr('Par Catégorie', 'Shop by Category')} · ${activeProductCategoryObj.subtitle}`,
         title: activeProductCategoryObj.name,
         description: activeProductCategoryObj.description,
-        bannerImage: '',
+        bannerImage: hasCustomSectionImage(storefrontConfig, slotKey)
+          ? getSectionImage(storefrontConfig, slotKey, activeProductCategoryObj.imageUrl)
+          : '',
       };
     }
     if (mode === 'collection' && activeCollectionObj) {
+      const slotKey = `collection:${activeCollectionObj.slug}`;
       return {
         eyebrow: `${activeCollectionObj.seasonTag} · ${activeCollectionObj.audiences
           .map((a) => localizeAudienceLabel(a, lang))
           .join(' / ')}`,
         title: activeCollectionObj.title,
         description: activeCollectionObj.description,
-        bannerImage: activeCollectionObj.campaignImage || '',
+        bannerImage: getSectionImage(storefrontConfig, slotKey, activeCollectionObj.campaignImage || ''),
       };
     }
     if (mode === 'new-in') {
@@ -488,6 +499,7 @@ export function CatalogPage({
       const copy = AUDIENCE_COPY[effectiveAudience];
       const localizedTitle = localizeAudienceLabel(effectiveAudience, lang);
       const subLabel = subSlug ? translateLabel(formatSlugLabel(subSlug), lang) : '';
+      const slotKey = `audience:${effectiveAudience}`;
       return {
         eyebrow: subSlug
           ? `${localizedTitle} · ${subLabel}`
@@ -500,7 +512,9 @@ export function CatalogPage({
                 copy.description
               )
             : copy.description,
-        bannerImage: '',
+        bannerImage: hasCustomSectionImage(storefrontConfig, slotKey)
+          ? getSectionImage(storefrontConfig, slotKey, '')
+          : '',
       };
     }
     return {
@@ -524,6 +538,7 @@ export function CatalogPage({
     subSlug,
     activeCategoryObj,
     categorySlug,
+    storefrontConfig,
     lang,
     tr,
   ]);
@@ -593,15 +608,19 @@ export function CatalogPage({
   }, [effectiveAudience]);
 
   return (
-    <main className="pt-[88px] lg:pt-[96px] pb-10 min-h-screen bg-white text-black">
-      {/* Optional Widescreen Collection Campaign Header */}
-      {mode === 'collection' && pageMeta.bannerImage && (
+    <main
+      className={`${
+        isAppMode ? 'pt-0 pb-10' : 'pt-[88px] lg:pt-[96px] pb-10'
+      } min-h-screen bg-white text-black`}
+    >
+      {/* Optional Widescreen Campaign / Section Banner Header */}
+      {Boolean(pageMeta.bannerImage) && (
         <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] max-h-[380px] bg-black overflow-hidden">
           <img
             src={pageMeta.bannerImage}
             alt={pageMeta.title}
             referrerPolicy="no-referrer"
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-top"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 pb-5 text-white space-y-1">
@@ -625,7 +644,7 @@ export function CatalogPage({
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
               {pageMeta.eyebrow}
             </p>
-            {!(mode === 'collection' && pageMeta.bannerImage) && (
+            {!pageMeta.bannerImage && (
               <div className="flex items-start gap-1.5">
                 <h1 className="font-editorial text-2xl sm:text-3xl text-black leading-tight">
                   {pageMeta.title}

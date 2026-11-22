@@ -2,8 +2,10 @@ import React from 'react';
 import { useReducedMotion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { DEFAULT_STOREFRONT_CONFIG } from '../lib/catalogDefaults';
 import { KJ_IMAGES } from '../lib/navigationData';
+import { getSectionImage } from '../lib/storefrontMedia';
 import {
   getLocalizedBrands,
   getLocalizedCategories,
@@ -15,6 +17,7 @@ import { ProductCard } from '../components/storefront/ProductCard';
 export function HomePage() {
   const { storefrontConfig, products, getProductVariants, navigate } = useStore();
   const { lang, tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
   const shouldReduceMotion = useReducedMotion();
 
   const brands = getLocalizedBrands(lang);
@@ -216,14 +219,16 @@ export function HomePage() {
               : storefrontConfig.heroSecondaryCtaLabel || 'Shop by Brand';
 
         return (
+          <React.Fragment key={renderKey}>
           <section
-            key={renderKey}
-            className="relative h-screen min-h-[620px] w-full overflow-hidden bg-black"
+            className={`relative w-full overflow-hidden bg-black ${
+              isAppMode ? 'h-[76svh] min-h-[480px] max-h-[760px]' : 'h-screen min-h-[620px]'
+            }`}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0 h-full w-full">
               <div className="relative h-full w-full overflow-hidden bg-black">
                 <img
-                  src={storefrontConfig.heroImageUrl || KJ_IMAGES.womenSatinEvening}
+                  src={getSectionImage(storefrontConfig, 'hero_left', storefrontConfig.heroImageUrl || KJ_IMAGES.womenSatinEvening)}
                   alt={tr('Campagne Femme KIKI JONES', 'KIKI JONES Women Campaign')}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover object-top"
@@ -231,7 +236,7 @@ export function HomePage() {
               </div>
               <div className="relative hidden md:block h-full w-full overflow-hidden bg-black">
                 <img
-                  src={KJ_IMAGES.menEditorial}
+                  src={getSectionImage(storefrontConfig, 'hero_right', KJ_IMAGES.menEditorial)}
                   alt={tr('Campagne Homme KIKI JONES', 'KIKI JONES Men Campaign')}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover object-top"
@@ -274,6 +279,40 @@ export function HomePage() {
               </div>
             </div>
           </section>
+          {isAppMode && (
+            <nav
+              aria-label={tr('Navigation rapide', 'Quick Divisions')}
+              className="w-full bg-white border-b border-black/10"
+            >
+              <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto no-scrollbar">
+                {[
+                  { label: tr('Nouveautés', 'New In'), href: '/new-in', solid: true },
+                  { label: tr('Femme', 'Women'), href: '/women' },
+                  { label: tr('Homme', 'Men'), href: '/men' },
+                  { label: 'Curve', href: '/brand/kiki-curve' },
+                  { label: 'Sculpt', href: '/brand/kiki-sculpt' },
+                  { label: 'Sport', href: '/brand/kiki-sport' },
+                  { label: tr('Enfants', 'Kids'), href: '/brand/kiki-kids' },
+                  { label: tr('Accessoires', 'Accessories'), href: '/accessories' },
+                  { label: tr('Soldes', 'Sale'), href: '/sale' },
+                ].map((item) => (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => navigate(item.href)}
+                    className={`min-h-[38px] px-3.5 text-[10.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      item.solid
+                        ? 'bg-black text-white'
+                        : 'bg-[#F5F5F5] text-black hover:bg-black hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </nav>
+          )}
+          </React.Fragment>
         );
       }
 
@@ -289,7 +328,7 @@ export function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
                 <div className="relative aspect-[3/4] md:aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
-                    src={KJ_IMAGES.heroCampaign}
+                    src={getSectionImage(storefrontConfig, 'new_arrivals_1', KJ_IMAGES.heroCampaign)}
                     alt={tr('Nouveautés Robes KIKI JONES', 'KIKI JONES New Arrivals Dress')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -297,7 +336,7 @@ export function HomePage() {
                 </div>
                 <div className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
-                    src={KJ_IMAGES.jumpsuitsFeature}
+                    src={getSectionImage(storefrontConfig, 'new_arrivals_2', KJ_IMAGES.jumpsuitsFeature)}
                     alt={tr('Combinaisons KIKI JONES', 'KIKI JONES Tailored Romper')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -305,7 +344,7 @@ export function HomePage() {
                 </div>
                 <div className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
-                    src={KJ_IMAGES.womenResortSet}
+                    src={getSectionImage(storefrontConfig, 'new_arrivals_3', KJ_IMAGES.womenResortSet)}
                     alt={tr('Ensembles Resort KIKI JONES', 'KIKI JONES Matching Resort Set')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -361,7 +400,7 @@ export function HomePage() {
                   className="group relative aspect-[3/4] w-full overflow-hidden bg-black text-left cursor-pointer border-r border-white/10 last:border-r-0"
                 >
                   <img
-                    src={cat.imageUrl}
+                    src={getSectionImage(storefrontConfig, `category:${cat.slug}`, cat.imageUrl)}
                     alt={cat.name}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"
@@ -389,7 +428,7 @@ export function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                 <div className="relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
-                    src={KJ_IMAGES.menMeshShirt}
+                    src={getSectionImage(storefrontConfig, 'kiki_men_left', KJ_IMAGES.menMeshShirt)}
                     alt={tr('Chemises de soirée Kiki Men', 'Kiki Men Night Out Shirts')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
@@ -397,7 +436,7 @@ export function HomePage() {
                 </div>
                 <div className="relative hidden md:block aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
-                    src={KJ_IMAGES.menStreetDenim}
+                    src={getSectionImage(storefrontConfig, 'kiki_men_right', KJ_IMAGES.menStreetDenim)}
                     alt={tr('Denim Stacked Kiki Men', 'Kiki Men Stacked Flare Denim')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
@@ -450,7 +489,7 @@ export function HomePage() {
                   className="group relative aspect-[3/4] w-full overflow-hidden bg-black cursor-pointer"
                 >
                   <img
-                    src={KJ_IMAGES.sculptFeature}
+                    src={getSectionImage(storefrontConfig, 'kiki_sculpt_1', KJ_IMAGES.sculptFeature)}
                     alt="Kiki Sculpt Corset"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -461,7 +500,7 @@ export function HomePage() {
                   className="group relative hidden md:block aspect-[3/4] w-full overflow-hidden bg-black cursor-pointer"
                 >
                   <img
-                    src={KJ_IMAGES.sculptBodysuitFeature}
+                    src={getSectionImage(storefrontConfig, 'kiki_sculpt_2', KJ_IMAGES.sculptBodysuitFeature)}
                     alt="Kiki Sculpt Bodysuit"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -472,7 +511,7 @@ export function HomePage() {
                   className="group relative hidden md:block aspect-[3/4] w-full overflow-hidden bg-black cursor-pointer"
                 >
                   <img
-                    src={KJ_IMAGES.curveFeature}
+                    src={getSectionImage(storefrontConfig, 'kiki_sculpt_3', KJ_IMAGES.curveFeature)}
                     alt="Kiki Curve"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -522,7 +561,7 @@ export function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                 <div className="relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
-                    src={KJ_IMAGES.formalFeature}
+                    src={getSectionImage(storefrontConfig, 'kiki_luxe_left', KJ_IMAGES.formalFeature)}
                     alt="Kiki Luxe"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
@@ -530,7 +569,7 @@ export function HomePage() {
                 </div>
                 <div className="relative hidden md:block aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <img
-                    src={KJ_IMAGES.curveGownCampaign}
+                    src={getSectionImage(storefrontConfig, 'kiki_luxe_right', KJ_IMAGES.curveGownCampaign)}
                     alt="Kiki Curve Evening"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
@@ -582,7 +621,11 @@ export function HomePage() {
                 className="group relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black cursor-pointer border-r border-white/10"
               >
                 <img
-                  src={storefrontConfig.nextDropLeftImageUrl || KJ_IMAGES.girlsEditorial}
+                  src={getSectionImage(
+                    storefrontConfig,
+                    'dual_left',
+                    storefrontConfig.nextDropLeftImageUrl || KJ_IMAGES.girlsEditorial
+                  )}
                   alt={storefrontConfig.nextDropLeftTitle || 'Kiki Kids'}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -617,7 +660,11 @@ export function HomePage() {
                 className="group relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black cursor-pointer"
               >
                 <img
-                  src={storefrontConfig.nextDropRightImageUrl || KJ_IMAGES.sportFeature}
+                  src={getSectionImage(
+                    storefrontConfig,
+                    'dual_right',
+                    storefrontConfig.nextDropRightImageUrl || KJ_IMAGES.sportFeature
+                  )}
                   alt={storefrontConfig.nextDropRightTitle || 'Kiki Sport'}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -700,7 +747,7 @@ export function HomePage() {
                 >
                   <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5F5F5]">
                     <img
-                      src={brand.heroImage}
+                      src={getSectionImage(storefrontConfig, `brand:${brand.slug}`, brand.heroImage)}
                       alt={brand.name}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"
@@ -785,7 +832,7 @@ export function HomePage() {
                   className="group relative aspect-[4/5] w-full overflow-hidden bg-black text-left cursor-pointer"
                 >
                   <img
-                    src={col.campaignImage}
+                    src={getSectionImage(storefrontConfig, `collection:${col.slug}`, col.campaignImage)}
                     alt={col.title}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
@@ -815,7 +862,13 @@ export function HomePage() {
   return (
     <main className="bg-white">
       {storefrontConfig.campaignBannerEnabled && storefrontConfig.campaignBannerText && (
-        <div className="fixed top-[88px] lg:top-[96px] inset-x-0 z-30 bg-black text-white text-center py-1.5 px-4 text-[10.5px] font-medium uppercase tracking-[0.16em]">
+        <div
+          className={
+            isAppMode
+              ? 'w-full bg-black text-white text-center py-2 px-4 text-[10px] font-medium uppercase tracking-[0.16em]'
+              : 'fixed top-[88px] lg:top-[96px] inset-x-0 z-30 bg-black text-white text-center py-1.5 px-4 text-[10.5px] font-medium uppercase tracking-[0.16em]'
+          }
+        >
           {storefrontConfig.campaignBannerText}
         </div>
       )}

@@ -73,6 +73,14 @@ service cloud.firestore {
         data.createdAt is timestamp;
     }
 
+    function isValidWishlistItem(data, productId) {
+      return data.keys().hasAll(['productId', 'createdAt']) &&
+        data.keys().hasOnly(['productId', 'createdAt']) &&
+        isValidId(data.productId) &&
+        data.productId == productId &&
+        data.createdAt is timestamp;
+    }
+
     function isValidCategory(data) {
       return data.keys().hasAll(['name', 'slug', 'description', 'imageUrl', 'sortOrder', 'isActive', 'createdAt', 'updatedAt']) &&
         data.keys().hasOnly(['name', 'slug', 'description', 'imageUrl', 'sortOrder', 'isActive', 'createdAt', 'updatedAt']) &&
@@ -261,7 +269,7 @@ service cloud.firestore {
           'nextDropRightTitle', 'nextDropRightBody', 'nextDropRightCtaLabel', 'nextDropRightCtaHref', 'nextDropRightImageUrl',
           'brandIntroEyebrow', 'brandIntroTitle', 'brandIntroBody', 'brandIntroImageUrl',
           'brandIntroCtaLabel', 'brandIntroCtaHref', 'brandIntroSecondaryCtaLabel', 'brandIntroSecondaryCtaHref',
-          'sectionOrder', 'collectionBanners', 'customSections',
+          'sectionOrder', 'sectionImages', 'collectionBanners', 'customSections',
           'galleryItems', 'newsletterTitle', 'newsletterBody', 'campaignBannerText',
           'campaignBannerEnabled', 'standardShippingXof', 'expressShippingXof',
           'freeShippingThresholdXof', 'supportEmail', 'supportPhone', 'updatedAt'
@@ -293,6 +301,7 @@ service cloud.firestore {
         (!('brandIntroSecondaryCtaLabel' in data) || data.brandIntroSecondaryCtaLabel == null || (data.brandIntroSecondaryCtaLabel is string && data.brandIntroSecondaryCtaLabel.size() <= 60)) &&
         (!('brandIntroSecondaryCtaHref' in data) || data.brandIntroSecondaryCtaHref == null || (data.brandIntroSecondaryCtaHref is string && data.brandIntroSecondaryCtaHref.size() <= 200)) &&
         data.sectionOrder is list && data.sectionOrder.size() <= 30 && (data.sectionOrder.size() == 0 || data.sectionOrder[0] is string) &&
+        (!('sectionImages' in data) || data.sectionImages == null || (data.sectionImages is map && data.sectionImages.size() <= 80)) &&
         (!('collectionBanners' in data) || (data.collectionBanners is list && data.collectionBanners.size() <= 12)) &&
         (!('customSections' in data) || (data.customSections is list && data.customSections.size() <= 24)) &&
         data.galleryItems is list && data.galleryItems.size() <= 24 &&
@@ -380,6 +389,12 @@ service cloud.firestore {
         allow create: if (isOwner(uid) || isAdmin()) && isValidId(addressId) && isValidAddress(incoming()) && incoming().createdAt == request.time;
         allow update: if (isOwner(uid) || isAdmin()) && isValidId(addressId) && isValidAddress(incoming()) && incoming().createdAt == existing().createdAt;
         allow delete: if (isOwner(uid) || isAdmin()) && isValidId(addressId);
+      }
+
+      match /wishlist/{productId} {
+        allow get, list: if isOwner(uid) || isAdmin();
+        allow create: if (isOwner(uid) || isAdmin()) && isValidId(productId) && isValidWishlistItem(incoming(), productId) && incoming().createdAt == request.time;
+        allow delete: if (isOwner(uid) || isAdmin()) && isValidId(productId);
       }
     }
 

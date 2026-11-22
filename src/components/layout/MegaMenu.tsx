@@ -3,7 +3,24 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import { MegaMenuKey } from '../../lib/navigationData';
 import { useLanguage } from '../../context/LanguageContext';
+import { useStore } from '../../context/StoreContext';
 import { getMegaMenuLocalized } from '../../lib/i18n';
+import { getSectionImage } from '../../lib/storefrontMedia';
+
+const MEGA_MENU_SLOT_MAP: Partial<Record<MegaMenuKey, string>> = {
+  women: 'audience:women',
+  men: 'audience:men',
+  kids: 'brand:kiki-kids',
+  curve: 'brand:kiki-curve',
+  sport: 'brand:kiki-sport',
+  brands: 'brand:kiki-luxe',
+  dresses: 'category:dresses',
+  'matching-sets': 'category:matching-sets',
+  tops: 'category:shirts',
+  bottoms: 'category:bottoms',
+  shoes: 'category:shoes',
+  accessories: 'audience:accessories',
+};
 
 interface MegaMenuProps {
   activeKey: MegaMenuKey | null;
@@ -21,7 +38,13 @@ export function MegaMenu({
   onMouseLeave,
 }: MegaMenuProps) {
   const { lang } = useLanguage();
+  const { storefrontConfig } = useStore();
   const config = getMegaMenuLocalized(activeKey, lang);
+  const editorialImageUrl = config
+    ? MEGA_MENU_SLOT_MAP[config.key]
+      ? getSectionImage(storefrontConfig, MEGA_MENU_SLOT_MAP[config.key]!, config.editorial.imageUrl)
+      : config.editorial.imageUrl
+    : '';
 
   return (
     <AnimatePresence>
@@ -96,7 +119,7 @@ export function MegaMenu({
                   >
                     <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5F5F5]">
                       <img
-                        src={config.editorial.imageUrl}
+                        src={editorialImageUrl}
                         alt={config.editorial.title}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"

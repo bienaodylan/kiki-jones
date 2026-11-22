@@ -32,7 +32,7 @@ export function CartDrawer() {
       />
       <aside
         aria-label={tr('Panier', 'Shopping Bag')}
-        className="relative w-full max-w-md bg-white h-full flex flex-col rounded-none shadow-2xl"
+        className="relative w-full max-w-md bg-white h-full flex flex-col rounded-none shadow-2xl pt-safe"
       >
         {/* Header */}
         <div className="px-6 py-5 border-b border-black/10 flex items-center justify-between">
@@ -174,7 +174,7 @@ export function CartDrawer() {
 
         {/* Footer Actions */}
         {cart.length > 0 && (
-          <div className="p-6 bg-[#F5F5F5] border-t border-black/10 space-y-4">
+          <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] bg-[#F5F5F5] border-t border-black/10 space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-light text-black/75">
                 {tr('Sous-total estimé', 'Estimated Subtotal')}

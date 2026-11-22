@@ -4,6 +4,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { db } from '../lib/firebase';
 import { formatXOF, sanitizeId } from '../lib/format';
 import { validatePromoCode } from '../lib/firestoreService';
@@ -13,6 +14,7 @@ export function CheckoutPage() {
   const { cart, cartSubtotalXof, storefrontConfig, clearCart, navigate, toast } = useStore();
   const { user, idToken, loginWithGoogle } = useAuth();
   const { tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
 
   const [customerName, setCustomerName] = useState(user?.displayName || '');
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
@@ -227,7 +229,11 @@ export function CheckoutPage() {
 
   if (orderConfirmation) {
     return (
-      <main className="pt-28 pb-24 max-w-2xl mx-auto px-5">
+      <main
+        className={`${
+          isAppMode ? 'pt-6 pb-12' : 'pt-28 pb-24'
+        } max-w-2xl mx-auto px-4 sm:px-5`}
+      >
         <div className="border border-black/20 bg-white p-8 md:p-10 space-y-6">
           <div className="space-y-2">
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/60">
@@ -320,7 +326,11 @@ export function CheckoutPage() {
   }
 
   return (
-    <main className="pt-28 pb-24 max-w-[1440px] mx-auto px-5 md:px-10">
+    <main
+      className={`${
+        isAppMode ? 'pt-5 pb-12' : 'pt-28 pb-24'
+      } max-w-[1440px] mx-auto px-4 md:px-10`}
+    >
       <div className="pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">

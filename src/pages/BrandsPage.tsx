@@ -2,15 +2,22 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { getLocalizedBrands } from '../lib/i18n';
+import { getSectionImage } from '../lib/storefrontMedia';
 
 export function BrandsPage() {
-  const { products, navigate } = useStore();
+  const { products, storefrontConfig, navigate } = useStore();
   const { lang, tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
   const brands = getLocalizedBrands(lang);
 
   return (
-    <main className="pt-[88px] lg:pt-[96px] pb-12 bg-white text-black min-h-screen">
+    <main
+      className={`${
+        isAppMode ? 'pt-0 pb-10' : 'pt-[88px] lg:pt-[96px] pb-12'
+      } bg-white text-black min-h-screen`}
+    >
       {/* Header */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 pt-8 pb-6 border-b border-black/10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -46,7 +53,7 @@ export function BrandsPage() {
                 className="group relative overflow-hidden bg-black cursor-pointer aspect-[4/5] sm:aspect-[5/6] border-r border-b border-white/10"
               >
                 <img
-                  src={brand.heroImage}
+                  src={getSectionImage(storefrontConfig, `brand:${brand.slug}`, brand.heroImage)}
                   alt={brand.name}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"

@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Plus, Minus, Heart, Ruler, ChevronDown, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { formatXOF, getAvailableStock, getColorHex } from '../lib/format';
 import { ProductCard } from '../components/storefront/ProductCard';
 import {
@@ -44,6 +45,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
     toggleWishlist,
   } = useStore();
   const { tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
 
   const product = useMemo(
     () => products.find((p) => p.slug === slug) || null,
@@ -158,7 +160,11 @@ export function ProductDetailPage({ slug }: { slug: string }) {
 
   if (!product) {
     return (
-      <main className="pt-32 pb-24 max-w-[1440px] mx-auto px-4 md:px-8 min-h-[70vh] flex flex-col items-center justify-center text-center space-y-4 bg-white">
+      <main
+        className={`${
+          isAppMode ? 'pt-12 pb-20' : 'pt-32 pb-24'
+        } max-w-[1440px] mx-auto px-4 md:px-8 min-h-[70vh] flex flex-col items-center justify-center text-center space-y-4 bg-white`}
+      >
         <h1 className="font-editorial text-3xl text-black">
           {tr('Pièce introuvable', 'Piece Not Found')}
         </h1>
@@ -246,9 +252,13 @@ export function ProductDetailPage({ slug }: { slug: string }) {
   const audiencePath = product.audience ? `/${product.audience}` : '/shop';
 
   return (
-    <main className="pt-[88px] lg:pt-[96px] pb-10 max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 bg-white text-black">
+    <main
+      className={`${
+        isAppMode ? 'pt-0 pb-28' : 'pt-[88px] lg:pt-[96px] pb-10'
+      } max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 bg-white text-black`}
+    >
       {/* Mobile Full-Width Swipeable Image Gallery (< lg) */}
-      <div className="lg:hidden -mx-2.5 sm:-mx-4 mb-4">
+      <div className="relative lg:hidden -mx-2.5 sm:-mx-4 mb-4">
         <div
           ref={mobileGalleryRef}
           onScroll={(e) => {
@@ -288,6 +298,11 @@ export function ProductDetailPage({ slug }: { slug: string }) {
             </div>
           )}
         </div>
+        {isAppMode && images.length > 1 && (
+          <div className="pointer-events-none absolute top-3 right-3 bg-black/70 text-white px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] tabular-nums">
+            {activeImageIdx + 1} / {images.length}
+          </div>
+        )}
         {images.length > 1 && (
           <div className="flex items-center justify-center gap-2 pt-3">
             {images.map((_, i) => (
@@ -742,6 +757,32 @@ export function ProductDetailPage({ slug }: { slug: string }) {
                 'Measurements represent body dimensions. For relaxed or oversized silhouettes, choose your standard size for the intended drape or size down for a closer fit.'
               )}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* App Mode Sticky Bottom Add-to-Bag Bar */}
+      {isAppMode && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-black/10 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="max-w-xl mx-auto flex items-center gap-3">
+            <div className="min-w-0 shrink-0">
+              <p className="text-sm font-bold text-black tabular-nums leading-tight">
+                {formatXOF(unitPrice)}
+              </p>
+              <p className="text-[10.5px] font-light text-black/55 truncate max-w-[125px]">
+                {activeColorLabel} &middot; {activeVariant?.size || selectedSize}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={!canPurchase}
+              onClick={handleAdd}
+              className="flex-1 min-h-[48px] px-5 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] active:scale-[0.99] transition-transform disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed"
+            >
+              {canPurchase
+                ? tr('Ajouter au panier', 'Add to Bag')
+                : tr('Épuisé', 'Sold Out')}
+            </button>
           </div>
         </div>
       )}

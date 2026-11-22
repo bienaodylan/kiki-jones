@@ -42,6 +42,16 @@
       },
       "required": ["label", "recipientName", "phone", "street", "city", "country", "isDefault", "createdAt"]
     },
+    "CustomerWishlistItem": {
+      "title": "CustomerWishlistItem",
+      "description": "Saved wishlist product reference for an authenticated customer.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "createdAt"]
+    },
     "Category": {
       "title": "Category",
       "description": "Storefront product category.",
@@ -329,6 +339,7 @@
         "brandIntroSecondaryCtaLabel": { "type": "string", "maxLength": 60 },
         "brandIntroSecondaryCtaHref": { "type": "string", "maxLength": 200 },
         "sectionOrder": { "type": "array" },
+        "sectionImages": { "type": "object" },
         "collectionBanners": { "type": "array" },
         "customSections": { "type": "array" },
         "galleryItems": { "type": "array" },
@@ -416,6 +427,10 @@
     "/users/{uid}/addresses/{addressId}": {
       "schema": { "$ref": "#/entities/CustomerAddress" },
       "description": "Customer saved addresses."
+    },
+    "/users/{uid}/wishlist/{productId}": {
+      "schema": { "$ref": "#/entities/CustomerWishlistItem" },
+      "description": "Customer saved wishlist items."
     },
     "/categories/{categoryId}": {
       "schema": { "$ref": "#/entities/Category" },

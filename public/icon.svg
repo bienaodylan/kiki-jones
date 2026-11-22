@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#000000" />
+  <rect x="34" y="34" width="444" height="444" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="2" />
+  <!-- Geometric K -->
+  <path d="M126 146 H162 V242 L238 146 H284 L202 246 L290 366 H242 L176 274 L162 291 V366 H126 Z" fill="#FFFFFF" />
+  <!-- Geometric J -->
+  <path d="M350 146 H386 V294 C386 341 356 370 308 370 C288 370 272 365 260 356 L272 325 C281 332 293 336 306 336 C334 336 350 321 350 292 Z" fill="#FFFFFF" />
+</svg>

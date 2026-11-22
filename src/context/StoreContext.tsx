@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db, testFirestoreConnection, handleFirestoreError, OperationType } from '../lib/firebase';
 import {
   AudienceSlug,
@@ -19,6 +19,7 @@ import {
 } from '../lib/catalogDefaults';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
+import { useExperienceMode } from './ExperienceContext';
 import {
   seedInitialCatalogClient,
   ensureDefaultCategories,
@@ -150,6 +151,8 @@ interface StoreContextValue {
   toggleWishlist: (productId: string, productName?: string) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
   recentSearches: string[];
   addRecentSearch: (term: string) => void;
   removeRecentSearch: (term: string) => void;
@@ -167,6 +170,7 @@ const RECENT_SEARCH_KEY = 'kikijones_recent_searches_v1';
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, authReady } = useAuth();
   const { tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
   const [route, setRoute] = useState<RouteView>(() => parseHashOrPath());
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -178,8 +182,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const syncedSampleRef = useRef(false);
+  const wishlistMergedUidRef = useRef<string | null>(null);
 
   const fallbackCategories: Category[] = useMemo(
     () => INITIAL_CATEGORIES.map((c) => ({ ...c })),
@@ -321,6 +327,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     setRoute(parseHashOrPath());
     setSearchOpen(false);
+    setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -412,9 +419,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       (err) => handleFirestoreError(err, OperationType.LIST, 'categories')
     );
 
+    const fallbackTimer = window.setTimeout(() => {
+      setLoadingCatalog(false);
+    }, 4000);
+
     const unsubProducts = onSnapshot(
       query(collection(db, 'products'), where('status', '==', 'published')),
       (snap) => {
+        window.clearTimeout(fallbackTimer);
         const list = snap.docs
           .filter((d) => !LEGACY_PLACEHOLDER_PRODUCT_IDS.includes(d.id))
           .map((d) => {
@@ -425,6 +437,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setLoadingCatalog(false);
       },
       (err) => {
+        window.clearTimeout(fallbackTimer);
         setLoadingCatalog(false);
         handleFirestoreError(err, OperationType.LIST, 'products');
       }
@@ -443,6 +456,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
+      window.clearTimeout(fallbackTimer);
       unsubConfig();
       unsubCategories();
       unsubProducts();
@@ -468,6 +482,59 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
     return () => unsubAll();
   }, [authReady, isAdmin]);
+
+  // Authenticated Wishlist Sync (Firestore users/{uid}/wishlist/{productId} + guest merge)
+  useEffect(() => {
+    if (!authReady || !user) {
+      wishlistMergedUidRef.current = null;
+      return;
+    }
+
+    const uid = user.uid;
+    const wishlistCol = collection(db, 'users', uid, 'wishlist');
+    const unsubWishlist = onSnapshot(
+      wishlistCol,
+      (snap) => {
+        const remoteIds = snap.docs
+          .map((d) => ({
+            id: d.id,
+            ts: d.data()?.createdAt?.toMillis?.() || 0,
+          }))
+          .sort((a, b) => b.ts - a.ts)
+          .map((x) => x.id);
+
+        if (wishlistMergedUidRef.current !== uid) {
+          wishlistMergedUidRef.current = uid;
+          let localIds: string[] = [];
+          try {
+            const raw = localStorage.getItem(WISHLIST_STORAGE_KEY);
+            localIds = raw ? JSON.parse(raw) : [];
+          } catch {
+            localIds = [];
+          }
+          const remoteSet = new Set(remoteIds);
+          const toPush = localIds.filter((id) => typeof id === 'string' && id.length > 0 && !remoteSet.has(id));
+          for (const pid of toPush) {
+            const safePid = sanitizeId(pid);
+            if (!safePid) continue;
+            setDoc(doc(db, 'users', uid, 'wishlist', safePid), {
+              productId: safePid,
+              createdAt: serverTimestamp(),
+            }).catch(() => {});
+          }
+          const merged = Array.from(new Set([...toPush, ...remoteIds]));
+          setWishlistIds(merged);
+        } else {
+          setWishlistIds(remoteIds);
+        }
+      },
+      () => {
+        // Fallback silently to localStorage if offline or permission pending
+      }
+    );
+
+    return () => unsubWishlist();
+  }, [authReady, user]);
 
   const initializeCatalog = useCallback(async () => {
     if (!user?.email || !isAdmin) {
@@ -622,8 +689,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const toggleWishlist = useCallback(
     (productId: string, productName?: string) => {
+      const safePid = sanitizeId(productId);
       setWishlistIds((prev) => {
-        if (prev.includes(productId)) {
+        const exists = prev.includes(productId);
+        if (exists) {
+          if (user && safePid) {
+            deleteDoc(doc(db, 'users', user.uid, 'wishlist', safePid)).catch(() => {});
+          }
           if (productName) {
             toast(
               tr(`${productName} retiré des favoris.`, `${productName} removed from wishlist.`),
@@ -631,6 +703,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             );
           }
           return prev.filter((id) => id !== productId);
+        }
+        if (user && safePid) {
+          setDoc(doc(db, 'users', user.uid, 'wishlist', safePid), {
+            productId: safePid,
+            createdAt: serverTimestamp(),
+          }).catch(() => {});
         }
         if (productName) {
           toast(
@@ -641,7 +719,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return [productId, ...prev];
       });
     },
-    [toast, tr]
+    [toast, tr, user]
   );
 
   const addRecentSearch = useCallback((term: string) => {
@@ -693,6 +771,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         toggleWishlist,
         searchOpen,
         setSearchOpen,
+        mobileMenuOpen,
+        setMobileMenuOpen,
         recentSearches,
         addRecentSearch,
         removeRecentSearch,
@@ -706,7 +786,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       {toasts.length > 0 && (
         <div
           aria-live="polite"
-          className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"
+          className={`fixed right-4 z-[65] flex flex-col gap-2 max-w-sm pointer-events-none ${
+            isAppMode
+              ? 'left-4 sm:left-auto bottom-[calc(4.75rem+env(safe-area-inset-bottom))]'
+              : 'bottom-5'
+          }`}
         >
           {toasts.map((t) => (
             <div

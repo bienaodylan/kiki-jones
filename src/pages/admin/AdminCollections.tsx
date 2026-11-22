@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Edit3, Trash2, X, Search } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Search, Upload } from 'lucide-react';
 import { Category, Product } from '../../types/commerce';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   assignProductsToCategory,
   deleteCategoryAdmin,
@@ -30,9 +31,11 @@ export function AdminCollections({
   onToast,
 }: AdminCollectionsProps) {
   const { tr } = useLanguage();
+  const { user, idToken } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [productSearch, setProductSearch] = useState('');
 
   const [form, setForm] = useState({
@@ -164,6 +167,35 @@ export function AdminCollections({
       onToast(tr(`Collection "${cat.name}" supprimée.`, `Collection "${cat.name}" deleted.`), 'success');
     } catch (err: any) {
       onToast(err?.message || tr('Suppression impossible.', 'Delete failed.'), 'error');
+    }
+  };
+
+  const handleUploadCover = async (file: File) => {
+    setUploadingCover(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Read error'));
+        reader.readAsDataURL(file);
+      });
+      const token = user ? await user.getIdToken() : idToken;
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dataUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Upload error');
+      setForm((prev) => ({ ...prev, imageUrl: String(data.url) }));
+      onToast(tr('Image importée.', 'Cover image uploaded.'), 'success');
+    } catch (err: any) {
+      onToast(err?.message || tr('Échec de l’import d’image.', 'Image upload failed.'), 'error');
+    } finally {
+      setUploadingCover(false);
     }
   };
 
@@ -337,7 +369,23 @@ export function AdminCollections({
               </label>
 
               <div className="space-y-2">
-                <span className="font-medium text-black block">{tr('Image de couverture', 'Cover image')}</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-black">{tr('Image de couverture', 'Cover image')}</span>
+                  <label className="px-2.5 py-1 border border-black bg-black text-white text-[11px] font-medium inline-flex items-center gap-1 hover:bg-black/85 cursor-pointer">
+                    <Upload className="w-3 h-3" />
+                    <span>{uploadingCover ? tr('Import...', 'Uploading...') : tr('Importer', 'Upload')}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadCover(f);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="text"
                   value={form.imageUrl}

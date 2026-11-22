@@ -341,6 +341,7 @@ export interface StorefrontConfig {
   brandIntroSecondaryCtaLabel?: string;
   brandIntroSecondaryCtaHref?: string;
   sectionOrder: HomepageSectionKey[];
+  sectionImages?: Record<string, string>;
   collectionBanners?: CollectionBannerConfig[];
   customSections?: CustomHomepageSection[];
   galleryItems: GalleryItem[];

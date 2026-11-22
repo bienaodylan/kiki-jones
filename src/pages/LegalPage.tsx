@@ -1,11 +1,13 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { formatXOF } from '../lib/format';
 
 export function LegalPage({ docType }: { docType: 'shipping' | 'returns' | 'privacy' | 'terms' }) {
   const { storefrontConfig } = useStore();
   const { tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
 
   const stdFee = formatXOF(storefrontConfig.standardShippingXof || 3500);
   const freeThreshold = formatXOF(storefrontConfig.freeShippingThresholdXof || 75000);
@@ -88,7 +90,11 @@ export function LegalPage({ docType }: { docType: 'shipping' | 'returns' | 'priv
   }[docType];
 
   return (
-    <main className="pt-28 pb-24 max-w-3xl mx-auto px-5 md:px-10 min-h-[70vh]">
+    <main
+      className={`${
+        isAppMode ? 'pt-6 pb-12' : 'pt-28 pb-24'
+      } max-w-3xl mx-auto px-5 md:px-10 min-h-[70vh]`}
+    >
       <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-black/50">
         {content.eyebrow}
       </p>

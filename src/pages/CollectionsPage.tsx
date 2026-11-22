@@ -2,19 +2,26 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useExperienceMode } from '../context/ExperienceContext';
 import { getLocalizedCollections, localizeAudienceLabel } from '../lib/i18n';
+import { getSectionImage } from '../lib/storefrontMedia';
 import { ProductCard } from '../components/storefront/ProductCard';
 
 export function CollectionsPage() {
-  const { products, getProductVariants, navigate } = useStore();
+  const { products, storefrontConfig, getProductVariants, navigate } = useStore();
   const { lang, tr } = useLanguage();
+  const { isAppMode } = useExperienceMode();
   const collections = getLocalizedCollections(lang);
 
   const leadCollection = collections[0];
   const secondaryCollections = collections.slice(1);
 
   return (
-    <main className="pt-[88px] lg:pt-[96px] pb-10 bg-white text-black min-h-screen">
+    <main
+      className={`${
+        isAppMode ? 'pt-0 pb-10' : 'pt-[88px] lg:pt-[96px] pb-10'
+      } bg-white text-black min-h-screen`}
+    >
       {/* Editorial Directory Header */}
       <section className="max-w-[1440px] mx-auto px-2.5 sm:px-4 lg:px-6 pt-5 pb-5 border-b border-black/10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -43,7 +50,7 @@ export function CollectionsPage() {
         <section className="w-full bg-black">
           <div className="group relative w-full aspect-[16/10] sm:aspect-[2/1] lg:aspect-[1800/780] overflow-hidden bg-black">
             <img
-              src={leadCollection.campaignImage}
+              src={getSectionImage(storefrontConfig, `collection:${leadCollection.slug}`, leadCollection.campaignImage)}
               alt={leadCollection.title}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.02]"
@@ -98,7 +105,7 @@ export function CollectionsPage() {
                     className="group block w-full aspect-[16/10] overflow-hidden cursor-pointer"
                   >
                     <img
-                      src={col.campaignImage}
+                      src={getSectionImage(storefrontConfig, `collection:${col.slug}`, col.campaignImage)}
                       alt={col.title}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
