@@ -13,6 +13,7 @@ import {
 } from '../lib/i18n';
 import { CustomHomepageSection } from '../types/commerce';
 import { ProductCard } from '../components/storefront/ProductCard';
+import { BrandLogo } from '../components/brand/BrandLogo';
 
 export function HomePage() {
   const { storefrontConfig, products, getProductVariants, navigate } = useStore();
@@ -247,10 +248,8 @@ export function HomePage() {
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30" />
 
             {shouldReduceMotion && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                <span className="font-bold text-4xl md:text-6xl tracking-[0.28em] uppercase text-white">
-                  KIKI JONES
-                </span>
+              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none px-6">
+                <BrandLogo variant="hero" tone="light" />
               </div>
             )}
 

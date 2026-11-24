@@ -4,6 +4,7 @@ import { useStore } from '../../context/StoreContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { subscribeNewsletter } from '../../lib/firestoreService';
 import { PWAInstallButton } from '../pwa/PWAInstallButton';
+import { BrandLogo } from '../brand/BrandLogo';
 
 export function Footer() {
   const { navigate, storefrontConfig, toast } = useStore();
@@ -56,6 +57,14 @@ export function Footer() {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-10 pt-12 pb-10 grid grid-cols-2 md:grid-cols-12 gap-x-6 sm:gap-x-8 gap-y-9">
         {/* Newsletter Column */}
         <div className="col-span-2 md:col-span-4 space-y-4 pr-0 md:pr-6">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
+            className="inline-flex items-center cursor-pointer"
+          >
+            <BrandLogo variant="footer" tone="dark" />
+          </button>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black">
             {newsletterHeading}
           </p>
@@ -271,11 +280,9 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Giant Full-Width Editorial Wordmark Footer Signature */}
-      <div className="w-full overflow-hidden px-3 md:px-6 pb-4 pt-2 select-none pointer-events-none">
-        <div className="w-full text-center font-bold uppercase tracking-[-0.045em] leading-[0.82] text-[13vw] sm:text-[13.5vw] text-black whitespace-nowrap">
-          KIKI JONES
-        </div>
+      {/* Official Editorial Brand Signature */}
+      <div className="w-full overflow-hidden px-4 sm:px-6 md:px-10 py-6 sm:py-8 md:py-10 flex items-center justify-center select-none pointer-events-none border-t border-black/[0.06]">
+        <BrandLogo variant="footer-signature" tone="dark" />
       </div>
     </footer>
   );

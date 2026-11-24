@@ -37,6 +37,7 @@ import { AdminPromotions } from './AdminPromotions';
 import { AdminStorefront } from './AdminStorefront';
 import { AdminSettings } from './AdminSettings';
 import { AdminAiAssistant } from '../../components/admin/AdminAiAssistant';
+import { BrandLogo } from '../../components/brand/BrandLogo';
 import {
   detectMissingMenusFromInventory,
   extractDynamicSubMenus,
@@ -156,9 +157,10 @@ export function AdminDashboard() {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
         <div className="max-w-md w-full border border-[#E8E8E8] bg-white p-8 md:p-10 space-y-6">
-          <div className="space-y-2">
+          <div className="space-y-2.5">
+            <BrandLogo variant="admin" tone="dark" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/45">
-              KIKI JONES Administration
+              {tr('Administration', 'Administration')}
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-black">
               {tr('Accès protégé', 'Protected Console')}
@@ -313,11 +315,16 @@ export function AdminDashboard() {
       {/* Desktop Sidebar (240px) */}
       <aside className="hidden lg:flex w-60 shrink-0 flex-col justify-between bg-white border-r border-[#E8E8E8] p-4 sticky top-0 h-screen">
         <div className="space-y-6">
-          <div className="px-2 pt-1">
-            <span className="font-bold text-base tracking-[0.22em] uppercase text-black block">
-              KIKI JONES
-            </span>
-            <span className="text-[10.5px] uppercase tracking-[0.14em] text-black/45">
+          <div className="px-2 pt-1 space-y-1">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
+              className="block cursor-pointer"
+            >
+              <BrandLogo variant="admin" tone="dark" />
+            </button>
+            <span className="text-[10.5px] uppercase tracking-[0.14em] text-black/45 block">
               {tr('Administration', 'Admin')}
             </span>
           </div>
@@ -358,9 +365,9 @@ export function AdminDashboard() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-xs font-medium text-black/45">KIKI JONES</span>
+            <BrandLogo variant="admin-compact" tone="dark" />
             <span className="text-xs text-black/25">/</span>
-            <span className="text-xs font-semibold text-black">{currentTabLabel}</span>
+            <span className="text-xs font-semibold text-black truncate">{currentTabLabel}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -494,9 +501,7 @@ export function AdminDashboard() {
           <div className="relative w-64 bg-white h-full p-4 flex flex-col justify-between overflow-y-auto z-10 border-r border-[#E8E8E8]">
             <div className="space-y-6">
               <div className="flex items-center justify-between px-2">
-                <span className="font-bold text-base tracking-[0.22em] uppercase text-black">
-                  KIKI JONES
-                </span>
+                <BrandLogo variant="admin" tone="dark" />
                 <button
                   type="button"
                   onClick={() => setMobileNavOpen(false)}

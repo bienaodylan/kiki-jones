@@ -8,6 +8,7 @@ import {
   getLocalizedCollections,
   localizeAudienceLabel,
 } from '../../lib/i18n';
+import { BrandLogo } from '../brand/BrandLogo';
 
 export function AppHeader() {
   const {
@@ -141,9 +142,9 @@ export function AppHeader() {
               type="button"
               onClick={() => navigate('/')}
               aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
-              className="font-bold text-[15px] tracking-[0.22em] uppercase text-black whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center justify-center cursor-pointer"
             >
-              KIKI JONES
+              <BrandLogo variant="app-header" tone="dark" />
             </button>
           ) : (
             <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-black truncate">

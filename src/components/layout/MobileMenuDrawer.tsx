@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useStore } from '../../context/StoreContext';
 import { PWAInstallButton } from '../pwa/PWAInstallButton';
 import { MobileShopDirectory } from './MobileShopDirectory';
+import { BrandLogo } from '../brand/BrandLogo';
 
 interface MobileMenuDrawerProps {
   open: boolean;
@@ -78,12 +79,11 @@ export function MobileMenuDrawer({
               <button
                 type="button"
                 onClick={() => go('/')}
-                className="inline-flex items-center gap-2 text-black cursor-pointer"
+                aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
+                className="inline-flex items-center gap-2.5 text-black cursor-pointer"
               >
-                <span className="font-bold text-[15px] tracking-[0.26em] uppercase">
-                  KIKI JONES
-                </span>
-                <span className="h-3 w-px bg-black/20" />
+                <BrandLogo variant="drawer" tone="dark" />
+                <span className="h-3.5 w-px bg-black/20" />
                 <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-black/45">
                   {tr('Menu', 'Index')}
                 </span>

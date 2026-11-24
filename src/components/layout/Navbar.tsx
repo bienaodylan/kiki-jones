@@ -12,6 +12,7 @@ import {
 import { getFloatingSubnav, getPrimaryNavLabel } from '../../lib/i18n';
 import { MegaMenu } from './MegaMenu';
 import { MobileMenuDrawer } from './MobileMenuDrawer';
+import { BrandLogo } from '../brand/BrandLogo';
 
 export function Navbar() {
   const {
@@ -154,7 +155,7 @@ export function Navbar() {
   const heroCenterY = Math.max(150, Math.round(viewport.height * 0.47 - 28));
   const dockEnd = Math.max(220, Math.round(viewport.height * 0.44));
   const logoY = useTransform(scrollY, [0, dockEnd], [heroCenterY, 0]);
-  const initialScale = viewport.width >= 1024 ? 2.15 : viewport.width >= 640 ? 1.75 : 1.3;
+  const initialScale = viewport.width >= 1024 ? 1.65 : viewport.width >= 640 ? 1.45 : 1.22;
   const logoScale = useTransform(scrollY, [0, dockEnd], [initialScale, 1]);
 
   const isSolid = !isHome || scrolledSolid || activeMegaMenu !== null;
@@ -285,7 +286,7 @@ export function Navbar() {
             </nav>
           </div>
 
-          {/* CENTER ZONE: KIKI JONES Prominent Wordmark */}
+          {/* CENTER ZONE: Official KIKI JONES Brand Logo */}
           <div className="flex items-center justify-center min-w-0">
             {isHome && !shouldReduceMotion && activeMegaMenu === null ? (
               <motion.button
@@ -296,22 +297,18 @@ export function Navbar() {
                   y: logoY,
                   scale: logoScale,
                 }}
-                className={`font-bold text-[13.5px] sm:text-lg xl:text-xl tracking-[0.18em] sm:tracking-[0.26em] uppercase whitespace-nowrap shrink-0 leading-none cursor-pointer transition-colors ${
-                  isSolid ? 'text-black' : 'text-white'
-                }`}
+                className="inline-flex items-center justify-center shrink-0 leading-none cursor-pointer"
               >
-                KIKI JONES
+                <BrandLogo variant="header" tone={isSolid ? 'dark' : 'light'} />
               </motion.button>
             ) : (
               <button
                 type="button"
                 onClick={() => navigate('/')}
                 aria-label={tr('Accueil KIKI JONES', 'KIKI JONES Home')}
-                className={`font-bold text-[13.5px] sm:text-lg xl:text-xl tracking-[0.18em] sm:tracking-[0.26em] uppercase whitespace-nowrap shrink-0 leading-none cursor-pointer transition-colors ${
-                  isSolid ? 'text-black' : 'text-white'
-                }`}
+                className="inline-flex items-center justify-center shrink-0 leading-none cursor-pointer"
               >
-                KIKI JONES
+                <BrandLogo variant="header" tone={isSolid ? 'dark' : 'light'} />
               </button>
             )}
           </div>

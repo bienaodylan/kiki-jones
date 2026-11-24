@@ -15,6 +15,7 @@ import {
 } from '../lib/firestoreService';
 import { CustomerAddress, Order } from '../types/commerce';
 import { formatXOF, formatTimestamp } from '../lib/format';
+import { BrandLogo } from '../components/brand/BrandLogo';
 
 export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile' | 'orders' }) {
   const { user, authReady, isAdmin, loginWithGoogle, logout } = useAuth();
@@ -146,7 +147,10 @@ export function AccountPage({ defaultTab = 'profile' }: { defaultTab?: 'profile'
           isAppMode ? 'pt-8 pb-12' : 'pt-32 pb-24'
         } max-w-lg mx-auto px-4 sm:px-5 min-h-[70vh] flex flex-col justify-center`}
       >
-        <div className="border border-black/20 bg-white p-7 md:p-10 space-y-6 text-center">
+        <div className="border border-black/20 bg-white p-7 md:p-10 space-y-5 text-center">
+          <div className="flex justify-center">
+            <BrandLogo variant="card" tone="dark" />
+          </div>
           <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-black/55">
             {tr('Espace Client', 'Client Account')}
           </p>
