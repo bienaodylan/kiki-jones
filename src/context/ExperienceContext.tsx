@@ -17,12 +17,24 @@ const OVERRIDE_STORAGE_KEY = 'kikijones_experience_override_v1';
 function detectStandaloneRuntime(): boolean {
   if (typeof window === 'undefined') return false;
   const nav = window.navigator as Navigator & { standalone?: boolean };
+  const ua = window.navigator.userAgent || '';
+  const win = window as unknown as {
+    Capacitor?: { isNativePlatform?: () => boolean };
+    cordova?: unknown;
+  };
+  const isNativeAppWrapper =
+    Boolean(win.Capacitor?.isNativePlatform?.()) ||
+    Boolean(win.cordova) ||
+    /\bwv\b/i.test(ua) ||
+    /Median|GoNative|PWABuilder/i.test(ua);
+
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     window.matchMedia('(display-mode: fullscreen)').matches ||
     window.matchMedia('(display-mode: minimal-ui)').matches ||
     nav.standalone === true ||
-    document.referrer.startsWith('android-app://')
+    document.referrer.startsWith('android-app://') ||
+    isNativeAppWrapper
   );
 }
 

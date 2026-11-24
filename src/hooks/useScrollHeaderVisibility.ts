@@ -11,6 +11,18 @@ interface UseScrollHeaderVisibilityOptions {
   desktopBreakpoint?: number;
 }
 
+function getScrollY(): number {
+  if (typeof window === 'undefined') return 0;
+  return Math.max(
+    0,
+    window.scrollY ||
+      window.pageYOffset ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0
+  );
+}
+
 /**
  * Hides the top header smoothly when scrolling down on mobile/tablet (< desktopBreakpoint)
  * and reveals it as soon as the user scrolls back up. Always stays visible on desktop.
@@ -28,32 +40,33 @@ export function useScrollHeaderVisibility({
   // Always show header immediately on route change or when forced visible
   useEffect(() => {
     setVisible(true);
-    if (typeof window !== 'undefined') {
-      lastYRef.current = Math.max(0, window.scrollY);
-    }
+    lastYRef.current = getScrollY();
   }, [resetKey, forceVisible]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    lastYRef.current = Math.max(0, window.scrollY);
+    lastYRef.current = getScrollY();
 
     const evaluateScroll = () => {
       tickingRef.current = false;
 
       if (window.innerWidth >= desktopBreakpoint || forceVisible) {
         setVisible(true);
-        lastYRef.current = Math.max(0, window.scrollY);
+        lastYRef.current = getScrollY();
         return;
       }
 
-      const currentY = Math.max(0, window.scrollY);
-      const docHeight = document.documentElement.scrollHeight;
+      const currentY = getScrollY();
+      const docHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body?.scrollHeight || 0
+      );
       const viewportHeight = window.innerHeight;
       const isAtBottomBounce =
         docHeight > viewportHeight + 40 && currentY + viewportHeight >= docHeight - 12;
 
-      if (currentY <= 36) {
+      if (currentY <= 24) {
         setVisible(true);
         lastYRef.current = currentY;
         return;
@@ -66,10 +79,10 @@ export function useScrollHeaderVisibility({
 
       const delta = currentY - lastYRef.current;
 
-      if (delta > 8 && currentY > hideAfter) {
+      if (delta > 6 && currentY > hideAfter) {
         setVisible(false);
         lastYRef.current = currentY;
-      } else if (delta < -6) {
+      } else if (delta < -5) {
         setVisible(true);
         lastYRef.current = currentY;
       }
@@ -89,9 +102,11 @@ export function useScrollHeaderVisibility({
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
     };
   }, [hideAfter, forceVisible, desktopBreakpoint]);

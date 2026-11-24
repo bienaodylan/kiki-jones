@@ -30,9 +30,10 @@ export function AppHeader() {
   const { lang, toggleLang, tr } = useLanguage();
   const infoBarActive = isInfoBarActive(storefrontConfig);
   const isHeaderVisible = useScrollHeaderVisibility({
-    hideAfter: 56,
+    hideAfter: 44,
     forceVisible: mobileMenuOpen,
     resetKey: JSON.stringify(route),
+    desktopBreakpoint: Infinity,
   });
 
   const isTopLevelTab =
@@ -110,12 +111,12 @@ export function AppHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-30 w-full max-w-full overflow-x-clip bg-white/78 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.04)] ${
+      className={`fixed top-0 left-0 right-0 z-40 w-full max-w-full overflow-x-clip bg-white/82 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.04)] ${
         infoBarActive ? '' : 'pt-safe'
-      } will-change-transform transition-transform duration-300 ease-out ${
+      } transform-gpu will-change-transform transition-transform duration-300 ease-out ${
         isHeaderVisible
-          ? 'translate-y-0'
-          : '-translate-y-full lg:translate-y-0 pointer-events-none lg:pointer-events-auto'
+          ? 'translate-y-0 pointer-events-auto'
+          : '-translate-y-full pointer-events-none'
       }`}
     >
       <HeaderInfoBar withSafeTop />
