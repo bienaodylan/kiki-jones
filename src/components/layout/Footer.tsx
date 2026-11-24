@@ -258,11 +258,6 @@ export function Footer() {
                 {tr('Conditions de vente', 'Terms of Sale')}
               </button>
             </li>
-            <li>
-              <button onClick={() => navigate('/admin')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                {tr('Administration', 'Store Administration')}
-              </button>
-            </li>
           </ul>
         </div>
       </div>

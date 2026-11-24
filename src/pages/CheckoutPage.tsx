@@ -271,38 +271,23 @@ export function CheckoutPage() {
             )}
           </div>
 
-          {!orderConfirmation.providerConfigured ? (
-            <div className="p-4 border border-black bg-black/[0.03] space-y-2 text-xs text-black">
-              <div className="flex items-center gap-2 font-bold">
-                <AlertCircle className="w-4 h-4 text-black shrink-0" />
-                <span>
-                  {tr(
-                    'Identifiants passerelle de paiement non configurés',
-                    'External Payment Gateway Credentials Not Supplied'
-                  )}
-                </span>
-              </div>
-              <p className="font-light leading-relaxed text-black/80">
+          <div className="p-4 border border-black/15 bg-black/[0.02] space-y-2 text-xs text-black">
+            <div className="flex items-center gap-2 font-bold">
+              <AlertCircle className="w-4 h-4 text-black shrink-0" />
+              <span>
                 {tr(
-                  'Votre commande est enregistrée en attente de vérification. Seule une notification webhook vérifiée du prestataire marque une commande comme payée.',
-                  'Your order is securely stored in awaiting_verification state. Only a verified server-side webhook from the payment provider marks an order as paid.'
+                  'Commande enregistrée — confirmation de paiement en cours',
+                  'Order Received — Payment Confirmation Pending'
                 )}
-              </p>
-              {orderConfirmation.missingEnvVars.length > 0 && (
-                <p className="font-light text-[11px] text-black/70">
-                  {tr('Configuration manquante :', 'Missing configuration:')}{' '}
-                  {orderConfirmation.missingEnvVars.join(', ')}
-                </p>
-              )}
+              </span>
             </div>
-          ) : (
-            <div className="p-4 border border-black/15 bg-black/[0.02] text-xs font-light text-black">
+            <p className="font-light leading-relaxed text-black/80">
               {tr(
-                'En attente de confirmation vérifiée du prestataire avant préparation de la commande.',
-                'Awaiting verified payment notification from provider webhook before fulfillment begins.'
+                'Votre commande est enregistrée et vos pièces sont réservées. Dès réception de la confirmation de paiement, notre équipe préparera votre expédition.',
+                'Your order has been recorded and your pieces are reserved. As soon as your payment is confirmed, our team will prepare your shipment.'
               )}
-            </div>
-          )}
+            </p>
+          </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button
@@ -515,7 +500,7 @@ export function CheckoutPage() {
                 </h2>
                 <span className="inline-flex items-center gap-1 text-[11px] font-light text-black/60 shrink-0">
                   <Lock className="w-3 h-3" />
-                  {tr('Sécurisé par webhook', 'Webhook-Verified')}
+                  {tr('Paiement sécurisé', 'Secure Payment')}
                 </span>
               </div>
 
@@ -547,7 +532,6 @@ export function CheckoutPage() {
                     note: tr('Carte bancaire 3DS sécurisée', '3DS Secure Card Payment'),
                   },
                 ].map((m) => {
-                  const status = providers.find((p) => p.id === m.id);
                   const active = paymentMethod === m.id;
                   return (
                     <button
@@ -558,15 +542,13 @@ export function CheckoutPage() {
                         active ? 'border-black bg-black text-white' : 'border-black/20 bg-white text-black'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-bold">{m.label}</span>
-                        <span
-                          className={`text-[10px] font-bold uppercase tracking-[0.14em] ${
-                            active ? 'text-white/80' : 'text-black/60'
-                          }`}
-                        >
-                          {status?.configured ? tr('Prêt', 'Ready') : tr('En attente', 'Config Pending')}
-                        </span>
+                        {active && (
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/80">
+                            {tr('Sélectionné', 'Selected')}
+                          </span>
+                        )}
                       </div>
                       <p
                         className={`text-[11px] font-light mt-1 ${
@@ -662,7 +644,7 @@ export function CheckoutPage() {
                 <span>
                   {tr(
                     'Le stock est réservé de manière sécurisée pendant 15 minutes dès validation.',
-                    'Inventory is reserved transactionally for 15 minutes upon order placement.'
+                    'Inventory is securely reserved for 15 minutes upon order placement.'
                   )}
                 </span>
               </p>

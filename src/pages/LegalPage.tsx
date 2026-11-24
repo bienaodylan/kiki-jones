@@ -28,8 +28,8 @@ export function LegalPage({ docType }: { docType: 'shipping' | 'returns' | 'priv
           `Express Courier dispatch (24 hours) is available for ${expFee}.`
         ),
         tr(
-          'Les commandes entrent en préparation immédiatement après vérification du paiement côté serveur.',
-          'Orders enter fulfillment processing immediately after server-side payment verification.'
+          'Les commandes entrent en préparation dès confirmation de votre paiement.',
+          'Orders enter fulfillment processing as soon as your payment is confirmed.'
         ),
       ],
     },
@@ -78,12 +78,12 @@ export function LegalPage({ docType }: { docType: 'shipping' | 'returns' | 'priv
           'All prices are displayed and settled in West African CFA Francs (XOF), inclusive of applicable taxes.'
         ),
         tr(
-          'L’ajout d’un article au panier ne réserve pas le stock ; l’inventaire est réservé pendant 15 minutes dès validation de la commande.',
-          'Adding an item to your bag does not reserve stock; inventory is reserved transactionally for 15 minutes when checkout is submitted.'
+          'L’ajout d’un article au panier ne réserve pas le stock ; vos pièces sont réservées pendant 15 minutes dès validation de la commande.',
+          'Adding an item to your bag does not reserve stock; your pieces are securely reserved for 15 minutes when checkout is submitted.'
         ),
         tr(
           'Les pièces en précommande affichent une date estimée d’expédition directement sur la fiche produit.',
-          'Pre-order pieces carry an estimated dispatch date and configurable allocation limit shown on the product page.'
+          'Pre-order pieces display an estimated dispatch date directly on the product page.'
         ),
       ],
     },

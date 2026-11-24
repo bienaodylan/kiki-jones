@@ -24,8 +24,8 @@ export function OfflineIndicator() {
       <WifiOff className="w-3.5 h-3.5 shrink-0" strokeWidth={1.7} />
       <span>
         {tr(
-          'Hors ligne — affichage des données en cache.',
-          'Offline — showing cached catalog data.'
+          'Connexion internet interrompue — reconnexion en cours.',
+          'Internet connection lost — reconnecting.'
         )}
       </span>
     </div>

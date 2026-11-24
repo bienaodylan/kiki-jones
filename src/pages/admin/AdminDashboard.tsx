@@ -143,70 +143,17 @@ export function AdminDashboard() {
     return () => unsubs.forEach((u) => u());
   }, [authReady, isAdmin]);
 
-  if (!authReady) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-black/50">
-          {tr('Vérification de la session...', 'Verifying session...')}
-        </p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!authReady) return;
+    if (!user) {
+      navigate('/account');
+    } else if (!isAdmin) {
+      navigate('/');
+    }
+  }, [authReady, user, isAdmin, navigate]);
 
-  if (!user || !isAdmin) {
-    return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
-        <div className="max-w-md w-full border border-[#E8E8E8] bg-white p-8 md:p-10 space-y-6">
-          <div className="space-y-2.5">
-            <BrandLogo variant="admin" tone="dark" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/45">
-              {tr('Administration', 'Administration')}
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-black">
-              {tr('Accès protégé', 'Protected Console')}
-            </h1>
-            <p className="text-xs text-black/60 leading-relaxed">
-              {user
-                ? tr(
-                    `Connecté en tant que ${user.email}, qui ne dispose pas des droits administrateur.`,
-                    `Signed in as ${user.email}, which does not have administrator privileges.`
-                  )
-                : tr(
-                    'Connectez-vous avec votre compte Google administrateur KIKI JONES autorisé.',
-                    'Sign in with your authorized KIKI JONES administrator Google account.'
-                  )}
-            </p>
-          </div>
-
-          <div className="space-y-2.5">
-            {!user ? (
-              <button
-                type="button"
-                onClick={() => loginWithGoogle()}
-                className="w-full py-3 bg-black text-white text-xs font-medium hover:bg-black/85 cursor-pointer"
-              >
-                {tr('Se connecter avec Google', 'Sign in with Google')}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="w-full py-3 border border-black text-black text-xs font-medium cursor-pointer"
-              >
-                {tr('Se déconnecter', 'Sign out')}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="w-full py-2.5 text-xs text-black/55 hover:text-black cursor-pointer"
-            >
-              {tr('Retour à la boutique', 'Return to storefront')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  if (!authReady || !user || !isAdmin) {
+    return null;
   }
 
   const pendingOrdersCount = orders.filter((o) => o.fulfillmentStatus === 'unfulfilled').length;
