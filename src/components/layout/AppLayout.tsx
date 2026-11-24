@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'motion/react';
 import { useStore } from '../../context/StoreContext';
 import { useAuth } from '../../context/AuthContext';
 import { AppHeader } from '../app/AppHeader';
@@ -9,6 +8,7 @@ import { CartDrawer } from '../cart/CartDrawer';
 import { SearchOverlay } from './SearchOverlay';
 import { OfflineIndicator } from '../pwa/OfflineIndicator';
 import { isInfoBarActive } from '../../lib/infoBar';
+import { PageTransition } from '../../motion/PageTransition';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -24,7 +24,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     storefrontConfig,
   } = useStore();
   const { isAdmin } = useAuth();
-  const shouldReduceMotion = useReducedMotion();
 
   const routeKey = JSON.stringify(route);
   const showsBottomNav = route.page !== 'checkout' && route.page !== 'product';
@@ -34,7 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     : 'pt-[calc(52px+env(safe-area-inset-top,0px))]';
 
   return (
-    <div className="min-h-dvh w-full max-w-full overflow-x-clip flex flex-col bg-white text-black font-light">
+    <div className="min-h-dvh w-full max-w-full max-md:overflow-x-clip flex flex-col bg-white text-black font-light">
       <AppHeader />
 
       {/* Preserved KIKI JONES full category & brand drawer menu */}
@@ -49,17 +48,15 @@ export function AppLayout({ children }: AppLayoutProps) {
       <CartDrawer />
       <SearchOverlay />
 
-      <motion.div
-        key={routeKey}
-        initial={shouldReduceMotion ? false : { opacity: 0.94 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.14, ease: 'easeOut' }}
-        className={`flex-1 w-full max-w-full min-w-0 overflow-x-clip ${topOffsetClass} ${
+      <PageTransition
+        routeKey={routeKey}
+        isAppMode
+        className={`flex-1 w-full max-w-full min-w-0 max-md:overflow-x-clip ${topOffsetClass} ${
           showsBottomNav ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'pb-safe'
         }`}
       >
         {children}
-      </motion.div>
+      </PageTransition>
 
       <OfflineIndicator />
       <AppBottomNavigation />

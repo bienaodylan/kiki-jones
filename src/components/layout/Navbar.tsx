@@ -16,6 +16,8 @@ import { BrandLogo } from '../brand/BrandLogo';
 import { HeaderInfoBar } from './HeaderInfoBar';
 import { isInfoBarActive } from '../../lib/infoBar';
 import { useScrollHeaderVisibility } from '../../hooks/useScrollHeaderVisibility';
+import { useMotionSystem } from '../../motion/MotionProvider';
+import { AnimatedCountBadge } from '../../motion/InteractivePrimitives';
 
 export function Navbar() {
   const {
@@ -31,6 +33,7 @@ export function Navbar() {
   } = useStore();
   const { isAdmin } = useAuth();
   const { lang, toggleLang, tr } = useLanguage();
+  const { cartPulseKey } = useMotionSystem();
   const shouldReduceMotion = useReducedMotion();
 
   const isHome = route.page === 'home';
@@ -212,7 +215,7 @@ export function Navbar() {
         onMouseEnter={cancelCloseMegaMenu}
         className={`fixed top-0 left-0 right-0 w-full max-w-full overflow-x-clip z-40 ${
           infoBarActive ? '' : 'pt-safe'
-        } will-change-transform transition-[transform,background-color,box-shadow,border-color] duration-300 ease-out ${
+        } transform-gpu will-change-transform transition-[transform,background-color,box-shadow,border-color] duration-300 ease-out ${
           isHeaderVisible
             ? 'translate-y-0'
             : '-translate-y-full lg:translate-y-0 pointer-events-none lg:pointer-events-auto'
@@ -382,36 +385,32 @@ export function Navbar() {
               type="button"
               onClick={() => navigate('/wishlist')}
               aria-label={tr(`Favoris (${wishlistCount})`, `Wishlist (${wishlistCount})`)}
-              className="relative p-2 inline-flex items-center justify-center hover:opacity-65 transition-opacity cursor-pointer"
+              className="relative p-2 inline-flex items-center justify-center hover:opacity-65 cursor-pointer"
             >
               <Heart className="w-[17px] h-[17px]" strokeWidth={1.65} />
-              {wishlistCount > 0 && (
-                <span
-                  className={`absolute top-1 right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full text-[8.5px] font-bold flex items-center justify-center tabular-nums ${
-                    isSolid ? 'bg-black text-white' : 'bg-white text-black'
-                  }`}
-                >
-                  {wishlistCount}
-                </span>
-              )}
+              <AnimatedCountBadge
+                count={wishlistCount}
+                className={`absolute top-1 right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full text-[8.5px] font-bold flex items-center justify-center tabular-nums ${
+                  isSolid ? 'bg-black text-white' : 'bg-white text-black'
+                }`}
+              />
             </button>
 
             <button
               type="button"
+              data-kj-cart-target="true"
               onClick={() => setCartOpen(true)}
               aria-label={tr(`Panier (${cartCount})`, `Shopping bag (${cartCount})`)}
-              className="relative p-2 -mr-1 inline-flex items-center justify-center hover:opacity-65 transition-opacity cursor-pointer"
+              className="relative p-2 -mr-1 inline-flex items-center justify-center hover:opacity-65 cursor-pointer"
             >
               <ShoppingBag className="w-[17px] h-[17px]" strokeWidth={1.65} />
-              {cartCount > 0 && (
-                <span
-                  className={`absolute top-1 right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full text-[8.5px] font-bold flex items-center justify-center tabular-nums ${
-                    isSolid ? 'bg-black text-white' : 'bg-white text-black'
-                  }`}
-                >
-                  {cartCount}
-                </span>
-              )}
+              <AnimatedCountBadge
+                count={cartCount}
+                pulseKey={cartPulseKey}
+                className={`absolute top-1 right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full text-[8.5px] font-bold flex items-center justify-center tabular-nums ${
+                  isSolid ? 'bg-black text-white' : 'bg-white text-black'
+                }`}
+              />
             </button>
           </div>
         </div>

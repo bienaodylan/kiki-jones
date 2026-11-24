@@ -1,10 +1,16 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Plus, Minus, Heart, Ruler, ChevronDown, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { ArrowLeft, Plus, Minus, Heart, Ruler, ChevronDown, X, Check } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useExperienceMode } from '../context/ExperienceContext';
 import { formatXOF, getAvailableStock, getColorHex } from '../lib/format';
+import { isInfoBarActive } from '../lib/infoBar';
 import { ProductCard } from '../components/storefront/ProductCard';
+import { useMotionSystem } from '../motion/MotionProvider';
+import { getProductTransitionName, KJ_DURATION, KJ_EASE } from '../motion/motionConfig';
+import { AnimatedAccordionContent, AnimatedValue } from '../motion/InteractivePrimitives';
+import { ScrollReveal } from '../motion/ScrollReveal';
 import {
   detectDominantColorsFromImageUrl,
   DetectedColor,
@@ -43,9 +49,18 @@ export function ProductDetailPage({ slug }: { slug: string }) {
     navigate,
     isWishlisted,
     toggleWishlist,
+    storefrontConfig,
   } = useStore();
   const { tr } = useLanguage();
   const { isAppMode } = useExperienceMode();
+  const {
+    prefersReducedMotion,
+    transitionProductSlug,
+    triggerFlyToCart,
+    lastWishlistPulse,
+  } = useMotionSystem();
+
+  const infoBarActive = isInfoBarActive(storefrontConfig);
 
   const product = useMemo(
     () => products.find((p) => p.slug === slug) || null,
@@ -65,12 +80,16 @@ export function ProductDetailPage({ slug }: { slug: string }) {
   const [imageBgMap, setImageBgMap] = useState<Record<string, ImageBackgroundAnalysis>>({});
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [sizeGuideTab, setSizeGuideTab] = useState<'women' | 'men' | 'youth'>('women');
-  const [openAccordion, setOpenAccordion] = useState<'details' | 'shipping' | null>('details');
+  const [openAccordion, setOpenAccordion] = useState<'details' | 'shipping' | null>(null);
+  const [justAdded, setJustAdded] = useState(false);
 
-  const imageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const desktopImageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tabletImageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const mobileGalleryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setOpenAccordion(null);
+    setJustAdded(false);
     if (variants.length > 0) {
       const firstAvail = variants.find((v) => getAvailableStock(v) > 0) || variants[0];
       setSelectedColor(firstAvail.color);
@@ -82,6 +101,15 @@ export function ProductDetailPage({ slug }: { slug: string }) {
     else if (product?.audience === 'girls' || product?.audience === 'boys') setSizeGuideTab('youth');
     else setSizeGuideTab('women');
   }, [product?.id, product?.audience, variants]);
+
+  useEffect(() => {
+    if (!sizeGuideOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSizeGuideOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sizeGuideOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,9 +166,12 @@ export function ProductDetailPage({ slug }: { slug: string }) {
           }
         }
       },
-      { rootMargin: '-35% 0px -45% 0px', threshold: 0.1 }
+      { rootMargin: '-25% 0px -35% 0px', threshold: 0.1 }
     );
-    imageRefs.current.forEach((el) => {
+    desktopImageRefs.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+    tabletImageRefs.current.forEach((el) => {
       if (el) observer.observe(el);
     });
     return () => observer.disconnect();
@@ -148,13 +179,16 @@ export function ProductDetailPage({ slug }: { slug: string }) {
 
   const scrollToImage = (idx: number) => {
     setActiveImageIdx(idx);
-    const el = imageRefs.current[idx];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+    const targetEl = isDesktop ? desktopImageRefs.current[idx] : tabletImageRefs.current[idx];
+    if (targetEl && targetEl.offsetParent !== null) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     if (mobileGalleryRef.current) {
       const width = mobileGalleryRef.current.clientWidth;
-      mobileGalleryRef.current.scrollTo({ left: width * idx, behavior: 'smooth' });
+      if (width > 0) {
+        mobileGalleryRef.current.scrollTo({ left: width * idx, behavior: 'smooth' });
+      }
     }
   };
 
@@ -187,6 +221,7 @@ export function ProductDetailPage({ slug }: { slug: string }) {
 
   const images = product.images || [];
   const wishlisted = isWishlisted(product.id);
+  const isHeartPulsing = lastWishlistPulse?.productId === product.id;
 
   const variantColors = Array.from(
     new Map(variants.map((v) => [v.color, v.colorHex || getColorHex(v.color)])).entries()
@@ -229,6 +264,19 @@ export function ProductDetailPage({ slug }: { slug: string }) {
 
   const handleAdd = () => {
     if (!activeVariant || !canPurchase) return;
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+    const isTablet =
+      typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
+    const sourceEl = isDesktop
+      ? desktopImageRefs.current[activeImageIdx] || desktopImageRefs.current[0]
+      : isTablet
+        ? tabletImageRefs.current[activeImageIdx] || tabletImageRefs.current[0]
+        : mobileGalleryRef.current;
+
+    triggerFlyToCart(images[activeImageIdx] || images[0], sourceEl);
+    setJustAdded(true);
+    window.setTimeout(() => setJustAdded(false), 1200);
+
     addToCart({
       variantId: activeVariant.id,
       productId: product.id,
@@ -251,519 +299,677 @@ export function ProductDetailPage({ slug }: { slug: string }) {
 
   const audiencePath = product.audience ? `/${product.audience}` : '/shop';
 
+  // Exact sticky geometry for Desktop (>= 1024px) AND iPad (768px–1023px)
+  const desktopStickyFrameClass = infoBarActive
+    ? 'lg:sticky lg:top-[124px] lg:h-[calc(100vh-124px)]'
+    : 'lg:sticky lg:top-[96px] lg:h-[calc(100vh-96px)]';
+
+  const desktopGalleryMinHClass = infoBarActive
+    ? 'lg:min-h-[calc(100vh-124px)]'
+    : 'lg:min-h-[calc(100vh-96px)]';
+
+  const tabletStickyFrameClass = isAppMode
+    ? infoBarActive
+      ? 'md:sticky md:top-[calc(80px+env(safe-area-inset-top,0px))] md:h-[calc(100vh-80px-env(safe-area-inset-top,0px))]'
+      : 'md:sticky md:top-[calc(52px+env(safe-area-inset-top,0px))] md:h-[calc(100vh-52px-env(safe-area-inset-top,0px))]'
+    : infoBarActive
+      ? 'md:sticky md:top-[116px] md:h-[calc(100vh-116px)]'
+      : 'md:sticky md:top-[88px] md:h-[calc(100vh-88px)]';
+
+  const tabletGalleryMinHClass = isAppMode
+    ? infoBarActive
+      ? 'md:min-h-[calc(100vh-80px)]'
+      : 'md:min-h-[calc(100vh-52px)]'
+    : infoBarActive
+      ? 'md:min-h-[calc(100vh-116px)]'
+      : 'md:min-h-[calc(100vh-88px)]';
+
+  const hasSharedTransition = transitionProductSlug === product.slug;
+  const sharedName = hasSharedTransition ? getProductTransitionName(product.slug) : undefined;
+
+  const renderThumbnails = (sizeClass: string) =>
+    images.length > 0 && (
+      <div
+        className={`flex flex-col gap-2 ${sizeClass} shrink-0 max-h-[calc(100vh-160px)] overflow-y-auto no-scrollbar py-0.5`}
+      >
+        {images.map((img, i) => {
+          const bgInfo = imageBgMap[img];
+          const isCutout = bgInfo ? bgInfo.hasTransparentOrWhiteBg : false;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => scrollToImage(i)}
+              aria-label={`View photo ${i + 1}`}
+              className={`w-full aspect-[4/5] shrink-0 bg-[#F5F5F5] overflow-hidden cursor-pointer ${
+                activeImageIdx === i
+                  ? 'ring-1 ring-black opacity-100'
+                  : 'opacity-45 hover:opacity-95'
+              }`}
+            >
+              <img
+                src={img}
+                alt={`${product.name} thumbnail ${i + 1}`}
+                referrerPolicy="no-referrer"
+                className={`w-full h-full block ${
+                  isCutout ? 'object-contain p-1 bg-[#F7F7F7]' : 'object-cover object-top'
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
+    );
+
+  const renderProductInfo = () => (
+    <div className="flex-1 min-w-0 space-y-5">
+      {/* Breadcrumb */}
+      <div className="flex items-center flex-wrap gap-2 text-[11px] font-light text-black/55">
+        <button
+          type="button"
+          onClick={() => navigate(audiencePath)}
+          className="inline-flex items-center gap-1.5 font-bold text-black hover:opacity-65 cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>{product.categoryName}</span>
+        </button>
+        <span>/</span>
+        <span className="text-black/80">{product.name}</span>
+      </div>
+
+      <div className="space-y-2">
+        <h1 className="font-editorial text-2xl xl:text-3xl text-black leading-tight">
+          {product.name}
+        </h1>
+
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-0.5 tabular-nums">
+          <AnimatedValue valueKey={unitPrice} className="text-lg xl:text-xl font-bold text-black whitespace-nowrap">
+            {formatXOF(unitPrice)}
+          </AnimatedValue>
+          {compareAt && compareAt > unitPrice && (
+            <span className="text-sm font-light text-black/45 line-through whitespace-nowrap">
+              {formatXOF(compareAt)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <p className="text-xs xl:text-sm font-light text-black/75 leading-relaxed">
+        {product.description}
+      </p>
+
+      {/* Editorial Accordions: Details & Shipping (Closed by default) */}
+      <div className="border-t border-black/10 divide-y divide-black/10 pt-1">
+        <div>
+          <button
+            type="button"
+            onClick={() => setOpenAccordion(openAccordion === 'details' ? null : 'details')}
+            aria-expanded={openAccordion === 'details'}
+            className="w-full py-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.16em] text-black cursor-pointer"
+          >
+            <span>{tr('Composition & Entretien', 'Composition & Care')}</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                openAccordion === 'details' ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          <AnimatedAccordionContent open={openAccordion === 'details'}>
+            <div className="pb-3.5 text-xs font-light text-black/70 space-y-1.5 leading-relaxed">
+              <p>
+                {product.materialDetails ||
+                  tr(
+                    'Matière contemporaine sélectionnée pour sa respirabilité, son tombé fluide et sa tenue durable.',
+                    'Refined contemporary fabrication selected for breathability, drape, and lasting shape.'
+                  )}
+              </p>
+              <p>
+                {tr(
+                  'Lavage délicat à froid. Séchage à plat ou sur cintre.',
+                  'Machine wash cold on gentle cycle. Lay flat or hang to dry.'
+                )}
+              </p>
+              {activeVariant && (
+                <p className="text-[11px] text-black/45">SKU: {activeVariant.sku}</p>
+              )}
+            </div>
+          </AnimatedAccordionContent>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setOpenAccordion(openAccordion === 'shipping' ? null : 'shipping')}
+            aria-expanded={openAccordion === 'shipping'}
+            className="w-full py-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.16em] text-black cursor-pointer"
+          >
+            <span>{tr('Livraison & Retours', 'Shipping & Returns')}</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                openAccordion === 'shipping' ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          <AnimatedAccordionContent open={openAccordion === 'shipping'}>
+            <div className="pb-3.5 text-xs font-light text-black/70 space-y-1.5 leading-relaxed">
+              <p>
+                {tr(
+                  'Livraison standard offerte dès 75 000 FCFA d’achat.',
+                  'Complimentary standard delivery on orders above 75,000 XOF.'
+                )}
+              </p>
+              <p>
+                {tr(
+                  'Livraison express le jour même ou le lendemain disponible au paiement.',
+                  'Express same-day and next-day delivery available at checkout.'
+                )}
+              </p>
+              <p>
+                {tr(
+                  'Retours et échanges de taille faciles sous 14 jours pour les pièces non portées.',
+                  'Easy 14-day returns and size exchanges on unworn pieces.'
+                )}
+              </p>
+            </div>
+          </AnimatedAccordionContent>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPurchaseControls = () => (
+    <div className="space-y-6 w-full">
+      {/* Color Selection */}
+      {displaySwatches.length > 0 && (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-bold uppercase tracking-[0.16em] text-black/55">
+              {tr('Couleur', 'Color')}
+            </span>
+            <span className="font-medium text-black">{activeColorLabel}</span>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {displaySwatches.map((c, cIdx) => {
+              const selected = c.name === activeColorLabel;
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  title={c.name}
+                  aria-label={c.name}
+                  onClick={() => {
+                    if (hasCustomVariantColors) {
+                      setSelectedColor(c.name);
+                      if (displaySwatches.length > 1 && images.length > cIdx) {
+                        scrollToImage(cIdx);
+                      }
+                      const match = variants.find(
+                        (v) => v.color === c.name && v.size === selectedSize
+                      );
+                      if (!match) {
+                        const firstForColor = variants.find((v) => v.color === c.name);
+                        if (firstForColor) setSelectedSize(firstForColor.size);
+                      }
+                      setQty(1);
+                    }
+                  }}
+                  className={`w-7 h-7 rounded-full border border-black/20 cursor-pointer ${
+                    selected
+                      ? 'ring-2 ring-black ring-offset-2 ring-offset-white scale-105'
+                      : 'opacity-80 hover:opacity-100 hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: c.hex }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Size Selector + Size Guide Trigger */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="font-bold uppercase tracking-[0.16em] text-black/55">
+            {tr('Taille', 'Size')}
+          </span>
+          <button
+            type="button"
+            onClick={() => setSizeGuideOpen(true)}
+            className="inline-flex items-center gap-1.5 font-bold uppercase tracking-[0.12em] text-black hover:opacity-65 underline underline-offset-4 cursor-pointer"
+          >
+            <Ruler className="w-3.5 h-3.5" />
+            <span>{tr('Guide des tailles', 'Size Guide')}</span>
+          </button>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {sizesForColor.map((v) => {
+            const vAvail = getAvailableStock(v);
+            const disabled = !product.isPreorder && vAvail <= 0;
+            const active = activeVariant?.id === v.id;
+            return (
+              <button
+                key={v.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  setSelectedSize(v.size);
+                  setQty(1);
+                }}
+                className={`py-2.5 text-xs font-bold ${
+                  disabled
+                    ? 'bg-black/[0.04] text-black/30 line-through cursor-not-allowed'
+                    : active
+                      ? 'bg-black text-white cursor-pointer'
+                      : 'bg-[#F5F5F5] text-black hover:bg-black hover:text-white cursor-pointer'
+                }`}
+              >
+                {v.size}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quantity + Add to Bag + Save to Wishlist */}
+      <div className="space-y-2.5 pt-1">
+        <div className="flex items-stretch gap-2 min-w-0">
+          <div className="flex items-center border border-black/15 px-0.5 sm:px-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              aria-label={tr('Diminuer la quantité', 'Decrease quantity')}
+              className="w-9 sm:w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <AnimatedValue
+              valueKey={qty}
+              className="w-7 sm:w-8 text-center text-sm font-bold tabular-nums"
+            >
+              {qty}
+            </AnimatedValue>
+            <button
+              type="button"
+              onClick={() =>
+                setQty((q) =>
+                  product.isPreorder ? q + 1 : Math.min(Math.max(1, available), q + 1)
+                )
+              }
+              aria-label={tr('Augmenter la quantité', 'Increase quantity')}
+              className="w-9 sm:w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            disabled={!canPurchase}
+            onClick={handleAdd}
+            className="flex-1 min-w-0 py-3.5 px-3 sm:px-6 bg-black text-white text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.2em] hover:bg-black/85 disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 truncate"
+          >
+            {justAdded ? (
+              <>
+                <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.2} />
+                <span className="truncate">{tr('Ajouté au panier', 'Added to Bag')}</span>
+              </>
+            ) : (
+              <span className="truncate">
+                {canPurchase ? tr('Ajouter au panier', 'Add to Bag') : tr('Épuisé', 'Sold Out')}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => toggleWishlist(product.id, product.name)}
+          className="w-full py-3 px-6 border border-black/20 bg-white text-black text-xs font-bold uppercase tracking-[0.18em] hover:border-black inline-flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <motion.span
+            key={isHeartPulsing ? lastWishlistPulse?.ts : 'pdp-heart'}
+            initial={false}
+            animate={
+              isHeartPulsing && !prefersReducedMotion
+                ? { scale: [1, 1.32, 0.92, 1] }
+                : { scale: 1 }
+            }
+            transition={{ duration: KJ_DURATION.icon * 1.15, ease: KJ_EASE.snappy }}
+            className="inline-flex items-center justify-center"
+          >
+            <Heart
+              className="w-3.5 h-3.5"
+              strokeWidth={1.7}
+              fill={wishlisted ? '#000000' : 'none'}
+            />
+          </motion.span>
+          <span>
+            {wishlisted
+              ? tr('Dans vos favoris', 'Saved in Wishlist')
+              : tr('Ajouter aux favoris', 'Save to Wishlist')}
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderStackedImages = (
+    refsArray: React.MutableRefObject<(HTMLDivElement | null)[]>,
+    attachViewTransition: boolean
+  ) =>
+    images.length > 0 ? (
+      images.map((img, i) => {
+        const bgInfo = imageBgMap[img];
+        const isCutout = bgInfo ? bgInfo.hasTransparentOrWhiteBg : false;
+        const isPrimarySlot = i === 0;
+        return (
+          <motion.div
+            key={i}
+            ref={(el) => {
+              refsArray.current[i] = el;
+            }}
+            data-img-index={i}
+            initial={
+              isPrimarySlot && !prefersReducedMotion
+                ? { opacity: 0.78, scale: 0.975 }
+                : false
+            }
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: KJ_DURATION.productImage, ease: KJ_EASE.editorial }}
+            style={
+              isPrimarySlot && attachViewTransition && sharedName
+                ? ({ viewTransitionName: sharedName } as React.CSSProperties)
+                : undefined
+            }
+            className={`w-full bg-[#F5F5F5] overflow-hidden flex items-center justify-center ${
+              isCutout ? 'min-h-[64vh] lg:min-h-[70vh]' : ''
+            }`}
+          >
+            <img
+              src={img}
+              alt={`${product.name} view ${i + 1}`}
+              referrerPolicy="no-referrer"
+              className={
+                isCutout
+                  ? 'w-full max-h-[74vh] lg:max-h-[78vh] object-contain p-6 lg:p-8 bg-[#F7F7F7] block'
+                  : 'w-full h-auto block'
+              }
+            />
+          </motion.div>
+        );
+      })
+    ) : (
+      <div className="w-full py-32 bg-[#F5F5F5] flex items-center justify-center text-sm font-bold tracking-[0.22em] uppercase">
+        KIKI JONES
+      </div>
+    );
+
   return (
     <main
       className={`${
         isAppMode ? 'pt-0 pb-28' : 'pt-[88px] lg:pt-[96px] pb-12'
-      } w-full max-w-[1440px] mx-auto overflow-x-clip px-4 sm:px-6 bg-white text-black`}
+      } w-full max-w-[1440px] mx-auto max-md:overflow-x-clip px-4 sm:px-6 bg-white text-black`}
     >
-      {/* Mobile Full-Width Swipeable Image Gallery (< lg) */}
-      <div className="relative lg:hidden -mx-4 sm:-mx-6 mb-4">
-        <div
-          ref={mobileGalleryRef}
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            if (el.clientWidth > 0) {
-              const idx = Math.round(el.scrollLeft / el.clientWidth);
-              if (idx !== activeImageIdx) setActiveImageIdx(idx);
-            }
-          }}
-          className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
-        >
-          {images.length > 0 ? (
-            images.map((img, i) => {
-              const bgInfo = imageBgMap[img];
-              const isCutout = bgInfo ? bgInfo.hasTransparentOrWhiteBg : false;
-              return (
-                <div
-                  key={i}
-                  className="w-full shrink-0 snap-center aspect-[4/5] bg-[#F5F5F5] flex items-center justify-center overflow-hidden"
-                >
-                  <img
-                    src={img}
-                    alt={`${product.name} view ${i + 1}`}
-                    referrerPolicy="no-referrer"
-                    className={
-                      isCutout
-                        ? 'w-full h-full object-contain p-6 bg-[#F7F7F7]'
-                        : 'w-full h-full object-cover object-top'
+      {/* 1. MOBILE LAYOUT (< 768px): Swipeable Full-Width Gallery + Stacked Info & Controls */}
+      <div className="md:hidden">
+        <div className="relative -mx-4 sm:-mx-6 mb-4">
+          <div
+            ref={mobileGalleryRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              if (el.clientWidth > 0) {
+                const idx = Math.round(el.scrollLeft / el.clientWidth);
+                if (idx !== activeImageIdx) setActiveImageIdx(idx);
+              }
+            }}
+            className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+          >
+            {images.length > 0 ? (
+              images.map((img, i) => {
+                const bgInfo = imageBgMap[img];
+                const isCutout = bgInfo ? bgInfo.hasTransparentOrWhiteBg : false;
+                return (
+                  <div
+                    key={i}
+                    style={
+                      i === 0 && sharedName
+                        ? ({ viewTransitionName: sharedName } as React.CSSProperties)
+                        : undefined
                     }
-                  />
-                </div>
-              );
-            })
-          ) : (
-            <div className="w-full aspect-[4/5] bg-[#F5F5F5] flex items-center justify-center text-sm font-bold tracking-[0.22em] uppercase">
-              KIKI JONES
-            </div>
-          )}
-        </div>
-        {isAppMode && images.length > 1 && (
-          <div className="pointer-events-none absolute top-3 right-3 bg-black/70 text-white px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] tabular-nums">
-            {activeImageIdx + 1} / {images.length}
-          </div>
-        )}
-        {images.length > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-3">
-            {images.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => scrollToImage(i)}
-                aria-label={`View image ${i + 1}`}
-                className={`h-1 transition-all cursor-pointer ${
-                  activeImageIdx === i ? 'w-6 bg-black' : 'w-2 bg-black/20'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop 3-Column Editorial Layout + Mobile Stacked Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)_minmax(280px,350px)] xl:grid-cols-[minmax(310px,390px)_minmax(0,1fr)_minmax(300px,370px)] gap-4 xl:gap-6 items-start">
-        {/* LEFT COLUMN — Thumbnails (desktop), Breadcrumb, Title, Price, Description & Accordions */}
-        <div className="lg:sticky lg:top-16 lg:min-h-[calc(100vh-4rem)] lg:flex lg:flex-col lg:justify-center py-2 lg:py-4 order-1">
-          <div className="flex flex-col lg:flex-row gap-4 xl:gap-5 lg:items-start w-full">
-            {images.length > 0 && (
-              <div className="hidden lg:flex flex-col gap-2 w-16 shrink-0">
-                {images.map((img, i) => {
-                  const bgInfo = imageBgMap[img];
-                  const isCutout = bgInfo ? bgInfo.hasTransparentOrWhiteBg : false;
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => scrollToImage(i)}
-                      aria-label={`View photo ${i + 1}`}
-                      className={`w-full aspect-[4/5] shrink-0 bg-[#F5F5F5] overflow-hidden transition-all cursor-pointer ${
-                        activeImageIdx === i
-                          ? 'ring-1 ring-black opacity-100'
-                          : 'opacity-50 hover:opacity-100'
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`${product.name} thumbnail ${i + 1}`}
-                        referrerPolicy="no-referrer"
-                        className={`w-full h-full block ${
-                          isCutout ? 'object-contain p-1 bg-[#F7F7F7]' : 'object-cover object-top'
-                        }`}
-                      />
-                    </button>
-                  );
-                })}
+                    className="w-full shrink-0 snap-center aspect-[4/5] bg-[#F5F5F5] flex items-center justify-center overflow-hidden"
+                  >
+                    <img
+                      src={img}
+                      alt={`${product.name} view ${i + 1}`}
+                      referrerPolicy="no-referrer"
+                      className={
+                        isCutout
+                          ? 'w-full h-full object-contain p-6 bg-[#F7F7F7]'
+                          : 'w-full h-full object-cover object-top'
+                      }
+                    />
+                  </div>
+                );
+              })
+            ) : (
+              <div className="w-full aspect-[4/5] bg-[#F5F5F5] flex items-center justify-center text-sm font-bold tracking-[0.22em] uppercase">
+                KIKI JONES
               </div>
             )}
-
-            <div className="flex-1 min-w-0 space-y-5">
-              {/* Breadcrumb */}
-              <div className="flex items-center flex-wrap gap-2 text-[11px] font-light text-black/55">
-                <button
-                  type="button"
-                  onClick={() => navigate(audiencePath)}
-                  className="inline-flex items-center gap-1.5 font-bold text-black hover:opacity-65 cursor-pointer"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>{product.categoryName}</span>
-                </button>
-                <span>/</span>
-                <span className="text-black/80">{product.name}</span>
-              </div>
-
-              <div className="space-y-2">
-                <h1 className="font-editorial text-2xl xl:text-3xl text-black leading-tight">
-                  {product.name}
-                </h1>
-
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-0.5 tabular-nums">
-                  <span className="text-lg xl:text-xl font-bold text-black whitespace-nowrap">
-                    {formatXOF(unitPrice)}
-                  </span>
-                  {compareAt && compareAt > unitPrice && (
-                    <span className="text-sm font-light text-black/45 line-through whitespace-nowrap">
-                      {formatXOF(compareAt)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <p className="text-xs xl:text-sm font-light text-black/75 leading-relaxed">
-                {product.description}
-              </p>
-
-              {/* Editorial Accordions: Details & Shipping */}
-              <div className="border-t border-black/10 divide-y divide-black/10 pt-1">
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setOpenAccordion(openAccordion === 'details' ? null : 'details')}
-                    className="w-full py-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.16em] text-black cursor-pointer"
-                  >
-                    <span>{tr('Composition & Entretien', 'Composition & Care')}</span>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 transition-transform ${
-                        openAccordion === 'details' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {openAccordion === 'details' && (
-                    <div className="pb-3.5 text-xs font-light text-black/70 space-y-1.5 leading-relaxed">
-                      <p>
-                        {product.materialDetails ||
-                          tr(
-                            'Matière contemporaine sélectionnée pour sa respirabilité, son tombé fluide et sa tenue durable.',
-                            'Refined contemporary fabrication selected for breathability, drape, and lasting shape.'
-                          )}
-                      </p>
-                      <p>
-                        {tr(
-                          'Lavage délicat à froid. Séchage à plat ou sur cintre.',
-                          'Machine wash cold on gentle cycle. Lay flat or hang to dry.'
-                        )}
-                      </p>
-                      {activeVariant && (
-                        <p className="text-[11px] text-black/45">SKU: {activeVariant.sku}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setOpenAccordion(openAccordion === 'shipping' ? null : 'shipping')}
-                    className="w-full py-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.16em] text-black cursor-pointer"
-                  >
-                    <span>{tr('Livraison & Retours', 'Shipping & Returns')}</span>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 transition-transform ${
-                        openAccordion === 'shipping' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {openAccordion === 'shipping' && (
-                    <div className="pb-3.5 text-xs font-light text-black/70 space-y-1.5 leading-relaxed">
-                      <p>
-                        {tr(
-                          'Livraison standard offerte dès 75 000 FCFA d’achat.',
-                          'Complimentary standard delivery on orders above 75,000 XOF.'
-                        )}
-                      </p>
-                      <p>
-                        {tr(
-                          'Livraison express le jour même ou le lendemain disponible au paiement.',
-                          'Express same-day and next-day delivery available at checkout.'
-                        )}
-                      </p>
-                      <p>
-                        {tr(
-                          'Retours et échanges de taille faciles sous 14 jours pour les pièces non portées.',
-                          'Easy 14-day returns and size exchanges on unworn pieces.'
-                        )}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-
-        {/* MIDDLE COLUMN — Desktop Stacked Editorial Visuals */}
-        <div className="hidden lg:flex lg:min-h-[calc(100vh-4rem)] flex-col justify-center gap-3 py-8 order-2">
-          {images.length > 0 ? (
-            images.map((img, i) => {
-              const bgInfo = imageBgMap[img];
-              const isCutout = bgInfo ? bgInfo.hasTransparentOrWhiteBg : false;
-              return (
-                <div
-                  key={i}
-                  ref={(el) => {
-                    imageRefs.current[i] = el;
-                  }}
-                  data-img-index={i}
-                  className="w-full bg-[#F5F5F5] overflow-hidden flex items-center justify-center"
-                >
-                  <img
-                    src={img}
-                    alt={`${product.name} view ${i + 1}`}
-                    referrerPolicy="no-referrer"
-                    className={
-                      isCutout
-                        ? 'w-full max-h-[78vh] object-contain p-8 bg-[#F7F7F7] block'
-                        : 'w-full h-auto block'
-                    }
-                  />
-                </div>
-              );
-            })
-          ) : (
-            <div className="w-full py-32 bg-[#F5F5F5] flex items-center justify-center text-sm font-bold tracking-[0.22em] uppercase">
-              KIKI JONES
+          {isAppMode && images.length > 1 && (
+            <div className="pointer-events-none absolute top-3 right-3 bg-black/70 text-white px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] tabular-nums">
+              {activeImageIdx + 1} / {images.length}
             </div>
           )}
-        </div>
-
-        {/* RIGHT COLUMN — Color Swatches, Sizes, Size Guide, Qty, Add to Bag & Wishlist */}
-        <div className="lg:sticky lg:top-16 lg:min-h-[calc(100vh-4rem)] lg:flex lg:flex-col lg:justify-center py-2 lg:py-8 order-2 lg:order-3">
-          <div className="space-y-6 w-full">
-            {/* Color Selection */}
-            {displaySwatches.length > 0 && (
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold uppercase tracking-[0.16em] text-black/55">
-                    {tr('Couleur', 'Color')}
-                  </span>
-                  <span className="font-medium text-black">{activeColorLabel}</span>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  {displaySwatches.map((c, cIdx) => {
-                    const selected = c.name === activeColorLabel;
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        title={c.name}
-                        aria-label={c.name}
-                        onClick={() => {
-                          if (hasCustomVariantColors) {
-                            setSelectedColor(c.name);
-                            if (displaySwatches.length > 1 && images.length > cIdx) {
-                              scrollToImage(cIdx);
-                            }
-                            const match = variants.find(
-                              (v) => v.color === c.name && v.size === selectedSize
-                            );
-                            if (!match) {
-                              const firstForColor = variants.find((v) => v.color === c.name);
-                              if (firstForColor) setSelectedSize(firstForColor.size);
-                            }
-                            setQty(1);
-                          }
-                        }}
-                        className={`w-7 h-7 rounded-full border border-black/20 transition-all cursor-pointer ${
-                          selected
-                            ? 'ring-2 ring-black ring-offset-2 ring-offset-white scale-105'
-                            : 'opacity-80 hover:opacity-100'
-                        }`}
-                        style={{ backgroundColor: c.hex }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Size Selector + Size Guide Trigger */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-bold uppercase tracking-[0.16em] text-black/55">
-                  {tr('Taille', 'Size')}
-                </span>
+          {images.length > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-3">
+              {images.map((_, i) => (
                 <button
+                  key={i}
                   type="button"
-                  onClick={() => setSizeGuideOpen(true)}
-                  className="inline-flex items-center gap-1.5 font-bold uppercase tracking-[0.12em] text-black hover:opacity-65 underline underline-offset-4 cursor-pointer"
-                >
-                  <Ruler className="w-3.5 h-3.5" />
-                  <span>{tr('Guide des tailles', 'Size Guide')}</span>
-                </button>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {sizesForColor.map((v) => {
-                  const vAvail = getAvailableStock(v);
-                  const disabled = !product.isPreorder && vAvail <= 0;
-                  const active = activeVariant?.id === v.id;
-                  return (
-                    <button
-                      key={v.id}
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => {
-                        setSelectedSize(v.size);
-                        setQty(1);
-                      }}
-                      className={`py-2.5 text-xs font-bold transition-colors ${
-                        disabled
-                          ? 'bg-black/[0.04] text-black/30 line-through cursor-not-allowed'
-                          : active
-                            ? 'bg-black text-white cursor-pointer'
-                            : 'bg-[#F5F5F5] text-black hover:bg-black hover:text-white cursor-pointer'
-                      }`}
-                    >
-                      {v.size}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Quantity + Add to Bag + Save to Wishlist */}
-            <div className="space-y-2.5 pt-1">
-              <div className="flex items-stretch gap-2 min-w-0">
-                <div className="flex items-center border border-black/15 px-0.5 sm:px-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    aria-label={tr('Diminuer la quantité', 'Decrease quantity')}
-                    className="w-9 sm:w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="w-7 sm:w-8 text-center text-sm font-bold tabular-nums">{qty}</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setQty((q) =>
-                        product.isPreorder ? q + 1 : Math.min(Math.max(1, available), q + 1)
-                      )
-                    }
-                    aria-label={tr('Augmenter la quantité', 'Increase quantity')}
-                    className="w-9 sm:w-10 h-11 flex items-center justify-center hover:opacity-65 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={!canPurchase}
-                  onClick={handleAdd}
-                  className="flex-1 min-w-0 py-3.5 px-3 sm:px-6 bg-black text-white text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.2em] hover:bg-black/85 transition-colors disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed truncate"
-                >
-                  {canPurchase ? tr('Ajouter au panier', 'Add to Bag') : tr('Épuisé', 'Sold Out')}
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => toggleWishlist(product.id, product.name)}
-                className="w-full py-3 px-6 border border-black/20 bg-white text-black text-xs font-bold uppercase tracking-[0.18em] hover:border-black transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Heart
-                  className="w-3.5 h-3.5"
-                  strokeWidth={1.7}
-                  fill={wishlisted ? '#000000' : 'none'}
+                  onClick={() => scrollToImage(i)}
+                  aria-label={`View image ${i + 1}`}
+                  className={`h-1 cursor-pointer ${
+                    activeImageIdx === i ? 'w-6 bg-black' : 'w-2 bg-black/20'
+                  }`}
                 />
-                <span>
-                  {wishlisted
-                    ? tr('Dans vos favoris', 'Saved in Wishlist')
-                    : tr('Ajouter aux favoris', 'Save to Wishlist')}
-                </span>
-              </button>
+              ))}
             </div>
-          </div>
+          )}
+        </div>
+
+        <div className="space-y-6 py-2">
+          {renderProductInfo()}
+          {renderPurchaseControls()}
         </div>
       </div>
 
-      {/* Related Pieces */}
-      {related.length > 0 && (
-        <section className="mt-8 pt-6 border-t border-black/10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45 mb-0.5">
-            {tr('Vous aimerez aussi', 'You May Also Like')}
-          </p>
-          <h2 className="font-editorial text-2xl sm:text-3xl text-black mb-4">
-            {tr('Pièces complémentaires', 'Complementary Pieces')}
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-1.5 gap-y-4 sm:gap-x-2 sm:gap-y-5 items-stretch">
-            {related.map((p) => (
-              <ProductCard key={p.id} product={p} variants={getProductVariants(p.id)} />
-            ))}
+      {/* 2. IPAD / TABLET EDITORIAL LAYOUT (768px–1023px): Fixed Info/Purchase Sidebar + Scrolling Images */}
+      <div className="hidden md:grid lg:hidden grid-cols-[56px_minmax(0,1fr)_minmax(290px,350px)] gap-5 items-start">
+        {/* Sticky Thumbnail Rail */}
+        <div className={`${tabletStickyFrameClass} flex flex-col justify-center py-4`}>
+          {renderThumbnails('w-14')}
+        </div>
+
+        {/* Scrolling Product Images Column (adapts seamlessly to any number of admin images) */}
+        <div
+          className={`flex ${tabletGalleryMinHClass} flex-col ${
+            images.length <= 1 ? 'justify-center' : 'justify-start'
+          } gap-4 py-4`}
+        >
+          {renderStackedImages(tabletImageRefs, true)}
+        </div>
+
+        {/* Fixed Sticky Right Column (Product Info + Purchase Controls) — releases after last image */}
+        <motion.div
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.42, delay: 0.08, ease: KJ_EASE.editorial }}
+          className={`${tabletStickyFrameClass} flex flex-col justify-center overflow-y-auto no-scrollbar py-4`}
+        >
+          <div className="space-y-6 w-full my-auto py-2">
+            {renderProductInfo()}
+            <div className="pt-2 border-t border-black/10">{renderPurchaseControls()}</div>
           </div>
-        </section>
+        </motion.div>
+      </div>
+
+      {/* 3. DESKTOP & IPAD LANDSCAPE 3-COLUMN EDITORIAL LAYOUT (>= 1024px) */}
+      <div className="hidden lg:grid grid-cols-[minmax(280px,360px)_minmax(0,1fr)_minmax(280px,350px)] xl:grid-cols-[minmax(310px,390px)_minmax(0,1fr)_minmax(300px,370px)] gap-4 xl:gap-6 items-start">
+        {/* LEFT COLUMN — Fixed while center images scroll, releases after last product image */}
+        <motion.div
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.42, delay: 0.06, ease: KJ_EASE.editorial }}
+          className={`${desktopStickyFrameClass} flex flex-col justify-center overflow-y-auto no-scrollbar py-4 order-1`}
+        >
+          <div className="flex flex-row gap-4 xl:gap-5 items-start w-full">
+            {renderThumbnails('w-16')}
+            {renderProductInfo()}
+          </div>
+        </motion.div>
+
+        {/* MIDDLE COLUMN — Stacked Editorial Visuals (scrolls independently between fixed sidebars) */}
+        <div
+          className={`flex ${desktopGalleryMinHClass} flex-col ${
+            images.length <= 1 ? 'justify-center' : 'justify-start'
+          } gap-4 py-4 order-2`}
+        >
+          {renderStackedImages(desktopImageRefs, true)}
+        </div>
+
+        {/* RIGHT COLUMN — Fixed while center images scroll, releases after last product image */}
+        <motion.div
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.42, delay: 0.12, ease: KJ_EASE.editorial }}
+          className={`${desktopStickyFrameClass} flex flex-col justify-center overflow-y-auto no-scrollbar py-4 order-3`}
+        >
+          {renderPurchaseControls()}
+        </motion.div>
+      </div>
+
+      {/* Related Pieces — Appears naturally once product images finish scrolling */}
+      {related.length > 0 && (
+        <ScrollReveal className="mt-8 pt-6 border-t border-black/10">
+          <section>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45 mb-0.5">
+              {tr('Vous aimerez aussi', 'You May Also Like')}
+            </p>
+            <h2 className="font-editorial text-2xl sm:text-3xl text-black mb-4">
+              {tr('Pièces complémentaires', 'Complementary Pieces')}
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-1.5 gap-y-4 sm:gap-x-2 sm:gap-y-5 items-stretch">
+              {related.map((p) => (
+                <ProductCard key={p.id} product={p} variants={getProductVariants(p.id)} />
+              ))}
+            </div>
+          </section>
+        </ScrollReveal>
       )}
 
       {/* Interactive Size Guide Modal */}
-      {sizeGuideOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setSizeGuideOpen(false)}
-          />
-          <div
-            role="dialog"
-            aria-label={tr('Guide des tailles KIKI JONES', 'KIKI JONES Size Guide')}
-            className="relative bg-white text-black w-full max-w-xl p-6 sm:p-8 shadow-2xl space-y-6"
-          >
-            <div className="flex items-center justify-between border-b border-black/10 pb-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">
-                  {tr('Guide KIKI JONES', 'KIKI JONES Fit Guide')}
-                </p>
-                <h2 className="font-editorial text-2xl text-black">
-                  {tr('Tableau des tailles', 'Size Chart')}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSizeGuideOpen(false)}
-                aria-label={tr('Fermer le guide des tailles', 'Close size guide')}
-                className="p-1.5 text-black/65 hover:text-black cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-4 border-b border-black/10 text-xs">
-              {(
-                [
-                  { id: 'women', label: tr('Femme', 'Women') },
-                  { id: 'men', label: tr('Homme', 'Men') },
-                  { id: 'youth', label: tr('Filles & Garçons', 'Girls & Boys') },
-                ] as const
-              ).map((tab) => (
+      <AnimatePresence>
+        {sizeGuideOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: KJ_EASE.gentle }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+              onClick={() => setSizeGuideOpen(false)}
+            />
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label={tr('Guide des tailles KIKI JONES', 'KIKI JONES Size Guide')}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: KJ_DURATION.dropdown, ease: KJ_EASE.editorial }}
+              className="relative bg-white text-black w-full max-w-xl p-6 sm:p-8 shadow-2xl space-y-6"
+            >
+              <div className="flex items-center justify-between border-b border-black/10 pb-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">
+                    {tr('Guide KIKI JONES', 'KIKI JONES Fit Guide')}
+                  </p>
+                  <h2 className="font-editorial text-2xl text-black">
+                    {tr('Tableau des tailles', 'Size Chart')}
+                  </h2>
+                </div>
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setSizeGuideTab(tab.id)}
-                  className={`pb-2.5 uppercase tracking-[0.14em] cursor-pointer ${
-                    sizeGuideTab === tab.id
-                      ? 'font-bold text-black border-b-2 border-black -mb-[1px]'
-                      : 'font-light text-black/55 hover:text-black'
-                  }`}
+                  onClick={() => setSizeGuideOpen(false)}
+                  aria-label={tr('Fermer le guide des tailles', 'Close size guide')}
+                  className="p-1.5 text-black/65 hover:text-black cursor-pointer"
                 >
-                  {tab.label}
+                  <X className="w-5 h-5" />
                 </button>
-              ))}
-            </div>
+              </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs tabular-nums">
-                <thead>
-                  <tr className="border-b border-black/15 text-[10px] font-bold uppercase tracking-[0.16em] text-black/55">
-                    <th className="py-2.5 pr-4">{tr('Taille', 'Size')}</th>
-                    <th className="py-2.5 pr-4">{tr('Poitrine', 'Chest')}</th>
-                    <th className="py-2.5 pr-4">{tr('Taille', 'Waist')}</th>
-                    <th className="py-2.5">{tr('Hanches', 'Hips')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/10 font-light">
-                  {SIZE_GUIDE_DATA[sizeGuideTab].map((row) => (
-                    <tr key={row.size}>
-                      <td className="py-3 pr-4 font-bold text-black">{row.size}</td>
-                      <td className="py-3 pr-4 text-black/75">{row.chest}</td>
-                      <td className="py-3 pr-4 text-black/75">{row.waist}</td>
-                      <td className="py-3 text-black/75">{row.hips}</td>
+              <div className="flex items-center gap-4 border-b border-black/10 text-xs">
+                {(
+                  [
+                    { id: 'women', label: tr('Femme', 'Women') },
+                    { id: 'men', label: tr('Homme', 'Men') },
+                    { id: 'youth', label: tr('Filles & Garçons', 'Girls & Boys') },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setSizeGuideTab(tab.id)}
+                    className={`pb-2.5 uppercase tracking-[0.14em] cursor-pointer ${
+                      sizeGuideTab === tab.id
+                        ? 'font-bold text-black border-b-2 border-black -mb-[1px]'
+                        : 'font-light text-black/55 hover:text-black'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs tabular-nums">
+                  <thead>
+                    <tr className="border-b border-black/15 text-[10px] font-bold uppercase tracking-[0.16em] text-black/55">
+                      <th className="py-2.5 pr-4">{tr('Taille', 'Size')}</th>
+                      <th className="py-2.5 pr-4">{tr('Poitrine', 'Chest')}</th>
+                      <th className="py-2.5 pr-4">{tr('Taille', 'Waist')}</th>
+                      <th className="py-2.5">{tr('Hanches', 'Hips')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-black/10 font-light">
+                    {SIZE_GUIDE_DATA[sizeGuideTab].map((row) => (
+                      <tr key={row.size}>
+                        <td className="py-3 pr-4 font-bold text-black">{row.size}</td>
+                        <td className="py-3 pr-4 text-black/75">{row.chest}</td>
+                        <td className="py-3 pr-4 text-black/75">{row.waist}</td>
+                        <td className="py-3 text-black/75">{row.hips}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            <p className="text-[11px] font-light text-black/55 leading-relaxed">
-              {tr(
-                'Les mesures correspondent aux mensurations du corps. Pour une coupe ample, choisissez votre taille habituelle ; pour une coupe plus ajustée, prenez la taille en dessous.',
-                'Measurements represent body dimensions. For relaxed or oversized silhouettes, choose your standard size for the intended drape or size down for a closer fit.'
-              )}
-            </p>
+              <p className="text-[11px] font-light text-black/55 leading-relaxed">
+                {tr(
+                  'Les mesures correspondent aux mensurations du corps. Pour une coupe ample, choisissez votre taille habituelle ; pour une coupe plus ajustée, prenez la taille en dessous.',
+                  'Measurements represent body dimensions. For relaxed or oversized silhouettes, choose your standard size for the intended drape or size down for a closer fit.'
+                )}
+              </p>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* App Mode Sticky Bottom Add-to-Bag Bar */}
+      {/* App Mode Sticky Bottom Add-to-Bag Bar (mobile phones only, < md) */}
       {isAppMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-black/10 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-black/10 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="max-w-xl mx-auto flex items-center gap-3">
             <div className="min-w-0 shrink-0">
               <p className="text-sm font-bold text-black tabular-nums whitespace-nowrap leading-tight">
@@ -777,11 +983,18 @@ export function ProductDetailPage({ slug }: { slug: string }) {
               type="button"
               disabled={!canPurchase}
               onClick={handleAdd}
-              className="flex-1 min-w-0 min-h-[48px] px-4 sm:px-5 bg-black text-white text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.18em] active:scale-[0.99] transition-transform disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed truncate"
+              className="flex-1 min-w-0 min-h-[48px] px-4 sm:px-5 bg-black text-white text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.18em] disabled:bg-black/20 disabled:text-black/45 cursor-pointer disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 truncate"
             >
-              {canPurchase
-                ? tr('Ajouter au panier', 'Add to Bag')
-                : tr('Épuisé', 'Sold Out')}
+              {justAdded ? (
+                <>
+                  <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.2} />
+                  <span>{tr('Ajouté', 'Added')}</span>
+                </>
+              ) : (
+                <span>
+                  {canPurchase ? tr('Ajouter au panier', 'Add to Bag') : tr('Épuisé', 'Sold Out')}
+                </span>
+              )}
             </button>
           </div>
         </div>

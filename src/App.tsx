@@ -3,6 +3,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ExperienceProvider, useExperienceMode } from './context/ExperienceContext';
+import { MotionProvider } from './motion/MotionProvider';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { WebLayout } from './components/layout/WebLayout';
 import { AppLayout } from './components/layout/AppLayout';
@@ -69,11 +70,13 @@ export default function App() {
     <ErrorBoundary>
       <LanguageProvider>
         <ExperienceProvider>
-          <AuthProvider>
-            <StoreProvider>
-              <AppRouter />
-            </StoreProvider>
-          </AuthProvider>
+          <MotionProvider>
+            <AuthProvider>
+              <StoreProvider>
+                <AppRouter />
+              </StoreProvider>
+            </AuthProvider>
+          </MotionProvider>
         </ExperienceProvider>
       </LanguageProvider>
     </ErrorBoundary>

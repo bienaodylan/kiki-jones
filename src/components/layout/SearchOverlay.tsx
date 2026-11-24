@@ -5,6 +5,8 @@ import { useStore } from '../../context/StoreContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatXOF } from '../../lib/format';
 import { getSuggestedSearchCategories, getTrendingSearches } from '../../lib/i18n';
+import { KJ_DURATION, KJ_EASE, KJ_TRANSITION } from '../../motion/motionConfig';
+import { useMotionSystem } from '../../motion/MotionProvider';
 
 export function SearchOverlay() {
   const {
@@ -18,6 +20,7 @@ export function SearchOverlay() {
     clearRecentSearches,
   } = useStore();
   const { lang, tr } = useLanguage();
+  const { prefersReducedMotion, beginProductTransition } = useMotionSystem();
 
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,16 +92,19 @@ export function SearchOverlay() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={KJ_TRANSITION.backdrop}
             onClick={() => setSearchOpen(false)}
-            className="fixed inset-0 bg-black/45 backdrop-blur-[1px] z-50"
+            className="fixed inset-0 bg-black/45 backdrop-blur-sm z-50"
           />
 
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+            transition={{
+              duration: prefersReducedMotion ? 0.12 : KJ_DURATION.dropdown,
+              ease: KJ_EASE.editorial,
+            }}
             role="dialog"
             aria-label={tr('Rechercher sur KIKI JONES', 'Search KIKI JONES')}
             className="fixed top-0 inset-x-0 bg-white text-black z-50 border-b border-black/10 shadow-2xl max-h-[88vh] overflow-y-auto"
@@ -263,7 +269,7 @@ export function SearchOverlay() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      {instantResults.map((p) => {
+                      {instantResults.map((p, resultIdx) => {
                         const price =
                           typeof p.promoPriceXof === 'number' &&
                           p.promoPriceXof > 0 &&
@@ -271,11 +277,19 @@ export function SearchOverlay() {
                             ? p.promoPriceXof
                             : p.regularPriceXof;
                         return (
-                          <button
+                          <motion.button
                             key={p.id}
                             type="button"
+                            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                              duration: KJ_DURATION.dropdown,
+                              delay: prefersReducedMotion ? 0 : Math.min(resultIdx, 6) * 0.03,
+                              ease: KJ_EASE.editorial,
+                            }}
                             onClick={() => {
                               addRecentSearch(query.trim());
+                              beginProductTransition(p.slug, p.images?.[0]);
                               setSearchOpen(false);
                               navigate(`/product/${p.slug}`);
                             }}
@@ -302,7 +316,7 @@ export function SearchOverlay() {
                                 {formatXOF(price)}
                               </p>
                             </div>
-                          </button>
+                          </motion.button>
                         );
                       })}
                     </div>

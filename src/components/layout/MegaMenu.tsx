@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import { DivisionKey, MegaMenuColumn, MegaMenuKey } from '../../lib/navigationData';
@@ -11,6 +11,8 @@ import {
   extractDynamicSubMenus,
   FASHION_SUB_TAXONOMY,
 } from '../../lib/menuDiscovery';
+import { KJ_DURATION, KJ_EASE, KJ_TRANSITION } from '../../motion/motionConfig';
+import { useMotionSystem } from '../../motion/MotionProvider';
 
 const MEGA_MENU_SLOT_MAP: Partial<Record<MegaMenuKey, string>> = {
   women: 'audience:women',
@@ -44,7 +46,17 @@ export function MegaMenu({
 }: MegaMenuProps) {
   const { lang, tr } = useLanguage();
   const { storefrontConfig } = useStore();
+  const { prefersReducedMotion } = useMotionSystem();
   const config = getMegaMenuLocalized(activeKey, lang);
+
+  useEffect(() => {
+    if (!activeKey) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeKey, onClose]);
 
   // Merge admin-approved dynamic sub-menus into the active desktop mega-menu
   const enrichedColumns: MegaMenuColumn[] = useMemo(() => {
@@ -109,7 +121,7 @@ export function MegaMenu({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={KJ_TRANSITION.backdrop}
             onClick={onClose}
             className={`fixed inset-x-0 ${topOffsetClass} bottom-0 bg-black/25 backdrop-blur-md z-30`}
           />
@@ -117,10 +129,13 @@ export function MegaMenu({
           {/* Frosted Glassmorphic Editorial Floating Mega Menu Panel */}
           <motion.div
             key={`mega-panel-${config.key}`}
-            initial={{ opacity: 0, y: -6 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            transition={{
+              duration: prefersReducedMotion ? 0.12 : KJ_DURATION.dropdown,
+              ease: KJ_EASE.editorial,
+            }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             className={`fixed inset-x-0 ${topOffsetClass} z-40 bg-white/78 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/10 text-black shadow-[0_32px_64px_-24px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-white/60`}
@@ -129,8 +144,18 @@ export function MegaMenu({
               <div className="grid grid-cols-12 gap-8 items-start">
                 {/* Category Columns */}
                 <div className="col-span-9 grid grid-cols-4 gap-x-8 gap-y-6">
-                  {enrichedColumns.map((column) => (
-                    <div key={column.heading} className="space-y-3.5">
+                  {enrichedColumns.map((column, colIdx) => (
+                    <motion.div
+                      key={column.heading}
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: KJ_DURATION.dropdown,
+                        delay: prefersReducedMotion ? 0 : colIdx * 0.035,
+                        ease: KJ_EASE.editorial,
+                      }}
+                      className="space-y-3.5"
+                    >
                       <h3 className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-black pb-2 border-b border-black/10">
                         {column.heading}
                       </h3>
@@ -156,7 +181,7 @@ export function MegaMenu({
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
 

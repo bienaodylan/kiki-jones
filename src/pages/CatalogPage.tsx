@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useExperienceMode } from '../context/ExperienceContext';
+import { KJ_DURATION, KJ_EASE, KJ_TRANSITION } from '../motion/motionConfig';
+import { useMotionSystem } from '../motion/MotionProvider';
 import { ProductCard } from '../components/storefront/ProductCard';
 import { formatXOF, getProductAvailability } from '../lib/format';
 import { INITIAL_CATEGORIES } from '../lib/catalogDefaults';
@@ -142,6 +145,7 @@ export function CatalogPage({
   } = useStore();
   const { lang, tr } = useLanguage();
   const { isAppMode } = useExperienceMode();
+  const { prefersReducedMotion } = useMotionSystem();
   const localizedBrands = useMemo(() => getLocalizedBrands(lang), [lang]);
   const localizedCategories = useMemo(() => getLocalizedCategories(lang), [lang]);
   const localizedCollections = useMemo(() => getLocalizedCollections(lang), [lang]);
@@ -160,6 +164,20 @@ export function CatalogPage({
   const [maxPriceXof, setMaxPriceXof] = useState<number>(150000);
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFiltersOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [filtersOpen]);
 
   // Reset local drawer filters when route context changes
   useEffect(() => {
@@ -790,8 +808,20 @@ export function CatalogPage({
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-1.5 gap-y-4 sm:gap-x-2 sm:gap-y-5 items-stretch">
-              {filteredProducts.map((p) => (
-                <ProductCard key={p.id} product={p} variants={getProductVariants(p.id)} />
+              {filteredProducts.map((p, idx) => (
+                <motion.div
+                  key={p.id}
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.08 }}
+                  transition={{
+                    duration: prefersReducedMotion ? 0 : 0.36,
+                    delay: prefersReducedMotion ? 0 : (idx % 4) * 0.04,
+                    ease: KJ_EASE.editorial,
+                  }}
+                >
+                  <ProductCard product={p} variants={getProductVariants(p.id)} />
+                </motion.div>
               ))}
             </div>
           )}
@@ -820,13 +850,29 @@ export function CatalogPage({
       </div>
 
       {/* Slide-Over Filter Drawer */}
-      {filtersOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="fixed inset-0 bg-black/45"
-            onClick={() => setFiltersOpen(false)}
-          />
-          <div className="relative w-80 max-w-[88vw] bg-white h-full flex flex-col shadow-2xl">
+      <AnimatePresence>
+        {filtersOpen && (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <motion.div
+              key="filter-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={KJ_TRANSITION.backdrop}
+              className="fixed inset-0 bg-black/45 backdrop-blur-sm"
+              onClick={() => setFiltersOpen(false)}
+            />
+            <motion.div
+              key="filter-panel"
+              initial={prefersReducedMotion ? { opacity: 0 } : { x: '100%' }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { x: '100%' }}
+              transition={{
+                duration: prefersReducedMotion ? 0.14 : KJ_DURATION.menu,
+                ease: KJ_EASE.editorial,
+              }}
+              className="relative w-80 max-w-[88vw] bg-white h-full flex flex-col shadow-2xl"
+            >
             <div className="px-6 py-5 border-b border-black/10 flex items-center justify-between shrink-0">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-black">
                 {tr('Filtrer & Affiner', 'Filter & Refine')}
@@ -1103,9 +1149,10 @@ export function CatalogPage({
                 {tr('Appliquer', 'Apply')} ({filteredProducts.length})
               </button>
             </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </main>
   );
 }

@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { X, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatXOF } from '../../lib/format';
+import { useMotionSystem } from '../../motion/MotionProvider';
+import { KJ_DURATION, KJ_EASE } from '../../motion/motionConfig';
+import { AnimatedValue } from '../../motion/InteractivePrimitives';
 
 export function CartDrawer() {
   const {
@@ -16,8 +20,16 @@ export function CartDrawer() {
     navigate,
   } = useStore();
   const { tr } = useLanguage();
+  const { prefersReducedMotion } = useMotionSystem();
 
-  if (!cartOpen) return null;
+  useEffect(() => {
+    if (!cartOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCartOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cartOpen, setCartOpen]);
 
   const freeThreshold = storefrontConfig.freeShippingThresholdXof || 75000;
   const remainingForFree = Math.max(0, freeThreshold - cartSubtotalXof);
@@ -25,196 +37,245 @@ export function CartDrawer() {
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div
-        className="fixed inset-0 bg-black/45 transition-opacity"
-        onClick={() => setCartOpen(false)}
-      />
-      <aside
-        aria-label={tr('Panier', 'Shopping Bag')}
-        className="relative w-full max-w-full sm:max-w-md bg-white h-full flex flex-col rounded-none shadow-2xl pt-safe overflow-x-hidden"
-      >
-        {/* Header */}
-        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-black/10 flex items-center justify-between gap-2">
-          <div>
-            <h2 className="font-editorial text-2xl text-black">
-              {tr('Votre panier', 'Shopping Bag')}
-            </h2>
-            <p className="text-[11px] font-light uppercase tracking-[0.16em] text-black/55 tabular-nums">
-              {totalItems} {tr(totalItems > 1 ? 'articles sélectionnés' : 'article sélectionné', 'Items Selected')}
-            </p>
-          </div>
-          <button
-            type="button"
+    <AnimatePresence>
+      {cartOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <motion.div
+            key="cart-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: KJ_EASE.gentle }}
+            className="fixed inset-0 bg-black/45 backdrop-blur-[2px]"
             onClick={() => setCartOpen(false)}
-            aria-label={tr('Fermer le panier', 'Close bag')}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-black hover:opacity-65 cursor-pointer"
+          />
+          <motion.aside
+            key="cart-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label={tr('Panier', 'Shopping Bag')}
+            initial={prefersReducedMotion ? { opacity: 0 } : { x: '100%' }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { x: '100%' }}
+            transition={{ duration: KJ_DURATION.menu, ease: KJ_EASE.editorial }}
+            className="relative w-full max-w-full sm:max-w-md bg-white h-full flex flex-col rounded-none shadow-2xl pt-safe overflow-x-hidden will-change-transform"
           >
-            <X className="w-5 h-5" strokeWidth={1.6} />
-          </button>
-        </div>
-
-        {/* Free Delivery Progress */}
-        <div className="px-4 sm:px-6 py-3 bg-[#F5F5F5] space-y-2">
-          <p className="text-xs font-light text-black">
-            {remainingForFree === 0
-              ? tr('Livraison standard offerte débloquée.', 'Complimentary standard delivery unlocked.')
-              : tr(
-                  `Ajoutez ${formatXOF(remainingForFree)} pour bénéficier de la livraison standard offerte.`,
-                  `Add ${formatXOF(remainingForFree)} more for complimentary standard delivery.`
-                )}
-          </p>
-          <div className="h-[2px] bg-black/15 w-full overflow-hidden">
-            <div
-              className="h-full bg-black transition-all duration-300"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Line Items */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-5 divide-y divide-black/10">
-          {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center py-12 space-y-4">
-              <p className="font-editorial text-2xl text-black">
-                {tr('Votre panier est vide', 'Your bag is empty')}
-              </p>
-              <p className="text-xs font-light text-black/65 max-w-xs leading-relaxed">
-                {tr(
-                  'Découvrez les dernières nouveautés KIKI JONES pour Femme, Homme, Filles, Garçons et Accessoires.',
-                  'Explore the latest KIKI JONES arrivals across Women, Men, Girls, Boys, and Accessories.'
-                )}
-              </p>
+            {/* Header */}
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-black/10 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="font-editorial text-2xl text-black">
+                  {tr('Votre panier', 'Shopping Bag')}
+                </h2>
+                <p className="text-[11px] font-light uppercase tracking-[0.16em] text-black/55 tabular-nums">
+                  <AnimatedValue valueKey={totalItems}>{totalItems}</AnimatedValue>{' '}
+                  {tr(totalItems > 1 ? 'articles sélectionnés' : 'article sélectionné', 'Items Selected')}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => {
-                  setCartOpen(false);
-                  navigate('/new-in');
-                }}
-                className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] hover:bg-black/85 transition-colors cursor-pointer"
+                onClick={() => setCartOpen(false)}
+                aria-label={tr('Fermer le panier', 'Close bag')}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-black hover:opacity-65 cursor-pointer"
               >
-                {tr('Voir les nouveautés', 'Shop New In')}
+                <X className="w-5 h-5" strokeWidth={1.6} />
               </button>
             </div>
-          ) : (
-            cart.map((item) => (
-              <div key={item.variantId} className="flex gap-3 sm:gap-4 py-4 first:pt-0 min-w-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCartOpen(false);
-                    navigate(`/product/${item.slug}`);
-                  }}
-                  className="w-20 aspect-[4/5] bg-[#F5F5F5] shrink-0 overflow-hidden cursor-pointer self-start"
+
+            {/* Free Delivery Progress */}
+            <div className="px-4 sm:px-6 py-3 bg-[#F5F5F5] space-y-2">
+              <p className="text-xs font-light text-black">
+                {remainingForFree === 0
+                  ? tr('Livraison standard offerte débloquée.', 'Complimentary standard delivery unlocked.')
+                  : tr(
+                      `Ajoutez ${formatXOF(remainingForFree)} pour bénéficier de la livraison standard offerte.`,
+                      `Add ${formatXOF(remainingForFree)} more for complimentary standard delivery.`
+                    )}
+              </p>
+              <div className="h-[2px] bg-black/15 w-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-black origin-left"
+                  initial={false}
+                  animate={{ width: `${progressPct}%` }}
+                  transition={{ duration: 0.36, ease: KJ_EASE.editorial }}
+                />
+              </div>
+            </div>
+
+            {/* Line Items */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-5">
+              {cart.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.32, ease: KJ_EASE.editorial }}
+                  className="h-full flex flex-col items-center justify-center text-center py-12 space-y-4"
                 >
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-top block"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[9px] font-bold tracking-[0.16em] uppercase text-black/60">
-                      KIKI JONES
-                    </div>
+                  <p className="font-editorial text-2xl text-black">
+                    {tr('Votre panier est vide', 'Your bag is empty')}
+                  </p>
+                  <p className="text-xs font-light text-black/65 max-w-xs leading-relaxed">
+                    {tr(
+                      'Découvrez les dernières nouveautés KIKI JONES pour Femme, Homme, Filles, Garçons et Accessoires.',
+                      'Explore the latest KIKI JONES arrivals across Women, Men, Girls, Boys, and Accessories.'
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCartOpen(false);
+                      navigate('/new-in');
+                    }}
+                    className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-[0.18em] hover:bg-black/85 cursor-pointer"
+                  >
+                    {tr('Voir les nouveautés', 'Shop New In')}
+                  </button>
+                </motion.div>
+              ) : (
+                <div className="divide-y divide-black/10">
+                  <AnimatePresence initial={false}>
+                    {cart.map((item) => (
+                      <motion.div
+                        key={item.variantId}
+                        layout={!prefersReducedMotion}
+                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={
+                          prefersReducedMotion
+                            ? { opacity: 0 }
+                            : { opacity: 0, x: 24, transition: { duration: 0.2, ease: KJ_EASE.exit } }
+                        }
+                        transition={{ duration: 0.28, ease: KJ_EASE.editorial }}
+                        className="flex gap-3 sm:gap-4 py-4 first:pt-0 min-w-0"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCartOpen(false);
+                            navigate(`/product/${item.slug}`);
+                          }}
+                          className="w-20 aspect-[4/5] bg-[#F5F5F5] shrink-0 overflow-hidden cursor-pointer self-start"
+                        >
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover object-top block hover:scale-[1.04] transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px] font-bold tracking-[0.16em] uppercase text-black/60">
+                              KIKI JONES
+                            </div>
+                          )}
+                        </button>
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="text-xs font-bold uppercase tracking-[0.06em] text-black truncate">
+                                {item.name}
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() => removeFromCart(item.variantId)}
+                                aria-label={tr(`Retirer ${item.name}`, `Remove ${item.name}`)}
+                                className="text-black/45 hover:text-black p-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <p className="text-xs font-light text-black/65 mt-0.5">
+                              {item.color} &middot; {tr('Taille', 'Size')} {item.size}
+                            </p>
+                            <p className="text-[11px] font-light text-black/45 mt-0.5">{item.sku}</p>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 flex-wrap mt-3">
+                            <div className="flex items-center border border-black/15 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => updateCartQty(item.variantId, item.quantity - 1)}
+                                aria-label={tr('Diminuer la quantité', 'Decrease quantity')}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-black/5 cursor-pointer"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <AnimatedValue
+                                valueKey={item.quantity}
+                                className="w-7 text-center text-xs tabular-nums font-bold"
+                              >
+                                {item.quantity}
+                              </AnimatedValue>
+                              <button
+                                type="button"
+                                onClick={() => updateCartQty(item.variantId, item.quantity + 1)}
+                                aria-label={tr('Augmenter la quantité', 'Increase quantity')}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-black/5 cursor-pointer"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <AnimatedValue
+                              valueKey={item.unitPriceXof * item.quantity}
+                              className="text-xs font-bold tabular-nums whitespace-nowrap shrink-0 ml-auto"
+                            >
+                              {formatXOF(item.unitPriceXof * item.quantity)}
+                            </AnimatedValue>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            {cart.length > 0 && (
+              <div className="p-4 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] bg-[#F5F5F5] border-t border-black/10 space-y-4">
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="font-light text-black/75 min-w-0">
+                    {tr('Sous-total estimé', 'Estimated Subtotal')}
+                  </span>
+                  <AnimatedValue
+                    valueKey={cartSubtotalXof}
+                    className="font-bold tabular-nums text-black whitespace-nowrap shrink-0"
+                  >
+                    {formatXOF(cartSubtotalXof)}
+                  </AnimatedValue>
+                </div>
+                <p className="text-[11px] font-light text-black/55">
+                  {tr(
+                    'Taxes incluses. Livraison et codes promo appliqués lors du paiement.',
+                    'Taxes included. Shipping and promo codes applied at checkout.'
                   )}
-                </button>
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-xs font-bold uppercase tracking-[0.06em] text-black truncate">
-                        {item.name}
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => removeFromCart(item.variantId)}
-                        aria-label={tr(`Retirer ${item.name}`, `Remove ${item.name}`)}
-                        className="text-black/45 hover:text-black p-1 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <p className="text-xs font-light text-black/65 mt-0.5">
-                      {item.color} &middot; {tr('Taille', 'Size')} {item.size}
-                    </p>
-                    <p className="text-[11px] font-light text-black/45 mt-0.5">{item.sku}</p>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 flex-wrap mt-3">
-                    <div className="flex items-center border border-black/15 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => updateCartQty(item.variantId, item.quantity - 1)}
-                        aria-label={tr('Diminuer la quantité', 'Decrease quantity')}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-black/5 cursor-pointer"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="w-7 text-center text-xs tabular-nums font-bold">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateCartQty(item.variantId, item.quantity + 1)}
-                        aria-label={tr('Augmenter la quantité', 'Increase quantity')}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-black/5 cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <span className="text-xs font-bold tabular-nums whitespace-nowrap shrink-0 ml-auto">
-                      {formatXOF(item.unitPriceXof * item.quantity)}
-                    </span>
-                  </div>
+                </p>
+                <div className="grid grid-cols-1 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCartOpen(false);
+                      navigate('/checkout');
+                    }}
+                    className="w-full py-3.5 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-black/85 cursor-pointer"
+                  >
+                    <span>{tr('Passer la commande', 'Proceed to Checkout')}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCartOpen(false);
+                      navigate('/cart');
+                    }}
+                    className="w-full py-3 px-6 border border-black/15 bg-white text-black text-xs font-bold uppercase tracking-[0.2em] hover:border-black hover:bg-black hover:text-white cursor-pointer"
+                  >
+                    {tr('Voir le panier complet', 'View Full Bag')}
+                  </button>
                 </div>
               </div>
-            ))
-          )}
+            )}
+          </motion.aside>
         </div>
-
-        {/* Footer Actions */}
-        {cart.length > 0 && (
-          <div className="p-4 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] bg-[#F5F5F5] border-t border-black/10 space-y-4">
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="font-light text-black/75 min-w-0">
-                {tr('Sous-total estimé', 'Estimated Subtotal')}
-              </span>
-              <span className="font-bold tabular-nums text-black whitespace-nowrap shrink-0">
-                {formatXOF(cartSubtotalXof)}
-              </span>
-            </div>
-            <p className="text-[11px] font-light text-black/55">
-              {tr(
-                'Taxes incluses. Livraison et codes promo appliqués lors du paiement.',
-                'Taxes included. Shipping and promo codes applied at checkout.'
-              )}
-            </p>
-            <div className="grid grid-cols-1 gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setCartOpen(false);
-                  navigate('/checkout');
-                }}
-                className="w-full py-3.5 px-6 bg-black text-white text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-black/85 transition-colors cursor-pointer"
-              >
-                <span>{tr('Passer la commande', 'Proceed to Checkout')}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCartOpen(false);
-                  navigate('/cart');
-                }}
-                className="w-full py-3 px-6 border border-black/15 bg-white text-black text-xs font-bold uppercase tracking-[0.2em] hover:border-black hover:bg-black hover:text-white transition-colors cursor-pointer"
-              >
-                {tr('Voir le panier complet', 'View Full Bag')}
-              </button>
-            </div>
-          </div>
-        )}
-      </aside>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

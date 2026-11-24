@@ -2,10 +2,13 @@ import React from 'react';
 import { Home, Search, Heart, ShoppingBag, User } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useMotionSystem } from '../../motion/MotionProvider';
+import { AnimatedCountBadge } from '../../motion/InteractivePrimitives';
 
 export function AppBottomNavigation() {
   const { route, navigate, cartCount, wishlistCount } = useStore();
   const { tr } = useLanguage();
+  const { cartPulseKey } = useMotionSystem();
 
   // Keep dedicated checkout, product detail, and admin screens clear of bottom chrome
   if (route.page === 'checkout' || route.page === 'product' || route.page === 'admin') {
@@ -82,10 +85,11 @@ export function AppBottomNavigation() {
             <button
               key={tab.key}
               type="button"
+              data-kj-cart-target={tab.key === 'bag' ? 'true' : undefined}
               onClick={() => navigate(tab.href)}
               aria-label={tab.label}
               aria-current={tab.active ? 'page' : undefined}
-              className="relative h-[44px] w-full flex items-center justify-center cursor-pointer active:opacity-70 transition-opacity"
+              className="relative h-[44px] w-full flex items-center justify-center cursor-pointer active:opacity-70"
             >
               <span
                 className={`relative w-[42px] h-[42px] rounded-full inline-flex items-center justify-center transition-colors duration-200 ${
@@ -99,17 +103,16 @@ export function AppBottomNavigation() {
                   strokeWidth={tab.active ? 1.95 : 1.65}
                   fill={tab.active && tab.key === 'wishlist' ? 'currentColor' : 'none'}
                 />
-                {tab.badge > 0 && (
-                  <span
-                    className={`absolute top-1.5 right-1 min-w-[14px] h-[14px] px-1 rounded-full text-[8.5px] font-bold flex items-center justify-center tabular-nums leading-none ${
-                      tab.active
-                        ? 'bg-white text-black'
-                        : 'bg-black text-white'
-                    }`}
-                  >
-                    {tab.badge > 9 ? '9+' : tab.badge}
-                  </span>
-                )}
+                <AnimatedCountBadge
+                  count={tab.badge}
+                  pulseKey={tab.key === 'bag' ? cartPulseKey : undefined}
+                  max={9}
+                  className={`absolute top-1.5 right-1 min-w-[14px] h-[14px] px-1 rounded-full text-[8.5px] font-bold flex items-center justify-center tabular-nums leading-none ${
+                    tab.active
+                      ? 'bg-white text-black'
+                      : 'bg-black text-white'
+                  }`}
+                />
               </span>
             </button>
           );

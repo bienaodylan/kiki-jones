@@ -14,6 +14,11 @@ import {
 import { CustomHomepageSection } from '../types/commerce';
 import { ProductCard } from '../components/storefront/ProductCard';
 import { BrandLogo } from '../components/brand/BrandLogo';
+import {
+  ScrollReveal,
+  EditorialImageReveal,
+  ParallaxImage,
+} from '../motion/ScrollReveal';
 
 export function HomePage() {
   const { storefrontConfig, products, getProductVariants, navigate } = useStore();
@@ -156,26 +161,28 @@ export function HomePage() {
     if (items.length === 0) return null;
     return (
       <section key={renderKey} className="w-full bg-white text-black py-10 md:py-14 border-b border-black/10">
-        <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">{eyebrow}</p>
-            <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black mt-0.5">
-              {heading}
-            </h2>
+        <ScrollReveal>
+          <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">{eyebrow}</p>
+              <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black mt-0.5">
+                {heading}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(ctaHref)}
+              className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
+            >
+              {ctaLabel}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate(ctaHref)}
-            className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
-          >
-            {ctaLabel}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-4 px-4 sm:px-6 lg:px-10">
-          {items.slice(0, 4).map((p) => (
-            <ProductCard key={p.id} product={p} variants={getProductVariants(p.id)} />
-          ))}
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-4 px-4 sm:px-6 lg:px-10">
+            {items.slice(0, 4).map((p) => (
+              <ProductCard key={p.id} product={p} variants={getProductVariants(p.id)} />
+            ))}
+          </div>
+        </ScrollReveal>
       </section>
     );
   };
@@ -325,33 +332,33 @@ export function HomePage() {
               className="group relative w-full overflow-hidden bg-black cursor-pointer"
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-                <div className="relative aspect-[3/4] md:aspect-[4/5] w-full overflow-hidden bg-black">
+                <EditorialImageReveal className="relative aspect-[3/4] md:aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
                     src={getSectionImage(storefrontConfig, 'new_arrivals_1', KJ_IMAGES.heroCampaign)}
                     alt={tr('Nouveautés Robes KIKI JONES', 'KIKI JONES New Arrivals Dress')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
-                </div>
-                <div className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
+                </EditorialImageReveal>
+                <EditorialImageReveal delay={0.07} className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
                     src={getSectionImage(storefrontConfig, 'new_arrivals_2', KJ_IMAGES.jumpsuitsFeature)}
                     alt={tr('Combinaisons KIKI JONES', 'KIKI JONES Tailored Romper')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
-                </div>
-                <div className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
+                </EditorialImageReveal>
+                <EditorialImageReveal delay={0.14} className="relative hidden md:block aspect-[4/5] w-full overflow-hidden bg-black">
                   <img
                     src={getSectionImage(storefrontConfig, 'new_arrivals_3', KJ_IMAGES.womenResortSet)}
                     alt={tr('Ensembles Resort KIKI JONES', 'KIKI JONES Matching Resort Set')}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />
-                </div>
+                </EditorialImageReveal>
               </div>
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
-              <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-lg space-y-3">
+              <ScrollReveal className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-lg space-y-3" y={14}>
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-white/75">
                   {tr('Nouvel arrivage · Collection Soleil', 'Just Landed · Warm-Climate Drop')}
                 </p>
@@ -380,7 +387,7 @@ export function HomePage() {
                     {tr('Soirée & Cérémonie', 'Formal & Occasion')}
                   </button>
                 </div>
-              </div>
+              </ScrollReveal>
             </div>
           </section>
         );
@@ -426,18 +433,18 @@ export function HomePage() {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                 <div className="relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
-                  <img
+                  <ParallaxImage
                     src={getSectionImage(storefrontConfig, 'kiki_men_left', KJ_IMAGES.menMeshShirt)}
                     alt={tr('Chemises de soirée Kiki Men', 'Kiki Men Night Out Shirts')}
-                    referrerPolicy="no-referrer"
+                    strength={3.5}
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
                 </div>
                 <div className="relative hidden md:block aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
-                  <img
+                  <ParallaxImage
                     src={getSectionImage(storefrontConfig, 'kiki_men_right', KJ_IMAGES.menStreetDenim)}
                     alt={tr('Denim Stacked Kiki Men', 'Kiki Men Stacked Flare Denim')}
-                    referrerPolicy="no-referrer"
+                    strength={3.5}
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
                 </div>
@@ -559,18 +566,18 @@ export function HomePage() {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                 <div className="relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
-                  <img
+                  <ParallaxImage
                     src={getSectionImage(storefrontConfig, 'kiki_luxe_left', KJ_IMAGES.formalFeature)}
                     alt="Kiki Luxe"
-                    referrerPolicy="no-referrer"
+                    strength={3.5}
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
                 </div>
                 <div className="relative hidden md:block aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
-                  <img
+                  <ParallaxImage
                     src={getSectionImage(storefrontConfig, 'kiki_luxe_right', KJ_IMAGES.curveGownCampaign)}
                     alt="Kiki Curve Evening"
-                    referrerPolicy="no-referrer"
+                    strength={3.5}
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
                 </div>
@@ -709,60 +716,62 @@ export function HomePage() {
       case 'mireza_world':
         return (
           <section key={renderKey} className="w-full bg-white text-black py-10 md:py-14">
-            <div className="w-full px-4 sm:px-6 lg:px-10 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
-                  {tr('KIKI JONES · Nos Maisons', 'KIKI JONES · House of Labels')}
-                </p>
-                <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black">
-                  {tr('Acheter par Marque', 'Shop by Brand')}
-                </h2>
+            <ScrollReveal>
+              <div className="w-full px-4 sm:px-6 lg:px-10 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
+                    {tr('KIKI JONES · Nos Maisons', 'KIKI JONES · House of Labels')}
+                  </p>
+                  <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black">
+                    {tr('Acheter par Marque', 'Shop by Brand')}
+                  </h2>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/brands')}
+                    className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
+                  >
+                    {tr('Toutes les marques', 'All Brands')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/categories')}
+                    className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer"
+                  >
+                    {tr('Toutes les catégories', 'All Categories')}
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/brands')}
-                  className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
-                >
-                  {tr('Toutes les marques', 'All Brands')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/categories')}
-                  className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full bg-black text-white text-[10.5px] font-bold uppercase tracking-[0.14em] hover:bg-black/85 transition-colors cursor-pointer"
-                >
-                  {tr('Toutes les catégories', 'All Categories')}
-                </button>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 px-4 sm:px-6 lg:px-10">
-              {brands.map((brand) => (
-                <button
-                  key={brand.slug}
-                  type="button"
-                  onClick={() => navigate(`/brand/${brand.slug}`)}
-                  className="group text-left cursor-pointer flex flex-col"
-                >
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5F5F5]">
-                    <img
-                      src={getSectionImage(storefrontConfig, `brand:${brand.slug}`, brand.heroImage)}
-                      alt={brand.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                    />
-                  </div>
-                  <div className="pt-2.5 space-y-0.5">
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-black group-hover:underline underline-offset-4">
-                      {brand.name}
-                    </p>
-                    <p className="text-[11px] font-light text-black/55 line-clamp-1">
-                      {brand.tagline}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 px-4 sm:px-6 lg:px-10">
+                {brands.map((brand) => (
+                  <button
+                    key={brand.slug}
+                    type="button"
+                    onClick={() => navigate(`/brand/${brand.slug}`)}
+                    className="group text-left cursor-pointer flex flex-col"
+                  >
+                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5F5F5]">
+                      <img
+                        src={getSectionImage(storefrontConfig, `brand:${brand.slug}`, brand.heroImage)}
+                        alt={brand.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                      />
+                    </div>
+                    <div className="pt-2.5 space-y-0.5">
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-black group-hover:underline underline-offset-4">
+                        {brand.name}
+                      </p>
+                      <p className="text-[11px] font-light text-black/55 line-clamp-1">
+                        {brand.tagline}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </ScrollReveal>
           </section>
         );
 
@@ -805,47 +814,49 @@ export function HomePage() {
       case 'featured_collections_grid':
         return (
           <section key={renderKey} className="w-full bg-white text-black py-10 md:py-14 border-b border-black/10">
-            <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
-                  {tr('Éditions saisonnières', 'Seasonal Capsules')}
-                </p>
-                <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black mt-0.5">
-                  {tr('Collections à la une', 'Featured Collections')}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/collections')}
-                className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
-              >
-                {tr('Toutes les collections', 'All Collections')}
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 px-4 sm:px-6 lg:px-10">
-              {collections.slice(0, 3).map((col) => (
+            <ScrollReveal>
+              <div className="w-full px-4 sm:px-6 lg:px-10 mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/45">
+                    {tr('Éditions saisonnières', 'Seasonal Capsules')}
+                  </p>
+                  <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.04em] text-black mt-0.5">
+                    {tr('Collections à la une', 'Featured Collections')}
+                  </h2>
+                </div>
                 <button
-                  key={col.slug}
                   type="button"
-                  onClick={() => navigate(`/collection/${col.slug}`)}
-                  className="group relative aspect-[4/5] w-full overflow-hidden bg-black text-left cursor-pointer"
+                  onClick={() => navigate('/collections')}
+                  className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-full border border-black text-[10.5px] font-bold uppercase tracking-[0.14em] text-black hover:bg-black hover:text-white transition-colors cursor-pointer"
                 >
-                  <img
-                    src={getSectionImage(storefrontConfig, `collection:${col.slug}`, col.campaignImage)}
-                    alt={col.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-6 left-5 right-5 text-white space-y-1">
-                    <p className="text-[9.5px] font-bold uppercase tracking-[0.2em] text-white/75">
-                      {col.seasonTag}
-                    </p>
-                    <p className="text-xl font-bold uppercase tracking-[-0.01em]">{col.title}</p>
-                  </div>
+                  {tr('Toutes les collections', 'All Collections')}
                 </button>
-              ))}
-            </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 px-4 sm:px-6 lg:px-10">
+                {collections.slice(0, 3).map((col) => (
+                  <button
+                    key={col.slug}
+                    type="button"
+                    onClick={() => navigate(`/collection/${col.slug}`)}
+                    className="group relative aspect-[4/5] w-full overflow-hidden bg-black text-left cursor-pointer"
+                  >
+                    <img
+                      src={getSectionImage(storefrontConfig, `collection:${col.slug}`, col.campaignImage)}
+                      alt={col.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute bottom-6 left-5 right-5 text-white space-y-1">
+                      <p className="text-[9.5px] font-bold uppercase tracking-[0.2em] text-white/75">
+                        {col.seasonTag}
+                      </p>
+                      <p className="text-xl font-bold uppercase tracking-[-0.01em]">{col.title}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </ScrollReveal>
           </section>
         );
 

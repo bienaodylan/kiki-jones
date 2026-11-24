@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, AlertCircle, Lock } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ShieldCheck, AlertCircle, Lock, Check } from 'lucide-react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
@@ -9,12 +10,16 @@ import { db } from '../lib/firebase';
 import { formatXOF, sanitizeId } from '../lib/format';
 import { validatePromoCode } from '../lib/firestoreService';
 import { PaymentMethod, PaymentProviderStatus, Promotion } from '../types/commerce';
+import { KJ_DURATION, KJ_EASE } from '../motion/motionConfig';
+import { useMotionSystem } from '../motion/MotionProvider';
+import { AnimatedValue } from '../motion/InteractivePrimitives';
 
 export function CheckoutPage() {
   const { cart, cartSubtotalXof, storefrontConfig, clearCart, navigate, toast } = useStore();
   const { user, idToken, loginWithGoogle } = useAuth();
   const { tr } = useLanguage();
   const { isAppMode } = useExperienceMode();
+  const { prefersReducedMotion } = useMotionSystem();
 
   const [customerName, setCustomerName] = useState(user?.displayName || '');
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
@@ -234,20 +239,35 @@ export function CheckoutPage() {
           isAppMode ? 'pt-6 pb-12' : 'pt-28 pb-24'
         } max-w-2xl mx-auto px-4 sm:px-5`}
       >
-        <div className="border border-black/20 bg-white p-8 md:p-10 space-y-6">
-          <div className="space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/60">
-              {tr('Commande créée · Stock réservé', 'Order Created · Stock Reserved')}
-            </p>
-            <h1 className="font-editorial text-3xl md:text-4xl text-black">
-              {tr('Commande', 'Order')} {orderConfirmation.orderNumber}
-            </h1>
-            <p className="text-sm font-light text-black/75">
-              {tr('Total à régler :', 'Total due:')}{' '}
-              <span className="font-bold tabular-nums text-black">
-                {formatXOF(orderConfirmation.totalXof)}
-              </span>
-            </p>
+        <motion.div
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: KJ_DURATION.pageEnter, ease: KJ_EASE.editorial }}
+          className="border border-black/20 bg-white p-8 md:p-10 space-y-6"
+        >
+          <div className="space-y-3">
+            <motion.div
+              initial={prefersReducedMotion ? false : { scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: KJ_DURATION.menu, delay: 0.08, ease: KJ_EASE.editorial }}
+              className="w-11 h-11 rounded-full bg-black text-white inline-flex items-center justify-center"
+            >
+              <Check className="w-5 h-5" strokeWidth={2} />
+            </motion.div>
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-black/60">
+                {tr('Commande créée · Stock réservé', 'Order Created · Stock Reserved')}
+              </p>
+              <h1 className="font-editorial text-3xl md:text-4xl text-black">
+                {tr('Commande', 'Order')} {orderConfirmation.orderNumber}
+              </h1>
+              <p className="text-sm font-light text-black/75">
+                {tr('Total à régler :', 'Total due:')}{' '}
+                <span className="font-bold tabular-nums text-black">
+                  {formatXOF(orderConfirmation.totalXof)}
+                </span>
+              </p>
+            </div>
           </div>
 
           <div className="p-4 border border-black/15 bg-black/[0.02] space-y-2 text-xs">
@@ -305,7 +325,7 @@ export function CheckoutPage() {
               {tr('Continuer vos achats', 'Continue Shopping')}
             </button>
           </div>
-        </div>
+        </motion.div>
       </main>
     );
   }
@@ -607,25 +627,31 @@ export function CheckoutPage() {
               <div className="space-y-2.5 text-sm pt-2">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-light text-black/75 min-w-0">{tr('Sous-total', 'Subtotal')}</span>
-                  <span className="tabular-nums font-bold whitespace-nowrap shrink-0">{formatXOF(cartSubtotalXof)}</span>
+                  <AnimatedValue valueKey={cartSubtotalXof} className="tabular-nums font-bold whitespace-nowrap shrink-0">
+                    {formatXOF(cartSubtotalXof)}
+                  </AnimatedValue>
                 </div>
                 {discountXof > 0 && (
                   <div className="flex items-baseline justify-between gap-3 text-black">
                     <span className="font-light min-w-0">
                       {tr('Réduction', 'Discount')} ({appliedPromo?.code})
                     </span>
-                    <span className="tabular-nums font-bold whitespace-nowrap shrink-0">-{formatXOF(discountXof)}</span>
+                    <AnimatedValue valueKey={discountXof} className="tabular-nums font-bold whitespace-nowrap shrink-0">
+                      -{formatXOF(discountXof)}
+                    </AnimatedValue>
                   </div>
                 )}
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-light text-black/75 min-w-0">{tr('Livraison', 'Shipping')}</span>
-                  <span className="tabular-nums font-light whitespace-nowrap shrink-0">
+                  <AnimatedValue valueKey={shippingFeeXof} className="tabular-nums font-light whitespace-nowrap shrink-0">
                     {shippingFeeXof === 0 ? tr('Offerte', 'Complimentary') : formatXOF(shippingFeeXof)}
-                  </span>
+                  </AnimatedValue>
                 </div>
                 <div className="flex items-baseline justify-between gap-3 text-base font-bold pt-2">
                   <span className="min-w-0">Total</span>
-                  <span className="tabular-nums whitespace-nowrap shrink-0">{formatXOF(totalXof)}</span>
+                  <AnimatedValue valueKey={totalXof} className="tabular-nums whitespace-nowrap shrink-0">
+                    {formatXOF(totalXof)}
+                  </AnimatedValue>
                 </div>
               </div>
 

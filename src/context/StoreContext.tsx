@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { flushSync } from 'react-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import { collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db, testFirestoreConnection, handleFirestoreError, OperationType } from '../lib/firebase';
 import {
@@ -20,6 +22,8 @@ import {
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { useExperienceMode } from './ExperienceContext';
+import { useMotionSystem } from '../motion/MotionProvider';
+import { KJ_DURATION, KJ_EASE } from '../motion/motionConfig';
 import {
   seedInitialCatalogClient,
   ensureDefaultCategories,
@@ -171,6 +175,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, authReady } = useAuth();
   const { tr } = useLanguage();
   const { isAppMode } = useExperienceMode();
+  const {
+    prefersReducedMotion,
+    setNavDirection,
+    triggerCartPulse,
+    triggerWishlistPulse,
+    clearProductTransition,
+  } = useMotionSystem();
   const [route, setRoute] = useState<RouteView>(() => parseHashOrPath());
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -313,23 +324,85 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onPop = () => {
-      setRoute(parseHashOrPath());
+      setNavDirection('back');
+      const nextRoute = parseHashOrPath();
+      const docAny = document as Document & {
+        startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+      };
+      if (!prefersReducedMotion && typeof docAny.startViewTransition === 'function') {
+        try {
+          const vt = docAny.startViewTransition(() => {
+            flushSync(() => {
+              setRoute(nextRoute);
+            });
+          });
+          vt.finished.finally(() => {
+            clearProductTransition();
+          });
+        } catch {
+          setRoute(nextRoute);
+        }
+      } else {
+        setRoute(nextRoute);
+      }
       window.scrollTo({ top: 0, behavior: 'auto' });
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [prefersReducedMotion, setNavDirection, clearProductTransition]);
 
-  const navigate = useCallback((path: string) => {
-    const currentFull = `${window.location.pathname}${window.location.search}`;
-    if (currentFull !== path) {
+  const navigate = useCallback(
+    (path: string) => {
+      const currentFull = `${window.location.pathname}${window.location.search}`;
+      if (currentFull === path) {
+        setSearchOpen(false);
+        setMobileMenuOpen(false);
+        return;
+      }
+
+      const prevPath = window.location.pathname;
+      setNavDirection('forward');
       window.history.pushState({}, '', path);
-    }
-    setRoute(parseHashOrPath());
-    setSearchOpen(false);
-    setMobileMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+      const nextRoute = parseHashOrPath();
+
+      const applyRouteUpdate = () => {
+        setRoute(nextRoute);
+        setSearchOpen(false);
+        setMobileMenuOpen(false);
+      };
+
+      const isProductBoundary =
+        path.startsWith('/product/') || prevPath.startsWith('/product/');
+      const docAny = document as Document & {
+        startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+      };
+
+      if (
+        isProductBoundary &&
+        !prefersReducedMotion &&
+        typeof docAny.startViewTransition === 'function'
+      ) {
+        try {
+          const vt = docAny.startViewTransition(() => {
+            flushSync(() => {
+              applyRouteUpdate();
+            });
+            window.scrollTo({ top: 0, behavior: 'auto' });
+          });
+          vt.finished.finally(() => {
+            clearProductTransition();
+          });
+          return;
+        } catch {
+          // Graceful fallback to standard Motion page transition
+        }
+      }
+
+      applyRouteUpdate();
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    },
+    [prefersReducedMotion, setNavDirection, clearProductTransition]
+  );
 
   const toast = useCallback((text: string, tone: 'default' | 'error' | 'success' = 'default') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -640,6 +713,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
         return [...prev, item];
       });
+      triggerCartPulse();
       if (openDrawer) setCartOpen(true);
       toast(
         tr(
@@ -649,7 +723,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         'success'
       );
     },
-    [effectiveVariants, toast, tr]
+    [effectiveVariants, toast, tr, triggerCartPulse]
   );
 
   const updateCartQty = useCallback(
@@ -689,6 +763,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const toggleWishlist = useCallback(
     (productId: string, productName?: string) => {
+      triggerWishlistPulse(productId);
       const safePid = sanitizeId(productId);
       setWishlistIds((prev) => {
         const exists = prev.includes(productId);
@@ -719,7 +794,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return [productId, ...prev];
       });
     },
-    [toast, tr, user]
+    [toast, tr, user, triggerWishlistPulse]
   );
 
   const addRecentSearch = useCallback((term: string) => {
@@ -783,29 +858,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-      {toasts.length > 0 && (
-        <div
-          aria-live="polite"
-          className={`fixed right-4 z-[65] flex flex-col gap-2 max-w-sm pointer-events-none ${
-            isAppMode
-              ? 'left-4 sm:left-auto bottom-[calc(4.75rem+env(safe-area-inset-bottom))]'
-              : 'bottom-5'
-          }`}
-        >
+      <div
+        aria-live="polite"
+        className={`fixed right-4 z-[65] flex flex-col gap-2 max-w-sm pointer-events-none ${
+          isAppMode
+            ? 'left-4 sm:left-auto bottom-[calc(4.75rem+env(safe-area-inset-bottom))]'
+            : 'bottom-5'
+        }`}
+      >
+        <AnimatePresence initial={false}>
           {toasts.map((t) => (
-            <div
+            <motion.div
               key={t.id}
-              className={`pointer-events-auto px-4 py-3 text-xs tracking-wide border transition-all ${
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.97 }}
+              transition={{ duration: KJ_DURATION.dropdown, ease: KJ_EASE.editorial }}
+              className={`pointer-events-auto px-4 py-3 text-xs tracking-wide border shadow-[0_10px_28px_rgba(0,0,0,0.12)] ${
                 t.tone === 'error'
                   ? 'bg-black text-white border-black font-bold'
                   : 'bg-white text-black border-black font-light'
               }`}
             >
               {t.text}
-            </div>
+            </motion.div>
           ))}
-        </div>
-      )}
+        </AnimatePresence>
+      </div>
     </StoreContext.Provider>
   );
 }

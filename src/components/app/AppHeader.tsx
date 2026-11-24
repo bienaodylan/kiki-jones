@@ -12,6 +12,8 @@ import { BrandLogo } from '../brand/BrandLogo';
 import { HeaderInfoBar } from '../layout/HeaderInfoBar';
 import { isInfoBarActive } from '../../lib/infoBar';
 import { useScrollHeaderVisibility } from '../../hooks/useScrollHeaderVisibility';
+import { useMotionSystem } from '../../motion/MotionProvider';
+import { AnimatedCountBadge } from '../../motion/InteractivePrimitives';
 
 export function AppHeader() {
   const {
@@ -28,6 +30,7 @@ export function AppHeader() {
     storefrontConfig,
   } = useStore();
   const { lang, toggleLang, tr } = useLanguage();
+  const { cartPulseKey } = useMotionSystem();
   const infoBarActive = isInfoBarActive(storefrontConfig);
   const isHeaderVisible = useScrollHeaderVisibility({
     hideAfter: 44,
@@ -196,16 +199,18 @@ export function AppHeader() {
               </button>
               <button
                 type="button"
+                data-kj-cart-target="true"
                 onClick={() => setCartOpen(true)}
                 aria-label={tr(`Panier (${cartCount})`, `Shopping bag (${cartCount})`)}
-                className="relative min-h-[44px] min-w-[42px] inline-flex items-center justify-center text-black active:opacity-50 transition-opacity cursor-pointer"
+                className="relative min-h-[44px] min-w-[42px] inline-flex items-center justify-center text-black active:opacity-50 cursor-pointer"
               >
                 <ShoppingBag className="w-[19px] h-[19px]" strokeWidth={1.7} />
-                {cartCount > 0 && (
-                  <span className="absolute top-2 right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full bg-black text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
-                    {cartCount > 9 ? '9+' : cartCount}
-                  </span>
-                )}
+                <AnimatedCountBadge
+                  count={cartCount}
+                  pulseKey={cartPulseKey}
+                  max={9}
+                  className="absolute top-2 right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full bg-black text-white text-[9px] font-bold flex items-center justify-center tabular-nums"
+                />
               </button>
             </>
           ) : (

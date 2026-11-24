@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import http from 'http';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -166,6 +167,7 @@ function verifyHmacSignature(payload: string, signatureHeader: string, secret: s
 
 async function startServer() {
   const app = express();
+  const server = http.createServer(app);
   const uploadsDir = path.resolve(__dirname, 'uploads');
   fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -1050,7 +1052,10 @@ ${JSON.stringify(compactInventory)}`,
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === 'true' ? false : { server },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -1077,7 +1082,7 @@ ${JSON.stringify(compactInventory)}`,
   }
 
   const PORT = Number(process.env.PORT || 3000);
-  app.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`KIKI JONES server running on http://0.0.0.0:${PORT}`);
   });
 }

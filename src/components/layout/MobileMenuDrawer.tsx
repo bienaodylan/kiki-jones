@@ -7,6 +7,8 @@ import { useStore } from '../../context/StoreContext';
 import { PWAInstallButton } from '../pwa/PWAInstallButton';
 import { MobileShopDirectory } from './MobileShopDirectory';
 import { BrandLogo } from '../brand/BrandLogo';
+import { KJ_DURATION, KJ_EASE, KJ_TRANSITION } from '../../motion/motionConfig';
+import { useMotionSystem } from '../../motion/MotionProvider';
 
 interface MobileMenuDrawerProps {
   open: boolean;
@@ -25,7 +27,22 @@ export function MobileMenuDrawer({
 }: MobileMenuDrawerProps) {
   const { lang, setLang, tr } = useLanguage();
   const { route } = useStore();
+  const { prefersReducedMotion } = useMotionSystem();
   const [selectedDivision, setSelectedDivision] = useState<DivisionKey>('women');
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
 
   // Sync active division with the current route whenever the drawer opens
   useEffect(() => {
@@ -61,16 +78,19 @@ export function MobileMenuDrawer({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={KJ_TRANSITION.backdrop}
             onClick={onClose}
             className="fixed inset-0 bg-black/45 backdrop-blur-md z-50"
           />
 
           <motion.aside
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 330, damping: 35 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { x: '-100%' }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { x: '-100%' }}
+            transition={{
+              duration: prefersReducedMotion ? 0.14 : KJ_DURATION.menu,
+              ease: KJ_EASE.editorial,
+            }}
             aria-label={tr('Navigation mobile', 'Mobile Navigation')}
             className="fixed top-0 left-0 bottom-0 w-full sm:max-w-[430px] bg-white/94 backdrop-blur-2xl backdrop-saturate-[1.85] text-black z-50 flex flex-col shadow-2xl pt-safe"
           >
