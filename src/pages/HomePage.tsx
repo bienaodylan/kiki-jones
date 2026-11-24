@@ -860,17 +860,6 @@ export function HomePage() {
 
   return (
     <main className="w-full max-w-full overflow-x-clip bg-white">
-      {storefrontConfig.campaignBannerEnabled && storefrontConfig.campaignBannerText && (
-        <div
-          className={
-            isAppMode
-              ? 'w-full bg-black text-white text-center py-2 px-4 text-[10px] font-medium uppercase tracking-[0.16em]'
-              : 'fixed top-[88px] lg:top-[96px] inset-x-0 z-30 bg-black text-white text-center py-1.5 px-4 text-[10.5px] font-medium uppercase tracking-[0.16em]'
-          }
-        >
-          {storefrontConfig.campaignBannerText}
-        </div>
-      )}
       {order.map((sec, idx) => renderSection(sec, idx))}
     </main>
   );

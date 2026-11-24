@@ -13,6 +13,9 @@ import { getFloatingSubnav, getPrimaryNavLabel } from '../../lib/i18n';
 import { MegaMenu } from './MegaMenu';
 import { MobileMenuDrawer } from './MobileMenuDrawer';
 import { BrandLogo } from '../brand/BrandLogo';
+import { HeaderInfoBar } from './HeaderInfoBar';
+import { isInfoBarActive } from '../../lib/infoBar';
+import { useScrollHeaderVisibility } from '../../hooks/useScrollHeaderVisibility';
 
 export function Navbar() {
   const {
@@ -159,6 +162,12 @@ export function Navbar() {
   const logoScale = useTransform(scrollY, [0, dockEnd], [initialScale, 1]);
 
   const isSolid = !isHome || scrolledSolid || activeMegaMenu !== null;
+  const infoBarActive = isInfoBarActive(storefrontConfig);
+  const isHeaderVisible = useScrollHeaderVisibility({
+    hideAfter: isHome ? dockEnd + 24 : 72,
+    forceVisible: mobileMenuOpen || activeMegaMenu !== null,
+    resetKey: JSON.stringify(route),
+  });
 
   const isItemActive = (key: string) => {
     if (key === 'women') {
@@ -201,14 +210,22 @@ export function Navbar() {
       <header
         onMouseLeave={scheduleCloseMegaMenu}
         onMouseEnter={cancelCloseMegaMenu}
-        className={`fixed top-0 left-0 right-0 w-full max-w-full overflow-x-clip z-40 transition-all duration-300 pt-safe ${
+        className={`fixed top-0 left-0 right-0 w-full max-w-full overflow-x-clip z-40 ${
+          infoBarActive ? '' : 'pt-safe'
+        } will-change-transform transition-[transform,background-color,box-shadow,border-color] duration-300 ease-out ${
+          isHeaderVisible
+            ? 'translate-y-0'
+            : '-translate-y-full lg:translate-y-0 pointer-events-none lg:pointer-events-auto'
+        } ${
           isSolid
             ? 'bg-white/75 backdrop-blur-2xl backdrop-saturate-[1.85] text-black shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-b border-black/[0.08]'
             : 'bg-black/15 backdrop-blur-md text-white'
         }`}
       >
+        <HeaderInfoBar withSafeTop />
+
         {!isSolid && (
-          <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/30 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 top-[28px] bg-gradient-to-b from-black/65 via-black/30 to-transparent pointer-events-none" />
         )}
 
         {/* ROW 1: Primary Division Header + Centered Wordmark + Utilities + FR/EN Switcher */}

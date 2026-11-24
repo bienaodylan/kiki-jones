@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useStore } from '../../context/StoreContext';
 import { getMegaMenuLocalized } from '../../lib/i18n';
 import { getSectionImage } from '../../lib/storefrontMedia';
+import { isInfoBarActive } from '../../lib/infoBar';
 import {
   extractDynamicSubMenus,
   FASHION_SUB_TAXONOMY,
@@ -94,6 +95,10 @@ export function MegaMenu({
       : config.editorial.imageUrl
     : '';
 
+  const topOffsetClass = isInfoBarActive(storefrontConfig)
+    ? 'top-[116px] lg:top-[124px]'
+    : 'top-[88px] lg:top-[96px]';
+
   return (
     <AnimatePresence>
       {config && (
@@ -106,7 +111,7 @@ export function MegaMenu({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             onClick={onClose}
-            className="fixed inset-x-0 top-[88px] lg:top-[96px] bottom-0 bg-black/25 backdrop-blur-md z-30"
+            className={`fixed inset-x-0 ${topOffsetClass} bottom-0 bg-black/25 backdrop-blur-md z-30`}
           />
 
           {/* Frosted Glassmorphic Editorial Floating Mega Menu Panel */}
@@ -118,7 +123,7 @@ export function MegaMenu({
             transition={{ duration: 0.18, ease: 'easeOut' }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
-            className="fixed inset-x-0 top-[88px] lg:top-[96px] z-40 bg-white/78 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/10 text-black shadow-[0_32px_64px_-24px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-white/60"
+            className={`fixed inset-x-0 ${topOffsetClass} z-40 bg-white/78 backdrop-blur-2xl backdrop-saturate-[1.85] border-b border-black/10 text-black shadow-[0_32px_64px_-24px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-white/60`}
           >
             <div className="max-w-[1440px] mx-auto px-6 xl:px-10 py-9">
               <div className="grid grid-cols-12 gap-8 items-start">

@@ -16,6 +16,8 @@ import {
   RotateCcw,
   RefreshCw,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Category,
@@ -50,6 +52,11 @@ import {
   mergeDynamicSubMenusIntoGallery,
   PARENT_MENU_LABELS,
 } from '../../lib/menuDiscovery';
+import {
+  extractInfoBarMessages,
+  InfoBarMessage,
+  mergeInfoBarIntoGallery,
+} from '../../lib/infoBar';
 
 const DISMISSED_MENUS_KEY = 'kikijones_dismissed_menu_suggestions_v1';
 
@@ -64,7 +71,7 @@ interface AdminStorefrontProps {
   onToast: (msg: string, tone?: 'default' | 'error' | 'success') => void;
 }
 
-type StoreSubTab = 'homepage' | 'banners' | 'navigation' | 'preview';
+type StoreSubTab = 'homepage' | 'infobar' | 'banners' | 'navigation' | 'preview';
 
 export function AdminStorefront({
   config,
@@ -83,6 +90,10 @@ export function AdminStorefront({
   const [navItems, setNavItems] = useState<StoreNavigationItem[]>(() =>
     extractNavigationFromConfig(config)
   );
+  const [infoBarItems, setInfoBarItems] = useState<InfoBarMessage[]>(() =>
+    extractInfoBarMessages(config)
+  );
+  const [previewInfoIdx, setPreviewInfoIdx] = useState(0);
   const [saving, setSaving] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const [openLibrarySlot, setOpenLibrarySlot] = useState<string | null>(null);
@@ -127,6 +138,7 @@ export function AdminStorefront({
   useEffect(() => {
     setDraft(config);
     setNavItems(extractNavigationFromConfig(config));
+    setInfoBarItems(extractInfoBarMessages(config));
   }, [config]);
 
   const dynamicSubMenus = useMemo(() => extractDynamicSubMenus(draft), [draft]);
@@ -566,6 +578,32 @@ export function AdminStorefront({
     );
   };
 
+  const syncInfoBarToDraft = (nextItems: InfoBarMessage[], nextEnabled?: boolean) => {
+    setInfoBarItems(nextItems);
+    const primaryText =
+      nextItems.find((m) => m.textFr.trim().length > 0)?.textFr.trim().slice(0, 200) || '';
+    setDraft((prev) => ({
+      ...prev,
+      ...(typeof nextEnabled === 'boolean' ? { campaignBannerEnabled: nextEnabled } : {}),
+      campaignBannerText: primaryText,
+      galleryItems: mergeInfoBarIntoGallery(prev.galleryItems, nextItems),
+    }));
+  };
+
+  const handleSaveInfoBar = async () => {
+    const cleaned = infoBarItems.filter((m) => m.textFr.trim().length > 0).slice(0, 6);
+    const primaryText = cleaned[0]?.textFr.trim().slice(0, 200) || '';
+    const nextConfig: StorefrontConfig = {
+      ...draft,
+      campaignBannerText: primaryText,
+      galleryItems: mergeInfoBarIntoGallery(draft.galleryItems, cleaned),
+    };
+    await persistConfig(
+      nextConfig,
+      tr('Barre d’infos enregistrée et publiée.', 'Info bar saved and published.')
+    );
+  };
+
   const editingCustom = editingCustomId
     ? (draft.customSections || []).find((c) => c.id === editingCustomId) || null
     : null;
@@ -750,6 +788,10 @@ export function AdminStorefront({
         <div className="flex items-center overflow-x-auto border-b border-[#E8E8E8] px-2">
           {[
             { id: 'homepage' as StoreSubTab, label: tr('Page d’accueil', 'Homepage') },
+            {
+              id: 'infobar' as StoreSubTab,
+              label: tr('Barre d’infos', 'Info Bar'),
+            },
             { id: 'banners' as StoreSubTab, label: tr('Bannières & Images', 'Banners & Images') },
             {
               id: 'navigation' as StoreSubTab,
@@ -908,41 +950,369 @@ export function AdminStorefront({
           </div>
         )}
 
-        {/* TAB 2: BANNERS & IMAGES (ALL SECTIONS, AUDIENCES, BRANDS, CATEGORIES, COLLECTIONS) */}
+        {/* TAB 2: HEADER INFO BAR */}
+        {subTab === 'infobar' && (() => {
+          const validPreviewItems = infoBarItems.filter((m) => m.textFr.trim().length > 0);
+          const safePreviewIdx =
+            validPreviewItems.length > 0 ? previewInfoIdx % validPreviewItems.length : 0;
+          const activePreview = validPreviewItems[safePreviewIdx];
+
+          return (
+            <div className="p-5 space-y-6 text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-black">
+                      {tr('Barre d’infos de l’en-tête', 'Header Info Bar')}
+                    </h2>
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${
+                        draft.campaignBannerEnabled
+                          ? 'bg-black text-white'
+                          : 'bg-[#F0F0F0] text-black/55'
+                      }`}
+                    >
+                      {draft.campaignBannerEnabled
+                        ? tr('Active', 'Active')
+                        : tr('Masquée', 'Hidden')}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-black/55 mt-0.5">
+                    {tr(
+                      'Intégrée directement en haut du header. Elle disparaît automatiquement avec l’en-tête au scroll sur mobile/tablette et reste fixe sur ordinateur.',
+                      'Attached directly to the top of the header. Hides smoothly with the header on scroll on mobile/tablet and stays fixed on desktop.'
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <label className="inline-flex items-center gap-2 px-3 py-2 border border-[#E8E8E8] bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(draft.campaignBannerEnabled)}
+                      onChange={(e) => syncInfoBarToDraft(infoBarItems, e.target.checked)}
+                      className="accent-black"
+                    />
+                    <span className="font-medium text-black">
+                      {tr('Afficher sur la boutique', 'Show on storefront')}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={handleSaveInfoBar}
+                    className="px-4 py-2 bg-black text-white text-xs font-medium hover:bg-black/85 disabled:opacity-50 cursor-pointer"
+                  >
+                    {saving ? tr('Enregistrement...', 'Saving...') : tr('Enregistrer', 'Save')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              <div className="border border-[#E8E8E8] bg-[#FAFAFA] p-4 space-y-2.5">
+                <div className="flex items-center justify-between text-[11px] text-black/50">
+                  <span className="uppercase tracking-[0.12em] font-semibold">
+                    {tr('Aperçu en direct', 'Live Preview')}
+                  </span>
+                  {validPreviewItems.length > 1 && (
+                    <span className="tabular-nums">
+                      {safePreviewIdx + 1} / {validPreviewItems.length}{' '}
+                      {tr('· rotation auto (4,5s)', '· auto-rotates (4.5s)')}
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className={`w-full border border-[#E8E8E8] overflow-hidden transition-opacity ${
+                    draft.campaignBannerEnabled ? 'opacity-100' : 'opacity-40'
+                  }`}
+                >
+                  <div className="bg-black text-white h-7 px-3 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      disabled={validPreviewItems.length <= 1}
+                      onClick={() =>
+                        setPreviewInfoIdx(
+                          (prev) =>
+                            (prev - 1 + Math.max(1, validPreviewItems.length)) %
+                            Math.max(1, validPreviewItems.length)
+                        )
+                      }
+                      className="p-0.5 text-white/60 hover:text-white disabled:opacity-20 cursor-pointer"
+                      aria-label={tr('Précédent', 'Previous')}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] truncate text-center flex-1">
+                      {activePreview
+                        ? lang === 'en' && activePreview.textEn
+                          ? activePreview.textEn
+                          : activePreview.textFr
+                        : tr(
+                            'Ajoutez un message ci-dessous pour activer la barre',
+                            'Add a message below to display in the bar'
+                          )}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={validPreviewItems.length <= 1}
+                      onClick={() =>
+                        setPreviewInfoIdx(
+                          (prev) => (prev + 1) % Math.max(1, validPreviewItems.length)
+                        )
+                      }
+                      className="p-0.5 text-white/60 hover:text-white disabled:opacity-20 cursor-pointer"
+                      aria-label={tr('Suivant', 'Next')}
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="bg-white h-10 px-4 flex items-center justify-between text-[10px] text-black/40 border-t border-black/10">
+                    <span className="font-semibold tracking-[0.18em] text-black/75">
+                      KIKI JONES
+                    </span>
+                    <span className="uppercase tracking-[0.1em]">
+                      {tr('En-tête principal', 'Main Header')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rotating Messages Editor */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-xs font-semibold text-black">
+                      {tr('Messages de la barre', 'Info Bar Messages')} ({infoBarItems.length}/6)
+                    </h3>
+                    <p className="text-[11px] text-black/50 mt-0.5">
+                      {tr(
+                        'Ajoutez 1 à 6 annonces (livraison, promotions, nouveautés, boutique). Avec 2 messages ou plus, ils défilent automatiquement.',
+                        'Add 1 to 6 announcements (shipping, promos, drops, store info). With 2+ messages, they rotate automatically.'
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={infoBarItems.length >= 6}
+                    onClick={() => {
+                      const next: InfoBarMessage[] = [
+                        ...infoBarItems,
+                        {
+                          id: sanitizeId(`info_${Date.now()}`),
+                          textFr: '',
+                          textEn: '',
+                          href: '',
+                        },
+                      ];
+                      syncInfoBarToDraft(next);
+                    }}
+                    className="px-3.5 py-2 border border-black bg-white hover:bg-black hover:text-white disabled:opacity-35 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{tr('Ajouter un message', 'Add message')}</span>
+                  </button>
+                </div>
+
+                <datalist id="kiki-infobar-routes">
+                  <option value="/new-in" />
+                  <option value="/sale" />
+                  <option value="/shop" />
+                  <option value="/women" />
+                  <option value="/men" />
+                  <option value="/collections" />
+                  <option value="/brand/kiki-luxe" />
+                  <option value="/brand/kiki-kids" />
+                </datalist>
+
+                {infoBarItems.length === 0 ? (
+                  <div className="border border-[#E8E8E8] bg-[#FAFAFA] px-4 py-8 text-center space-y-2">
+                    <p className="text-xs text-black/55">
+                      {tr(
+                        'Aucun message configuré dans la barre d’infos.',
+                        'No messages configured for the info bar.'
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        syncInfoBarToDraft(
+                          [
+                            {
+                              id: 'info_primary',
+                              textFr:
+                                'Livraison offerte dès 75 000 XOF · Nouvelle Collection Disponible',
+                              textEn: 'Free Delivery from 75,000 XOF · New Collection Now Live',
+                              href: '/new-in',
+                            },
+                          ],
+                          true
+                        )
+                      }
+                      className="px-3.5 py-2 bg-black text-white text-xs font-medium hover:bg-black/85 cursor-pointer"
+                    >
+                      {tr('Créer un premier message', 'Create first message')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border border-[#E8E8E8] divide-y divide-[#F0F0F0]">
+                    {infoBarItems.map((item, idx) => (
+                      <div key={item.id} className="p-3.5 space-y-2.5 bg-white">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-black/45 tabular-nums">
+                            {tr(`Message #${idx + 1}`, `Message #${idx + 1}`)}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => {
+                                const copy = [...infoBarItems];
+                                const [m] = copy.splice(idx, 1);
+                                copy.splice(idx - 1, 0, m);
+                                syncInfoBarToDraft(copy);
+                              }}
+                              className="p-1.5 text-black/50 hover:text-black disabled:opacity-25 cursor-pointer"
+                              title={tr('Monter', 'Move up')}
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === infoBarItems.length - 1}
+                              onClick={() => {
+                                const copy = [...infoBarItems];
+                                const [m] = copy.splice(idx, 1);
+                                copy.splice(idx + 1, 0, m);
+                                syncInfoBarToDraft(copy);
+                              }}
+                              className="p-1.5 text-black/50 hover:text-black disabled:opacity-25 cursor-pointer"
+                              title={tr('Descendre', 'Move down')}
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = infoBarItems.filter((_, i) => i !== idx);
+                                syncInfoBarToDraft(next);
+                              }}
+                              className="p-1.5 text-black/40 hover:text-black cursor-pointer"
+                              title={tr('Supprimer', 'Delete')}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">
+                          <div className="lg:col-span-5">
+                            <label className="block text-[10.5px] text-black/50 mb-1">
+                              {tr('Texte affiché (FR)', 'Displayed text (FR)')}
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={180}
+                              value={item.textFr}
+                              onChange={(e) => {
+                                const copy = [...infoBarItems];
+                                copy[idx] = { ...item, textFr: e.target.value };
+                                syncInfoBarToDraft(copy);
+                              }}
+                              placeholder={tr(
+                                'Ex : Livraison offerte dès 75 000 XOF',
+                                'e.g. Free delivery from 75,000 XOF'
+                              )}
+                              className="w-full border border-[#E8E8E8] focus:border-black px-2.5 py-2 focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="lg:col-span-4">
+                            <label className="block text-[10.5px] text-black/50 mb-1">
+                              {tr('Version anglaise (optionnel)', 'English version (optional)')}
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={180}
+                              value={item.textEn}
+                              onChange={(e) => {
+                                const copy = [...infoBarItems];
+                                copy[idx] = { ...item, textEn: e.target.value };
+                                syncInfoBarToDraft(copy);
+                              }}
+                              placeholder="e.g. Free delivery from 75,000 XOF"
+                              className="w-full border border-[#E8E8E8] focus:border-black px-2.5 py-2 focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="lg:col-span-3">
+                            <label className="block text-[10.5px] text-black/50 mb-1">
+                              {tr('Lien au clic (optionnel)', 'Click link (optional)')}
+                            </label>
+                            <input
+                              type="text"
+                              list="kiki-infobar-routes"
+                              maxLength={200}
+                              value={item.href}
+                              onChange={(e) => {
+                                const copy = [...infoBarItems];
+                                copy[idx] = { ...item, href: e.target.value };
+                                syncInfoBarToDraft(copy);
+                              }}
+                              placeholder="/new-in"
+                              className="w-full border border-[#E8E8E8] focus:border-black px-2.5 py-2 focus:outline-none font-mono text-[11px]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* TAB 3: BANNERS & IMAGES (ALL SECTIONS, AUDIENCES, BRANDS, CATEGORIES, COLLECTIONS) */}
         {subTab === 'banners' && (
           <div className="p-5 space-y-6 text-xs">
-            {/* Announcement Bar & Hero Text Compact Row */}
+            {/* Info Bar Quick Card & Hero Text Compact Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-6 border-b border-[#E8E8E8]">
-              <div className="border border-[#E8E8E8] p-4 space-y-3">
-                <div className="flex items-center justify-between gap-2">
+              <div className="border border-[#E8E8E8] p-4 flex flex-col justify-between gap-3">
+                <div className="flex items-start justify-between gap-2">
                   <div>
                     <h2 className="text-xs font-semibold text-black">
-                      {tr('Barre d’annonce promotionnelle', 'Promotional announcement bar')}
+                      {tr('Barre d’infos (liée à l’en-tête)', 'Header Info Bar')}
                     </h2>
                     <p className="text-[11px] text-black/50 mt-0.5">
-                      {tr('Affichée en haut de la page d’accueil.', 'Displayed at the top of the homepage.')}
+                      {infoBarItems.filter((m) => m.textFr.trim()).length}{' '}
+                      {tr('message(s) configuré(s)', 'message(s) configured')}
                     </p>
                   </div>
                   <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
                     <input
                       type="checkbox"
                       checked={Boolean(draft.campaignBannerEnabled)}
-                      onChange={(e) => setDraft({ ...draft, campaignBannerEnabled: e.target.checked })}
+                      onChange={(e) => syncInfoBarToDraft(infoBarItems, e.target.checked)}
                       className="accent-black"
                     />
-                    <span className="font-medium">{tr('Activer', 'Enable')}</span>
+                    <span className="font-medium">{tr('Active', 'Active')}</span>
                   </label>
                 </div>
-                <input
-                  type="text"
-                  value={draft.campaignBannerText || ''}
-                  onChange={(e) => setDraft({ ...draft, campaignBannerText: e.target.value })}
-                  placeholder={tr(
-                    'Ex : Livraison offerte dès 75 000 XOF — Code KIKIJONES10',
-                    'e.g. Free delivery over 75,000 XOF — Code KIKIJONES10'
-                  )}
-                  className="w-full border border-[#E8E8E8] focus:border-black px-3 py-2 focus:outline-none"
-                />
+
+                {infoBarItems[0]?.textFr && (
+                  <div className="bg-black text-white px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] truncate">
+                    {infoBarItems[0].textFr}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSubTab('infobar')}
+                  className="px-3 py-1.5 border border-[#E8E8E8] hover:border-black text-[11px] font-medium text-black self-start cursor-pointer"
+                >
+                  {tr('Gérer les messages de la barre d’infos', 'Manage info bar messages')}
+                </button>
               </div>
 
               <div className="border border-[#E8E8E8] p-4 space-y-2.5">
@@ -1379,10 +1749,12 @@ export function AdminStorefront({
               </div>
               <div className="border border-[#E8E8E8] p-4">
                 <p className="text-[10.5px] uppercase tracking-[0.1em] text-black/45">
-                  {tr('Barre d’annonce', 'Announcement bar')}
+                  {tr('Barre d’infos', 'Info bar')}
                 </p>
                 <p className="text-xl font-semibold text-black mt-1">
-                  {draft.campaignBannerEnabled ? tr('Active', 'Active') : tr('Inactive', 'Off')}
+                  {draft.campaignBannerEnabled
+                    ? `${tr('Active', 'Active')} (${infoBarItems.filter((m) => m.textFr.trim()).length})`
+                    : tr('Masquée', 'Hidden')}
                 </p>
               </div>
             </div>

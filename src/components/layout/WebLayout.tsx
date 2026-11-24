@@ -4,18 +4,29 @@ import { Footer } from './Footer';
 import { CartDrawer } from '../cart/CartDrawer';
 import { SearchOverlay } from './SearchOverlay';
 import { OfflineIndicator } from '../pwa/OfflineIndicator';
+import { useStore } from '../../context/StoreContext';
+import { isInfoBarActive } from '../../lib/infoBar';
 
 interface WebLayoutProps {
   children: React.ReactNode;
 }
 
 export function WebLayout({ children }: WebLayoutProps) {
+  const { storefrontConfig, route } = useStore();
+  const hasInfoBarOffset = isInfoBarActive(storefrontConfig) && route.page !== 'home';
+
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-clip flex flex-col bg-white text-black font-light">
       <Navbar />
       <CartDrawer />
       <SearchOverlay />
-      <div className="flex-1 w-full max-w-full min-w-0 overflow-x-clip">{children}</div>
+      <div
+        className={`flex-1 w-full max-w-full min-w-0 overflow-x-clip ${
+          hasInfoBarOffset ? 'pt-[28px]' : ''
+        }`}
+      >
+        {children}
+      </div>
       <Footer />
       <OfflineIndicator />
     </div>
