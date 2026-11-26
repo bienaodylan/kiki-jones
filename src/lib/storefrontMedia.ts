@@ -139,18 +139,18 @@ export const HOMEPAGE_SECTION_SLOTS: Record<string, SectionImageSlot[]> = {
   women_exclusive_banner: [
     {
       key: 'kiki_luxe_left',
-      labelFr: 'Bannière Kiki Luxe — Visuel gauche',
-      labelEn: 'Kiki Luxe Banner — Left Visual',
-      descFr: 'Affiché sur la grande section Kiki Luxe de la page d’accueil.',
-      descEn: 'Displayed on the main Kiki Luxe homepage banner.',
+      labelFr: 'Bannière Kiki Jones Premium — Visuel gauche',
+      labelEn: 'Kiki Jones Premium Banner — Left Visual',
+      descFr: 'Affiché sur la grande section Kiki Jones Premium de la page d’accueil.',
+      descEn: 'Displayed on the main Kiki Jones Premium homepage banner.',
       defaultUrl: KJ_IMAGES.formalFeature,
     },
     {
       key: 'kiki_luxe_right',
-      labelFr: 'Bannière Kiki Luxe — Visuel droite',
-      labelEn: 'Kiki Luxe Banner — Right Visual',
-      descFr: 'Deuxième colonne de la section Kiki Luxe sur grand écran.',
-      descEn: 'Second column of the Kiki Luxe homepage banner on desktop.',
+      labelFr: 'Bannière Kiki Jones Premium — Visuel droite',
+      labelEn: 'Kiki Jones Premium Banner — Right Visual',
+      descFr: 'Deuxième colonne de la section Kiki Jones Premium sur grand écran.',
+      descEn: 'Second column of the Kiki Jones Premium homepage banner on desktop.',
       defaultUrl: KJ_IMAGES.curveGownCampaign,
     },
   ],
@@ -331,8 +331,8 @@ export const ALL_BANNER_GROUPS: BannerGroupDefinition[] = [
   },
   {
     id: 'brands',
-    labelFr: 'Marques (Kiki Luxe...)',
-    labelEn: 'Brands (Kiki Luxe...)',
+    labelFr: 'Marques (Kiki Jones Premium...)',
+    labelEn: 'Brands (Kiki Jones Premium...)',
     slots: BRAND_BANNER_SLOTS,
   },
   {
