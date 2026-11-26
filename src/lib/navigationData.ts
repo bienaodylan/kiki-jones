@@ -138,8 +138,8 @@ export const BRAND_LINES: BrandLine[] = [
   },
   {
     slug: 'kiki-luxe',
-    name: 'Kiki Luxe',
-    shortLabel: 'KIKI LUXE',
+    name: 'Kiki Jones Premium',
+    shortLabel: 'KIKI JONES PREMIUM',
     tagline: 'Evening, Formal & Resort · Dresses, Rompers & Heels',
     description:
       'Embroidered formal gowns, fluid satin kaftans, rhinestone evening maxis, tailored rompers, pleated pant sets, sculptural stilettos, and acetate eyewear.',
@@ -328,7 +328,8 @@ export const FLOATING_SUBNAV_BY_DIVISION: Record<DivisionKey, FloatingSubNavItem
     { label: 'After Dark', href: '/collection/after-dark' },
     { label: 'Shoes', href: '/category/shoes', megaMenuKey: 'shoes' },
     { label: 'Accessories', href: '/accessories', megaMenuKey: 'accessories' },
-    { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+    { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
+    { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
     { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
     { label: 'Sale', href: '/sale', highlight: true },
   ],
@@ -403,7 +404,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'Women Brands',
         links: [
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
           { label: 'Kiki Curve', href: '/brand/kiki-curve' },
           { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
           { label: 'Kiki Sport', href: '/brand/kiki-sport' },
@@ -412,6 +413,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'Warm-Climate Edits',
         links: [
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
           { label: 'After Dark / Going Out', href: '/collection/after-dark' },
           { label: 'Formal & Occasion', href: '/collection/formal' },
           { label: 'Sun & Resort Sets', href: '/collection/summer-drop' },
@@ -475,7 +477,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
         links: [
           { label: 'Kiki Curve', href: '/brand/kiki-curve' },
           { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
           { label: 'All Brands', href: '/brands' },
         ],
       },
@@ -622,7 +624,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
         heading: 'More Labels',
         links: [
           { label: 'Kiki Men', href: '/brand/kiki-men' },
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
           { label: 'Kiki Sport', href: '/brand/kiki-sport' },
           { label: 'All Brands', href: '/brands' },
         ],
@@ -646,7 +648,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
         links: [
           { label: 'All Brands', href: '/brands' },
           { label: 'Kiki Men', href: '/brand/kiki-men' },
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
           { label: 'Kiki Curve', href: '/brand/kiki-curve' },
           { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
           { label: 'Kiki Sport', href: '/brand/kiki-sport' },
@@ -656,6 +658,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'Featured Edits',
         links: [
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
           { label: 'New Arrivals', href: '/new-in' },
           { label: 'After Dark Edit', href: '/collection/after-dark' },
           { label: 'Formal & Occasion', href: '/collection/formal' },
@@ -724,7 +727,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
         heading: 'Shop by Brand',
         links: [
           { label: 'Kiki Men', href: '/brand/kiki-men' },
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
           { label: 'Kiki Curve', href: '/brand/kiki-curve' },
           { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
           { label: 'Kiki Sport', href: '/brand/kiki-sport' },
@@ -735,6 +738,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
         heading: 'Collections',
         links: [
           { label: 'All Collections', href: '/collections' },
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
           { label: 'After Dark Edit', href: '/collection/after-dark' },
           { label: 'Formal & Occasion', href: '/collection/formal' },
           { label: 'The Essentials', href: '/collection/essentials' },
@@ -770,7 +774,8 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
         links: [
           { label: 'Jumpsuits & Rompers', href: '/category/jumpsuits' },
           { label: 'Matching Sets', href: '/category/matching-sets' },
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
         ],
       },
       {
@@ -790,7 +795,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       },
     ],
     editorial: {
-      eyebrow: 'Kiki Luxe · Dresses',
+      eyebrow: 'Kiki Jones Premium · Dresses',
       title: 'Gowns, Maxis & Minis',
       ctaLabel: 'Shop Dresses',
       href: '/category/dresses',
@@ -831,7 +836,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'Brands',
         links: [
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
           { label: 'Kiki Men', href: '/brand/kiki-men' },
           { label: 'Kiki Kids', href: '/brand/kiki-kids' },
         ],
@@ -953,7 +958,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'By Brand',
         links: [
-          { label: 'Kiki Luxe Heels', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium Heels', href: '/brand/kiki-luxe' },
           { label: 'Kiki Men Footwear', href: '/brand/kiki-men' },
           { label: 'Kiki Sculpt Sneakers', href: '/brand/kiki-sculpt' },
         ],
@@ -1015,7 +1020,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'Shop by Brand',
         links: [
-          { label: 'Kiki Luxe', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
           { label: 'Kiki Men', href: '/brand/kiki-men' },
           { label: 'All Categories', href: '/categories' },
         ],
@@ -1033,13 +1038,26 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
 
 export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
   {
+    slug: 'kiki-jones-doupi',
+    seasonTag: 'New Collection · Kiki Jones Premium',
+    title: 'Kiki Jones Doupi',
+    shortTitle: 'Kiki Jones Doupi',
+    subtitle: 'Cinematic 3D Atelier · Suspended Premium Silhouettes & Statement Pieces.',
+    description:
+      'Discover the Kiki Jones Doupi collection inside Kiki Jones Premium — presented in an interactive boutique-atelier showroom where every hanging piece can be inspected in 3D.',
+    campaignImage: KJ_IMAGES.womenSatinEvening,
+    secondaryImage: KJ_IMAGES.formalFeature,
+    audiences: ['women', 'men'],
+    featured: true,
+  },
+  {
     slug: 'after-dark',
     seasonTag: 'Edit 01 · Evening & Nightlife',
     title: 'After Dark Edit',
     shortTitle: 'After Dark',
     subtitle: 'Rhinestone maxis, lace corsets, waxed flare pants, and bold button-up shirts.',
     description:
-      'High-impact evening pieces built for warm nights — featuring Kiki Luxe maxi dresses, Kiki Curve minis, Kiki Sculpt corsets, and sharp Kiki Men silhouettes.',
+      'High-impact evening pieces built for warm nights — featuring Kiki Jones Premium maxi dresses, Kiki Curve minis, Kiki Sculpt corsets, and sharp Kiki Men silhouettes.',
     campaignImage: KJ_IMAGES.womenSatinEvening,
     secondaryImage: KJ_IMAGES.menMeshShirt,
     audiences: ['women', 'men'],
@@ -1116,7 +1134,7 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
     shortTitle: 'Accessories',
     subtitle: 'Platform stilettos, polished loafers, dark acetate sunglasses, clutches, and jewelry.',
     description:
-      'Statement accessories and footwear designed to complete every Kiki Luxe, Kiki Men, Kiki Curve, and Kiki Sculpt look.',
+      'Statement accessories and footwear designed to complete every Kiki Jones Premium, Kiki Men, Kiki Curve, and Kiki Sculpt look.',
     campaignImage: KJ_IMAGES.shoesFeature,
     secondaryImage: KJ_IMAGES.sunglassesFeature,
     audiences: ['women', 'men'],
@@ -1125,7 +1143,8 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
 
 export const TRENDING_SEARCHES: string[] = [
   'Kiki Men',
-  'Kiki Luxe',
+  'Kiki Jones Premium',
+  'Kiki Jones Doupi',
   'Kiki Sport',
   'Kiki Curve',
   'Dresses',
@@ -1137,10 +1156,10 @@ export const TRENDING_SEARCHES: string[] = [
 ];
 
 export const SUGGESTED_SEARCH_CATEGORIES: { label: string; href: string; countHint: string }[] = [
-  { label: 'Shop by Brand', href: '/brands', countHint: 'Men, Luxe, Curve, Sculpt, Sport, Kids' },
+  { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi', countHint: 'New Collection · 3D Atelier Showroom' },
+  { label: 'Shop by Brand', href: '/brands', countHint: 'Men, Premium, Curve, Sculpt, Sport, Kids' },
   { label: 'Shop by Category', href: '/categories', countHint: 'Dresses, Sets, Rompers, Shoes, Shades' },
   { label: 'Formal & Occasion', href: '/collection/formal', countHint: 'Gowns, Jacquard Suits & Heels' },
   { label: 'Kiki Sport', href: '/brand/kiki-sport', countHint: 'Biker Shorts & Breathable Activewear' },
   { label: 'Shoes', href: '/category/shoes', countHint: 'Heels, Loafers & Sneakers' },
-  { label: 'Sunglasses', href: '/category/sunglasses', countHint: 'Dark Acetate & Optical' },
 ];

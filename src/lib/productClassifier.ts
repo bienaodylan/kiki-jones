@@ -55,7 +55,7 @@ export const SUBCATEGORY_OPTIONS: ClassificationOption[] = [
 ];
 
 export const BRAND_OPTIONS: BrandOption[] = [
-  { slug: 'kiki-luxe', name: 'Kiki Luxe', labelFr: 'Kiki Luxe (Soirée & Chic)', labelEn: 'Kiki Luxe (Evening & Luxe)' },
+  { slug: 'kiki-luxe', name: 'Kiki Jones Premium', labelFr: 'Kiki Jones Premium (Soirée & Chic)', labelEn: 'Kiki Jones Premium (Evening & Premium)' },
   { slug: 'kiki-men', name: 'Kiki Men', labelFr: 'Kiki Men (Homme)', labelEn: 'Kiki Men (Menswear)' },
   { slug: 'kiki-sculpt', name: 'Kiki Sculpt', labelFr: 'Kiki Sculpt (Sculptant & Corsets)', labelEn: 'Kiki Sculpt (Sculpt & Shapewear)' },
   { slug: 'kiki-curve', name: 'Kiki Curve', labelFr: 'Kiki Curve (Courbes & Lounge)', labelEn: 'Kiki Curve (Curve & Lounge)' },
@@ -64,6 +64,7 @@ export const BRAND_OPTIONS: BrandOption[] = [
 ];
 
 export const COLLECTION_OPTIONS: ClassificationOption[] = [
+  { value: 'kiki-jones-doupi', labelFr: 'Kiki Jones Doupi (Atelier 3D · Premium)', labelEn: 'Kiki Jones Doupi (3D Atelier · Premium)' },
   { value: 'after-dark', labelFr: 'After Dark (Soirée)', labelEn: 'After Dark (Evening)' },
   { value: 'formal', labelFr: 'Gala & Cérémonie', labelEn: 'Formal & Gala' },
   { value: 'sport', labelFr: 'Sport & Studio', labelEn: 'Sport & Studio' },
@@ -170,7 +171,7 @@ function hasKeyword(normalizedText: string, keywords: string[]): boolean {
 
 export function getBrandNameBySlug(slug?: string): string {
   const found = BRAND_OPTIONS.find((b) => b.slug === slug);
-  return found ? found.name : 'Kiki Luxe';
+  return found ? found.name : 'Kiki Jones Premium';
 }
 
 /**

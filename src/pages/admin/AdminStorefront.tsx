@@ -294,10 +294,10 @@ export function AdminStorefront({
     },
     {
       key: 'women_exclusive_banner',
-      labelFr: 'Bannière Kiki Luxe',
-      labelEn: 'Kiki Luxe Banner',
-      descFr: 'Mise en avant Kiki Luxe (2 visuels soirée & robes)',
-      descEn: 'Full-width Kiki Luxe showcase (2 evening & dress visuals)',
+      labelFr: 'Bannière Kiki Jones Premium',
+      labelEn: 'Kiki Jones Premium Banner',
+      descFr: 'Mise en avant Kiki Jones Premium (2 visuels soirée & robes)',
+      descEn: 'Full-width Kiki Jones Premium showcase (2 evening & dress visuals)',
     },
     {
       key: 'dual_spotlight',
@@ -310,8 +310,8 @@ export function AdminStorefront({
       key: 'shop_by_brand_strip',
       labelFr: 'Acheter par Marque',
       labelEn: 'Shop by Brand Strip',
-      descFr: 'Visuels Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, Kiki Kids',
-      descEn: 'Brand visuals: Kiki Men, Luxe, Curve, Sculpt, Sport, Kids',
+      descFr: 'Visuels Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport, Kiki Kids',
+      descEn: 'Brand visuals: Kiki Men, Kiki Jones Premium, Curve, Sculpt, Sport, Kids',
     },
     {
       key: 'trending_now_grid',
@@ -1354,8 +1354,8 @@ export function AdminStorefront({
                   </h2>
                   <p className="text-[11px] text-black/50 mt-0.5">
                     {tr(
-                      'Importez vos propres photos ou choisissez dans la bibliothèque pour chaque section, marque (Kiki Luxe, Kiki Men...) et catégorie (Filles, Garçons, Robes...).',
-                      'Upload your own images or pick from the library for every section, brand (Kiki Luxe, Kiki Men...), and category (Girls, Boys, Dresses...).'
+                      'Importez vos propres photos ou choisissez dans la bibliothèque pour chaque section, marque (Kiki Jones Premium, Kiki Men...) et catégorie (Filles, Garçons, Robes...).',
+                      'Upload your own images or pick from the library for every section, brand (Kiki Jones Premium, Kiki Men...), and category (Girls, Boys, Dresses...).'
                     )}
                   </p>
                 </div>

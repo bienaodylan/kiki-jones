@@ -30,8 +30,8 @@ export function BrandsPage() {
             </h1>
             <p className="text-xs sm:text-sm font-light text-black/65 leading-relaxed">
               {tr(
-                'Six marques KIKI JONES pensées pour un style contemporain sous les climats chauds — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
-                'Six distinct KIKI JONES labels built for modern warm-climate style — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
+                'Six marques KIKI JONES pensées pour un style contemporain sous les climats chauds — Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
+                'Six distinct KIKI JONES labels built for modern warm-climate style — Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
               )}
             </p>
           </div>
@@ -69,7 +69,7 @@ export function BrandsPage() {
                   <p className="text-xs sm:text-sm font-light text-white/85 leading-relaxed max-w-md">
                     {brand.description}
                   </p>
-                  <div className="pt-1">
+                  <div className="pt-1 flex flex-wrap items-center gap-2.5">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -81,6 +81,18 @@ export function BrandsPage() {
                       <span>{tr(`Découvrir ${brand.name}`, `Shop ${brand.name}`)}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
+                    {brand.slug === 'kiki-luxe' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/collection/kiki-jones-doupi');
+                        }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer"
+                      >
+                        <span>Kiki Jones Doupi</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

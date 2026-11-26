@@ -49,8 +49,8 @@ export function Footer() {
   const newsletterBody =
     lang === 'fr'
       ? storefrontConfig.newsletterBody ||
-        'Accès anticipé aux nouveautés hebdomadaires et sorties exclusives Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Luxe et Kiki Kids.'
-      : 'Early access to weekly drops and exclusive releases across Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Luxe, and Kiki Kids.';
+        'Accès anticipé aux nouveautés hebdomadaires et sorties exclusives Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Jones Premium et Kiki Kids.'
+      : 'Early access to weekly drops and exclusive releases across Kiki Men, Kiki Curve, Kiki Sculpt, Kiki Jones Premium, and Kiki Kids.';
 
   return (
     <footer className="w-full max-w-full bg-white text-black border-t border-black/10 overflow-x-clip">
@@ -138,7 +138,7 @@ export function Footer() {
             </li>
             <li>
               <button onClick={() => navigate('/brand/kiki-luxe')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
-                Kiki Luxe
+                Kiki Jones Premium
               </button>
             </li>
             <li>
@@ -246,6 +246,11 @@ export function Footer() {
             <li>
               <button onClick={() => navigate('/collections')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
                 Collections
+              </button>
+            </li>
+            <li>
+              <button onClick={() => navigate('/collection/kiki-jones-doupi')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
+                Kiki Jones Doupi
               </button>
             </li>
             <li>

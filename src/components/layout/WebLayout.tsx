@@ -14,11 +14,16 @@ interface WebLayoutProps {
 
 export function WebLayout({ children }: WebLayoutProps) {
   const { storefrontConfig, route } = useStore();
+  const isDoupiShowroom = route.page === 'collection' && route.slug === 'kiki-jones-doupi';
   const hasInfoBarOffset = isInfoBarActive(storefrontConfig) && route.page !== 'home';
   const routeKey = JSON.stringify(route);
 
   return (
-    <div className="min-h-screen w-full max-w-full max-md:overflow-x-clip flex flex-col bg-white text-black font-light">
+    <div
+      className={`${
+        isDoupiShowroom ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'
+      } w-full max-w-full max-md:overflow-x-clip flex flex-col bg-white text-black font-light`}
+    >
       <Navbar />
       <CartDrawer />
       <SearchOverlay />
@@ -26,11 +31,11 @@ export function WebLayout({ children }: WebLayoutProps) {
         routeKey={routeKey}
         className={`flex-1 w-full max-w-full min-w-0 max-md:overflow-x-clip ${
           hasInfoBarOffset ? 'pt-[28px]' : ''
-        }`}
+        } ${isDoupiShowroom ? 'min-h-0 flex flex-col' : ''}`}
       >
         {children}
       </PageTransition>
-      <Footer />
+      {!isDoupiShowroom && <Footer />}
       <OfflineIndicator />
     </div>
   );
