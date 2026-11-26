@@ -11,6 +11,7 @@ import { HomePage } from './pages/HomePage';
 import { CatalogPage } from './pages/CatalogPage';
 import { CollectionsPage } from './pages/CollectionsPage';
 import { BrandsPage } from './pages/BrandsPage';
+import { DoupiPapillonPage } from './pages/DoupiPapillonPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { SearchPage } from './pages/SearchPage';
@@ -36,6 +37,7 @@ function AppRouter() {
       {route.page === 'new-in' && <CatalogPage mode="new-in" />}
       {route.page === 'sale' && <CatalogPage mode="sale" />}
       {route.page === 'brands' && <BrandsPage />}
+      {route.page === 'premium-collaboration' && <DoupiPapillonPage />}
       {route.page === 'brand' && <CatalogPage mode="brand" brandSlug={route.slug} />}
       {route.page === 'categories' && <CategoriesPage />}
       {route.page === 'audience' && (
