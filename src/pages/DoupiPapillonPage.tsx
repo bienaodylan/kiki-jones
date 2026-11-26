@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react';
-import { ArrowDown, ArrowLeft, ArrowRight, Check, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useExperienceMode } from '../context/ExperienceContext';
