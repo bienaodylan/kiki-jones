@@ -55,7 +55,7 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   heroImageUrl: KIKI_JONES_IMAGES.hero,
   heroHeadline: 'NOUVELLE SAISON',
   heroSubheadline:
-    'Silhouettes contemporaines pour climats chauds signées Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
+    'Silhouettes contemporaines pour climats chauds signées Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
   heroCtaLabel: 'Découvrir les Nouveautés',
   heroCtaHref: '/new-in',
   heroSecondaryCtaLabel: 'Par Marque',
@@ -75,7 +75,7 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   brandIntroEyebrow: 'KIKI JONES · Maison de Marques',
   brandIntroTitle: 'Style Moderne. Pensé pour les Climats Chauds.',
   brandIntroBody:
-    'Explorez six labels signatures — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids — pensés pour un style sûr et sans effort.',
+    'Explorez six labels signatures — Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids — pensés pour un style sûr et sans effort.',
   brandIntroImageUrl: KIKI_JONES_IMAGES.womenResortSet,
   brandIntroCtaLabel: 'Acheter par Marque',
   brandIntroCtaHref: '/brands',
@@ -94,9 +94,9 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   collectionBanners: [
     {
       id: 'banner_luxe',
-      title: 'Kiki Luxe · Soirée & Cérémonie',
+      title: 'Kiki Jones Premium · Soirée & Cérémonie',
       subtitle: 'Robes brodées, kaftans en satin, robes maxi à strass, ensembles plissés et talons.',
-      ctaLabel: 'Découvrir Kiki Luxe',
+      ctaLabel: 'Découvrir Kiki Jones Premium',
       href: '/brand/kiki-luxe',
       imageUrl: KIKI_JONES_IMAGES.afterDarkBanner,
     },
@@ -112,7 +112,7 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
     },
     {
       id: 'world_luxe',
-      title: 'Kiki Luxe',
+      title: 'Kiki Jones Premium',
       caption: 'Robes de soirée, combishorts, stilettos, sacs et lunettes.',
       imageUrl: KIKI_JONES_IMAGES.womenSatinEvening,
       tag: 'Brand',
@@ -134,7 +134,7 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   ],
   newsletterTitle: 'Rejoindre la Liste KIKI JONES',
   newsletterBody:
-    'Accès prioritaire aux nouveautés hebdomadaires et éditions exclusives Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
+    'Accès prioritaire aux nouveautés hebdomadaires et éditions exclusives Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
   campaignBannerText: 'Nouvelle Collection Disponible — Livraison Standard Offerte dès 75 000 XOF',
   campaignBannerEnabled: true,
   standardShippingXof: 3500,
@@ -150,7 +150,7 @@ export const INITIAL_CATEGORIES = [
     name: 'Women',
     slug: 'women',
     description:
-      'Dresses, matching sets, corsets, bodysuits, heels, and curve styles across Kiki Luxe, Kiki Sculpt, and Kiki Curve.',
+      'Dresses, matching sets, corsets, bodysuits, heels, and curve styles across Kiki Jones Premium, Kiki Sculpt, and Kiki Curve.',
     imageUrl: KIKI_JONES_IMAGES.catWomen,
     sortOrder: 1,
     isActive: true,
@@ -968,21 +968,21 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "dresses",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "summer-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Dresses"
     ],
     "isBestSeller": true,
     "isTrending": false,
     "materialDetails": [
       "Shell : 97% Polyester 3% Spandex, Lining : 100% Polyester",
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Pink"
     ]
   },
@@ -1026,21 +1026,21 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "dresses",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "summer-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Dresses"
     ],
     "isBestSeller": false,
     "isTrending": true,
     "materialDetails": [
       "60% Polyester 32% Rayon 8% Spandex",
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black"
     ]
   },
@@ -1084,21 +1084,21 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "dresses",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "summer-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Dresses"
     ],
     "isBestSeller": false,
     "isTrending": false,
     "materialDetails": [
       "Self: 93% Nylon 7% Spandex",
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Chocolate"
     ]
   },
@@ -1142,21 +1142,21 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "matching-sets",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "summer-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Matching Sets"
     ],
     "isBestSeller": false,
     "isTrending": false,
     "materialDetails": [
       "Top Self: 97% Polyester 3% Spandex, Pant Self: 100% Polyester, Top Lining: 100% Polyester",
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black/White"
     ]
   },
@@ -1200,21 +1200,21 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "matching-sets",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "summer-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Matching Sets"
     ],
     "isBestSeller": true,
     "isTrending": true,
     "materialDetails": [
       "Blazer Shell: 95% Polyester 5% Spandex, Lining: 95% Polyester 5% Spandex, Decoration: 100% Polyester, Pants Shell & Pocketing: 95% Polyester 5% Spandex",
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black/Red"
     ]
   },
@@ -1260,7 +1260,7 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "shoes",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
@@ -1268,13 +1268,13 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Shoes"
     ],
     "isBestSeller": false,
     "isTrending": false,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black",
       "Warm-climate breathable finish"
     ]
@@ -1321,7 +1321,7 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "shoes",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
@@ -1329,13 +1329,13 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Shoes"
     ],
     "isBestSeller": false,
     "isTrending": false,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black",
       "Warm-climate breathable finish"
     ]
@@ -2229,7 +2229,7 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "unisex",
     "subCategory": "sunglasses",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
@@ -2237,13 +2237,13 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Sunglasses"
     ],
     "isBestSeller": false,
     "isTrending": true,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black",
       "Warm-climate breathable finish"
     ]
@@ -2282,7 +2282,7 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "unisex",
     "subCategory": "sunglasses",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
@@ -2290,13 +2290,13 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Sunglasses"
     ],
     "isBestSeller": false,
     "isTrending": false,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black",
       "Warm-climate breathable finish"
     ]
@@ -2335,7 +2335,7 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "unisex",
     "subCategory": "sunglasses",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
@@ -2343,13 +2343,13 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Sunglasses"
     ],
     "isBestSeller": true,
     "isTrending": false,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black",
       "Warm-climate breathable finish"
     ]
@@ -2388,20 +2388,20 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "bags",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Bags"
     ],
     "isBestSeller": false,
     "isTrending": true,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Black",
       "Warm-climate breathable finish"
     ]
@@ -2440,20 +2440,20 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "bags",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Bags"
     ],
     "isBestSeller": false,
     "isTrending": false,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Brown",
       "Warm-climate breathable finish"
     ]
@@ -2491,20 +2491,20 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "unisex",
     "subCategory": "jewelry",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Jewelry"
     ],
     "isBestSeller": false,
     "isTrending": false,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Gold",
       "Warm-climate breathable finish"
     ]
@@ -2543,20 +2543,20 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "unisex",
     "subCategory": "jewelry",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": [
       "essentials",
       "after-dark",
       "exclusive-drop"
     ],
     "styleTags": [
-      "Kiki Luxe",
+      "Kiki Jones Premium",
       "Jewelry"
     ],
     "isBestSeller": true,
     "isTrending": true,
     "materialDetails": [
-      "Brand: Kiki Luxe",
+      "Brand: Kiki Jones Premium",
       "Colorway: Gold",
       "Warm-climate breathable finish"
     ]
@@ -2707,9 +2707,9 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "jumpsuits",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": ["essentials", "summer-drop"],
-    "styleTags": ["Kiki Luxe", "Jumpsuits"],
+    "styleTags": ["Kiki Jones Premium", "Jumpsuits"],
     "isBestSeller": true,
     "isTrending": true,
     "materialDetails": ["71% Cotton, 25% Polyester, 2% Rayon, 2% Spandex", "Colorway: Black", "Warm-climate breathable denim"]
@@ -2740,9 +2740,9 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "jumpsuits",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": ["essentials", "after-dark", "formal"],
-    "styleTags": ["Kiki Luxe", "Jumpsuits"],
+    "styleTags": ["Kiki Jones Premium", "Jumpsuits"],
     "isBestSeller": true,
     "isTrending": true,
     "materialDetails": ["95% Polyester, 5% Spandex", "Colorway: Black", "Lightweight tailored finish"]
@@ -2773,9 +2773,9 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "bottoms",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": ["summer-drop", "essentials"],
-    "styleTags": ["Kiki Luxe", "Shorts", "Resort"],
+    "styleTags": ["Kiki Jones Premium", "Shorts", "Resort"],
     "isBestSeller": false,
     "isTrending": true,
     "materialDetails": ["100% Cotton Crochet", "Colorway: Chocolate", "Breathable coastal knit"]
@@ -2971,12 +2971,12 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "dresses",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": ["formal", "after-dark"],
-    "styleTags": ["Kiki Luxe", "Formal", "Dresses"],
+    "styleTags": ["Kiki Jones Premium", "Formal", "Dresses"],
     "isBestSeller": true,
     "isTrending": true,
-    "materialDetails": ["Embroidered tulle shell, satin lining", "Colorway: Gold", "Kiki Luxe Formal Edit"]
+    "materialDetails": ["Embroidered tulle shell, satin lining", "Colorway: Gold", "Kiki Jones Premium Formal Edit"]
   },
   {
     "id": "prod_fn_53",
@@ -3004,9 +3004,9 @@ export const ALL_SEED_PRODUCTS: SeedProductInput[] = [
     "audience": "women",
     "subCategory": "matching-sets",
     "brandSlug": "kiki-luxe",
-    "brandName": "Kiki Luxe",
+    "brandName": "Kiki Jones Premium",
     "collectionSlugs": ["formal", "after-dark"],
-    "styleTags": ["Kiki Luxe", "Formal", "Matching Sets"],
+    "styleTags": ["Kiki Jones Premium", "Formal", "Matching Sets"],
     "isBestSeller": true,
     "isTrending": true,
     "materialDetails": ["65% Polyester, 20% Nylon, 15% Metallic Jacquard", "Colorway: Black", "Two-piece tailored occasion set"]
