@@ -82,6 +82,19 @@ export function BrandsPage() {
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                  {brand.slug === 'kiki-luxe' && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/premium/doupi-papillon');
+                      }}
+                      className="inline-flex items-center gap-2 border border-white/75 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white hover:bg-white hover:text-black transition-colors"
+                    >
+                      {tr('Kiki Jones × Doupi Papillon', 'Kiki Jones × Doupi Papillon')}
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );
