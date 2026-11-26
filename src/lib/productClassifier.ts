@@ -72,6 +72,7 @@ export const COLLECTION_OPTIONS: ClassificationOption[] = [
   { value: 'street-collection', labelFr: 'Streetwear', labelEn: 'Street Collection' },
   { value: 'summer-drop', labelFr: 'Drop Été & Soleil', labelEn: 'Summer Drop' },
   { value: 'exclusive-drop', labelFr: 'Drop Exclusif', labelEn: 'Exclusive Drop' },
+  { value: 'doupi-papillon', labelFr: 'Kiki Jones × Doupi Papillon', labelEn: 'Kiki Jones × Doupi Papillon' },
 ];
 
 /**

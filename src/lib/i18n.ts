@@ -304,7 +304,7 @@ const BRAND_FR: Record<
       'Chemises à col ouvert, ensembles plissés texturés, jeans évasés stacked, t-shirts boxy vintage et mocassins soignés pensés pour les climats chauds.',
   },
   'kiki-luxe': {
-    tagline: 'Soirée, Gala & Resort · Robes, Combinaisons & Talons',
+    tagline: 'Premium · Soirée, Gala & Resort · Robes & Silhouettes Signature',
     description:
       'Robes de gala brodées, caftans fluides en satin, robes maxi à strass, combi-shorts ajustés, ensembles plissés, talons aiguilles et lunettes en acétate.',
   },

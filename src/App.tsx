@@ -40,6 +40,7 @@ function AppRouter() {
       {route.page === 'new-in' && <CatalogPage mode="new-in" />}
       {route.page === 'sale' && <CatalogPage mode="sale" />}
       {route.page === 'brands' && <BrandsPage />}
+      {route.page === 'premium-collaboration' && <DoupiPapillonPage />}
       {route.page === 'brand' && <CatalogPage mode="brand" brandSlug={route.slug} />}
       {route.page === 'categories' && <CategoriesPage />}
       {route.page === 'audience' && (
