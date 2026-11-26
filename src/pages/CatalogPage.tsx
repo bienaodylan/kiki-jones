@@ -507,8 +507,8 @@ export function CatalogPage({
         eyebrow: tr('Vient d’arriver', 'Just Landed'),
         title: tr('Nouveautés', 'New Arrivals'),
         description: tr(
-          'Les dernières arrivées pour climats chauds sur Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
-          'The latest warm-climate drops across Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
+          'Les dernières arrivées pour climats chauds sur Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
+          'The latest warm-climate drops across Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
         ),
         bannerImage: '',
       };
