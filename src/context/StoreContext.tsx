@@ -37,6 +37,7 @@ export type RouteView =
   | { page: 'new-in' }
   | { page: 'sale' }
   | { page: 'brands' }
+  | { page: 'premium-collaboration' }
   | { page: 'brand'; slug: string }
   | { page: 'categories' }
   | { page: 'audience'; audience: Exclude<AudienceSlug, 'unisex'>; subSlug?: string }
@@ -66,6 +67,7 @@ function parseHashOrPath(): RouteView {
   if (rawPathname === '/kids') return { page: 'brand', slug: 'kiki-kids' };
   if (rawPathname === '/formal') return { page: 'collection', slug: 'formal' };
   if (rawPathname === '/brands') return { page: 'brands' };
+  if (rawPathname === '/premium/doupi-papillon') return { page: 'premium-collaboration' };
   if (rawPathname.startsWith('/brand/')) {
     return { page: 'brand', slug: rawPathname.replace('/brand/', '') };
   }
