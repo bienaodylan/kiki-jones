@@ -30,8 +30,8 @@ export function BrandsPage() {
             </h1>
             <p className="text-xs sm:text-sm font-light text-black/65 leading-relaxed">
               {tr(
-                'Six marques KIKI JONES pensées pour un style contemporain sous les climats chauds — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
-                'Six distinct KIKI JONES labels built for modern warm-climate style — Kiki Men, Kiki Luxe, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
+                'Six marques KIKI JONES pensées pour un style contemporain sous les climats chauds — Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport et Kiki Kids.',
+                'Six distinct KIKI JONES labels built for modern warm-climate style — Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport, and Kiki Kids.'
               )}
             </p>
           </div>
