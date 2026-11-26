@@ -202,7 +202,7 @@ const LABEL_MAP_FR: Record<string, string> = {
   'Shoes & Sneakers': 'Chaussures & Baskets',
   'Women Heels & Pumps': 'Talons & Escarpins Femme',
   'Men Loafers & Slip-Ons': 'Mocassins & Slip-Ons Homme',
-  'Kiki Luxe Heels': 'Talons Kiki Luxe',
+  'Kiki Jones Premium Heels': 'Talons Kiki Jones Premium',
   'Kiki Men Footwear': 'Chaussures Kiki Men',
   'Kiki Sculpt Sneakers': 'Baskets Kiki Sculpt',
   'Shoes, Shades & Objects': 'Chaussures, Lunettes & Objets',
@@ -232,7 +232,7 @@ const LABEL_MAP_FR: Record<string, string> = {
   'Shop by Piece': 'Par Type de Pièce',
   'Shoes, Shades & Wardrobe': 'Chaussures, Lunettes & Garde-Robe',
   'Explore Categories': 'Explorer les Catégories',
-  'Kiki Luxe · Dresses': 'Kiki Luxe · Robes',
+  'Kiki Jones Premium · Dresses': 'Kiki Jones Premium · Robes',
   'Gowns, Maxis & Minis': 'Robes Longues, Maxis & Minis',
   'Shop Dresses': 'Découvrir les Robes',
   'Effortless Co-ords': 'Ensembles Coordonnés',
@@ -304,7 +304,7 @@ const BRAND_FR: Record<
       'Chemises à col ouvert, ensembles plissés texturés, jeans évasés stacked, t-shirts boxy vintage et mocassins soignés pensés pour les climats chauds.',
   },
   'kiki-luxe': {
-    tagline: 'Soirée, Gala & Resort · Robes, Combinaisons & Talons',
+    tagline: 'Premium · Soirée, Gala & Resort · Robes & Silhouettes Signature',
     description:
       'Robes de gala brodées, caftans fluides en satin, robes maxi à strass, combi-shorts ajustés, ensembles plissés, talons aiguilles et lunettes en acétate.',
   },
@@ -426,7 +426,7 @@ const COLLECTION_FR: Record<
     shortTitle: 'After Dark',
     subtitle: 'Robes maxi à strass, corsets en dentelle, pantalons cirés et chemises audacieuses.',
     description:
-      'Des pièces de soirée à fort impact pensées pour les nuits chaudes — robes Kiki Luxe, mini-robes Kiki Curve, corsets Kiki Sculpt et silhouettes Kiki Men.',
+      'Des pièces de soirée à fort impact pensées pour les nuits chaudes — robes Kiki Jones Premium, mini-robes Kiki Curve, corsets Kiki Sculpt et silhouettes Kiki Men.',
   },
   formal: {
     seasonTag: 'Édition 02 · Gala & Cérémonie',
@@ -474,7 +474,7 @@ const COLLECTION_FR: Record<
     shortTitle: 'Accessoires',
     subtitle: 'Talons aiguilles plateformes, mocassins vernis, lunettes en acétate, pochettes et bijoux.',
     description:
-      'Des accessoires et chaussures de caractère conçus pour parfaire chaque silhouette Kiki Luxe, Kiki Men, Kiki Curve et Kiki Sculpt.',
+      'Des accessoires et chaussures de caractère conçus pour parfaire chaque silhouette Kiki Jones Premium, Kiki Men, Kiki Curve et Kiki Sculpt.',
   },
 };
 
@@ -494,7 +494,7 @@ export function getTrendingSearches(lang: AppLanguage): string[] {
   if (lang === 'en') return TRENDING_SEARCHES;
   return [
     'Kiki Men',
-    'Kiki Luxe',
+    'Kiki Jones Premium',
     'Kiki Sport',
     'Kiki Curve',
     'Robes',
