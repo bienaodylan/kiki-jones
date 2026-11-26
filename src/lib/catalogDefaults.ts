@@ -3244,24 +3244,59 @@ export const LEGACY_PLACEHOLDER_PRODUCT_IDS: string[] = [
  * Enriches any Firestore-stored product with multi-audience, brand & category metadata
  * so both seeded and admin-created products work seamlessly with Brands, Categories & Mega Menus.
  */
+const DOUPI_APPAREL_SUBCATEGORIES = new Set([
+  'dresses',
+  'matching-sets',
+  'jumpsuits',
+  'tops',
+  'shirts',
+  'bottoms',
+  'jeans',
+  'pants',
+  'skirts',
+  'activewear',
+]);
+
+function normalizeBrandDisplay(brandSlug: string, brandName?: string): string {
+  if (brandSlug === 'kiki-luxe') return 'Kiki Jones Premium';
+  if (typeof brandName === 'string' && /kiki luxe/i.test(brandName)) {
+    return brandName.replace(/kiki luxe/gi, 'Kiki Jones Premium');
+  }
+  return brandName || getBrandNameBySlug(brandSlug);
+}
+
+function normalizeTagList(items?: string[]): string[] | undefined {
+  if (!Array.isArray(items)) return items;
+  return items.map((s) => (typeof s === 'string' ? s.replace(/kiki luxe/gi, 'Kiki Jones Premium') : s));
+}
+
 export function enrichProductMetadata(product: Product): Product {
   const seed = ALL_SEED_PRODUCTS.find((s) => s.id === product.id || s.slug === product.slug);
   if (seed) {
     const resolvedBrandSlug = product.brandSlug || seed.brandSlug;
+    const resolvedSubCategory = product.subCategory || seed.subCategory;
+    const baseCollections =
+      Array.isArray(product.collectionSlugs) && product.collectionSlugs.length > 0
+        ? product.collectionSlugs
+        : seed.collectionSlugs;
+    const collectionSlugs =
+      resolvedBrandSlug === 'kiki-luxe' &&
+      DOUPI_APPAREL_SUBCATEGORIES.has(resolvedSubCategory || '') &&
+      !baseCollections.includes('kiki-jones-doupi')
+        ? [...baseCollections, 'kiki-jones-doupi']
+        : baseCollections;
+
     return {
       ...product,
       audience: product.audience || seed.audience,
-      subCategory: product.subCategory || seed.subCategory,
+      subCategory: resolvedSubCategory,
       brandSlug: resolvedBrandSlug,
-      brandName: product.brandName || (product.brandSlug ? getBrandNameBySlug(product.brandSlug) : seed.brandName),
-      collectionSlugs:
-        Array.isArray(product.collectionSlugs) && product.collectionSlugs.length > 0
-          ? product.collectionSlugs
-          : seed.collectionSlugs,
-      styleTags: product.styleTags || seed.styleTags,
+      brandName: normalizeBrandDisplay(resolvedBrandSlug, product.brandName || seed.brandName),
+      collectionSlugs,
+      styleTags: normalizeTagList(product.styleTags || seed.styleTags),
       isBestSeller: product.isBestSeller ?? seed.isBestSeller ?? false,
       isTrending: product.isTrending ?? seed.isTrending ?? false,
-      materialDetails: product.materialDetails || seed.materialDetails,
+      materialDetails: normalizeTagList(product.materialDetails || seed.materialDetails),
     };
   }
 
@@ -3275,23 +3310,32 @@ export function enrichProductMetadata(product: Product): Product {
   });
 
   const resolvedBrandSlug = product.brandSlug || detected.brandSlug;
-  const resolvedBrandName =
-    product.brandName ||
-    (product.brandSlug ? getBrandNameBySlug(product.brandSlug) : detected.brandName);
-  const resolvedCollections =
+  const resolvedSubCategory = product.subCategory || detected.subCategory;
+  const resolvedBrandName = normalizeBrandDisplay(
+    resolvedBrandSlug,
+    product.brandName || (product.brandSlug ? getBrandNameBySlug(product.brandSlug) : detected.brandName)
+  );
+  const baseCollections =
     Array.isArray(product.collectionSlugs) && product.collectionSlugs.length > 0
       ? product.collectionSlugs
       : detected.collectionSlugs;
+  const resolvedCollections =
+    resolvedBrandSlug === 'kiki-luxe' &&
+    DOUPI_APPAREL_SUBCATEGORIES.has(resolvedSubCategory || '') &&
+    !baseCollections.includes('kiki-jones-doupi')
+      ? [...baseCollections, 'kiki-jones-doupi']
+      : baseCollections;
 
   return {
     ...product,
     audience: product.audience || detected.audience,
-    subCategory: product.subCategory || detected.subCategory,
+    subCategory: resolvedSubCategory,
     brandSlug: resolvedBrandSlug,
     brandName: resolvedBrandName,
     collectionSlugs: resolvedCollections,
-    styleTags: product.styleTags || [resolvedBrandName],
+    styleTags: normalizeTagList(product.styleTags) || [resolvedBrandName],
     isBestSeller: product.isBestSeller ?? Boolean(product.isFeatured),
     isTrending: product.isTrending ?? Boolean(product.isNewDrop),
+    materialDetails: normalizeTagList(product.materialDetails),
   };
 }

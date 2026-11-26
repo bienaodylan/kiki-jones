@@ -420,6 +420,14 @@ const COLLECTION_FR: Record<
   string,
   { seasonTag: string; title: string; shortTitle: string; subtitle: string; description: string }
 > = {
+  'kiki-jones-doupi': {
+    seasonTag: 'Nouvelle Collection · Kiki Jones Premium',
+    title: 'Kiki Jones Doupi',
+    shortTitle: 'Kiki Jones Doupi',
+    subtitle: 'Atelier 3D Cinématique · Silhouettes Premium Suspendues & Pièces Signatures.',
+    description:
+      'Découvrez la collection Kiki Jones Doupi au sein de Kiki Jones Premium — mise en scène dans une boutique-atelier interactive où chaque pièce suspendue se découvre en 3D.',
+  },
   'after-dark': {
     seasonTag: 'Édition 01 · Soirée & Nuit',
     title: 'Édition After Dark',
@@ -495,6 +503,7 @@ export function getTrendingSearches(lang: AppLanguage): string[] {
   return [
     'Kiki Men',
     'Kiki Jones Premium',
+    'Kiki Jones Doupi',
     'Kiki Sport',
     'Kiki Curve',
     'Robes',
@@ -509,12 +518,12 @@ export function getTrendingSearches(lang: AppLanguage): string[] {
 export function getSuggestedSearchCategories(lang: AppLanguage) {
   if (lang === 'en') return SUGGESTED_SEARCH_CATEGORIES;
   return [
-    { label: 'Acheter par Marque', href: '/brands', countHint: 'Men, Luxe, Curve, Sculpt, Sport, Kids' },
+    { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi', countHint: 'Nouvelle Collection · Atelier 3D' },
+    { label: 'Acheter par Marque', href: '/brands', countHint: 'Men, Premium, Curve, Sculpt, Sport, Kids' },
     { label: 'Acheter par Catégorie', href: '/categories', countHint: 'Robes, Ensembles, Combinaisons, Chaussures' },
     { label: 'Soirée & Cérémonie', href: '/collection/formal', countHint: 'Robes de Gala, Tailleurs & Talons' },
     { label: 'Kiki Sport', href: '/brand/kiki-sport', countHint: 'Cyclistes & Activewear Respirant' },
     { label: 'Chaussures', href: '/category/shoes', countHint: 'Talons, Mocassins & Baskets' },
-    { label: 'Lunettes de soleil', href: '/category/sunglasses', countHint: 'Acétate Sombre & Optique' },
   ];
 }
 

@@ -311,7 +311,7 @@ export function AdminStorefront({
       labelFr: 'Acheter par Marque',
       labelEn: 'Shop by Brand Strip',
       descFr: 'Visuels Kiki Men, Kiki Jones Premium, Kiki Curve, Kiki Sculpt, Kiki Sport, Kiki Kids',
-      descEn: 'Brand visuals: Kiki Men, Luxe, Curve, Sculpt, Sport, Kids',
+      descEn: 'Brand visuals: Kiki Men, Kiki Jones Premium, Curve, Sculpt, Sport, Kids',
     },
     {
       key: 'trending_now_grid',

@@ -69,7 +69,11 @@ function parseHashOrPath(): RouteView {
   if (rawPathname === '/brands') return { page: 'brands' };
   if (rawPathname === '/premium/doupi-papillon') return { page: 'premium-collaboration' };
   if (rawPathname.startsWith('/brand/')) {
-    return { page: 'brand', slug: rawPathname.replace('/brand/', '') };
+    const rawSlug = rawPathname.replace('/brand/', '');
+    return {
+      page: 'brand',
+      slug: rawSlug === 'kiki-jones-premium' ? 'kiki-luxe' : rawSlug,
+    };
   }
   if (rawPathname === '/categories') return { page: 'categories' };
   if (rawPathname === '/collections') return { page: 'collections' };
@@ -441,21 +445,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 raw.freeShippingThresholdXof ?? DEFAULT_STOREFRONT_CONFIG.freeShippingThresholdXof,
             });
           } else {
+            const replaceLegacyBrand = (val?: string) =>
+              typeof val === 'string'
+                ? val.replace(/Kiki Luxe/gi, 'Kiki Jones Premium')
+                : val;
             setStorefrontConfig({
               ...DEFAULT_STOREFRONT_CONFIG,
               ...raw,
+              heroSubheadline: replaceLegacyBrand(raw.heroSubheadline) ?? DEFAULT_STOREFRONT_CONFIG.heroSubheadline,
+              brandIntroBody: replaceLegacyBrand(raw.brandIntroBody) ?? DEFAULT_STOREFRONT_CONFIG.brandIntroBody,
+              newsletterBody: replaceLegacyBrand(raw.newsletterBody) ?? DEFAULT_STOREFRONT_CONFIG.newsletterBody,
+              campaignBannerText: replaceLegacyBrand(raw.campaignBannerText) ?? DEFAULT_STOREFRONT_CONFIG.campaignBannerText,
               sectionOrder:
                 Array.isArray(raw.sectionOrder) && raw.sectionOrder.length > 0
                   ? raw.sectionOrder
                   : DEFAULT_STOREFRONT_CONFIG.sectionOrder,
               collectionBanners:
                 Array.isArray(raw.collectionBanners) && raw.collectionBanners.length > 0
-                  ? raw.collectionBanners
+                  ? raw.collectionBanners.map((b) => ({
+                      ...b,
+                      title: replaceLegacyBrand(b.title) || b.title,
+                      subtitle: replaceLegacyBrand(b.subtitle) || b.subtitle,
+                      ctaLabel: replaceLegacyBrand(b.ctaLabel) || b.ctaLabel,
+                    }))
                   : DEFAULT_STOREFRONT_CONFIG.collectionBanners,
               customSections: Array.isArray(raw.customSections) ? raw.customSections : [],
               galleryItems:
                 Array.isArray(raw.galleryItems) && raw.galleryItems.length > 0
-                  ? raw.galleryItems
+                  ? raw.galleryItems.map((g) => ({
+                      ...g,
+                      title: replaceLegacyBrand(g.title) || g.title,
+                      caption: replaceLegacyBrand(g.caption) || g.caption,
+                    }))
                   : DEFAULT_STOREFRONT_CONFIG.galleryItems,
             });
           }

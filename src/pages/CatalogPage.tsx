@@ -680,6 +680,29 @@ export function CatalogPage({
       )}
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6">
+        {mode === 'brand' && brandSlug === 'kiki-luxe' && (
+          <div className="mt-4 mb-2 border border-black/12 bg-[#F7F6F3] px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium uppercase tracking-[0.26em] text-black/50">
+                NEW COLLECTION &nbsp;|&nbsp; KIKI JONES DOUPI
+              </p>
+              <p className="text-xs sm:text-sm font-light text-black/80">
+                {tr(
+                  'Découvrez la nouvelle collection Kiki Jones Doupi de Kiki Jones Premium dans notre boutique-atelier 3D.',
+                  'Experience the new Kiki Jones Doupi collection inside Kiki Jones Premium in our 3D atelier showroom.'
+                )}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/collection/kiki-jones-doupi')}
+              className="shrink-0 self-start sm:self-center px-5 py-2.5 bg-black text-white text-[10.5px] font-medium uppercase tracking-[0.2em] hover:bg-black/85 transition-colors cursor-pointer"
+            >
+              {tr('Entrer dans l’atelier', 'Enter Atelier')}
+            </button>
+          </div>
+        )}
+
         {/* Category Header */}
         <div className="pt-4 pb-3 border-b border-black/10 flex flex-col md:flex-row md:items-end justify-between gap-3">
           <div className="space-y-1 max-w-2xl">

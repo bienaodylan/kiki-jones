@@ -69,7 +69,7 @@ export function BrandsPage() {
                   <p className="text-xs sm:text-sm font-light text-white/85 leading-relaxed max-w-md">
                     {brand.description}
                   </p>
-                  <div className="pt-1">
+                  <div className="pt-1 flex flex-wrap items-center gap-2.5">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -81,6 +81,18 @@ export function BrandsPage() {
                       <span>{tr(`Découvrir ${brand.name}`, `Shop ${brand.name}`)}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
+                    {brand.slug === 'kiki-luxe' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/collection/kiki-jones-doupi');
+                        }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer"
+                      >
+                        <span>Kiki Jones Doupi</span>
+                      </button>
+                    )}
                   </div>
                   {brand.slug === 'kiki-luxe' && (
                     <button

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -11,7 +11,10 @@ import { HomePage } from './pages/HomePage';
 import { CatalogPage } from './pages/CatalogPage';
 import { CollectionsPage } from './pages/CollectionsPage';
 import { BrandsPage } from './pages/BrandsPage';
-import { DoupiPapillonPage } from './pages/DoupiPapillonPage';
+
+const DoupiShowroomPage = lazy(() =>
+  import('./pages/DoupiShowroomPage').then((m) => ({ default: m.DoupiShowroomPage }))
+);
 import { CategoriesPage } from './pages/CategoriesPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { SearchPage } from './pages/SearchPage';
@@ -47,9 +50,22 @@ function AppRouter() {
         <CatalogPage mode="accessories" audience="accessories" subSlug={route.subSlug} />
       )}
       {route.page === 'collections' && <CollectionsPage />}
-      {route.page === 'collection' && (
-        <CatalogPage mode="collection" collectionSlug={route.slug} />
-      )}
+      {route.page === 'collection' &&
+        (route.slug === 'kiki-jones-doupi' ? (
+          <Suspense
+            fallback={
+              <main className="w-full flex-1 min-h-[75dvh] bg-[#F4F3EF] flex items-center justify-center">
+                <p className="text-[11px] font-light uppercase tracking-[0.26em] text-black/50">
+                  NEW COLLECTION | KIKI JONES DOUPI
+                </p>
+              </main>
+            }
+          >
+            <DoupiShowroomPage />
+          </Suspense>
+        ) : (
+          <CatalogPage mode="collection" collectionSlug={route.slug} />
+        ))}
       {route.page === 'category' && (
         <CatalogPage mode="category" categorySlug={route.slug} />
       )}

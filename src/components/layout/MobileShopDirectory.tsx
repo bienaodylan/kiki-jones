@@ -198,6 +198,7 @@ export function MobileShopDirectory({
             { label: 'After Dark', href: '/collection/after-dark' },
             { label: tr('Soleil & Resort', 'Resort'), href: '/collection/summer-drop' },
             { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
+            { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
             { label: tr('Soldes', 'Sale'), href: '/sale' },
           ],
         };

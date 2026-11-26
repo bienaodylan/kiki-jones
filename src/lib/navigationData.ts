@@ -329,6 +329,7 @@ export const FLOATING_SUBNAV_BY_DIVISION: Record<DivisionKey, FloatingSubNavItem
     { label: 'Shoes', href: '/category/shoes', megaMenuKey: 'shoes' },
     { label: 'Accessories', href: '/accessories', megaMenuKey: 'accessories' },
     { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
+    { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
     { label: 'Kiki Sculpt', href: '/brand/kiki-sculpt' },
     { label: 'Sale', href: '/sale', highlight: true },
   ],
@@ -412,6 +413,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'Warm-Climate Edits',
         links: [
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
           { label: 'After Dark / Going Out', href: '/collection/after-dark' },
           { label: 'Formal & Occasion', href: '/collection/formal' },
           { label: 'Sun & Resort Sets', href: '/collection/summer-drop' },
@@ -656,6 +658,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
       {
         heading: 'Featured Edits',
         links: [
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
           { label: 'New Arrivals', href: '/new-in' },
           { label: 'After Dark Edit', href: '/collection/after-dark' },
           { label: 'Formal & Occasion', href: '/collection/formal' },
@@ -735,6 +738,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
         heading: 'Collections',
         links: [
           { label: 'All Collections', href: '/collections' },
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
           { label: 'After Dark Edit', href: '/collection/after-dark' },
           { label: 'Formal & Occasion', href: '/collection/formal' },
           { label: 'The Essentials', href: '/collection/essentials' },
@@ -771,6 +775,7 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
           { label: 'Jumpsuits & Rompers', href: '/category/jumpsuits' },
           { label: 'Matching Sets', href: '/category/matching-sets' },
           { label: 'Kiki Jones Premium', href: '/brand/kiki-luxe' },
+          { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi' },
         ],
       },
       {
@@ -1033,6 +1038,19 @@ export const MEGA_MENUS: Record<MegaMenuKey, MegaMenuConfig> = {
 
 export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
   {
+    slug: 'kiki-jones-doupi',
+    seasonTag: 'New Collection · Kiki Jones Premium',
+    title: 'Kiki Jones Doupi',
+    shortTitle: 'Kiki Jones Doupi',
+    subtitle: 'Cinematic 3D Atelier · Suspended Premium Silhouettes & Statement Pieces.',
+    description:
+      'Discover the Kiki Jones Doupi collection inside Kiki Jones Premium — presented in an interactive boutique-atelier showroom where every hanging piece can be inspected in 3D.',
+    campaignImage: KJ_IMAGES.womenSatinEvening,
+    secondaryImage: KJ_IMAGES.formalFeature,
+    audiences: ['women', 'men'],
+    featured: true,
+  },
+  {
     slug: 'after-dark',
     seasonTag: 'Edit 01 · Evening & Nightlife',
     title: 'After Dark Edit',
@@ -1126,6 +1144,7 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
 export const TRENDING_SEARCHES: string[] = [
   'Kiki Men',
   'Kiki Jones Premium',
+  'Kiki Jones Doupi',
   'Kiki Sport',
   'Kiki Curve',
   'Dresses',
@@ -1137,10 +1156,10 @@ export const TRENDING_SEARCHES: string[] = [
 ];
 
 export const SUGGESTED_SEARCH_CATEGORIES: { label: string; href: string; countHint: string }[] = [
-  { label: 'Shop by Brand', href: '/brands', countHint: 'Men, Luxe, Curve, Sculpt, Sport, Kids' },
+  { label: 'Kiki Jones Doupi', href: '/collection/kiki-jones-doupi', countHint: 'New Collection · 3D Atelier Showroom' },
+  { label: 'Shop by Brand', href: '/brands', countHint: 'Men, Premium, Curve, Sculpt, Sport, Kids' },
   { label: 'Shop by Category', href: '/categories', countHint: 'Dresses, Sets, Rompers, Shoes, Shades' },
   { label: 'Formal & Occasion', href: '/collection/formal', countHint: 'Gowns, Jacquard Suits & Heels' },
   { label: 'Kiki Sport', href: '/brand/kiki-sport', countHint: 'Biker Shorts & Breathable Activewear' },
   { label: 'Shoes', href: '/category/shoes', countHint: 'Heels, Loafers & Sneakers' },
-  { label: 'Sunglasses', href: '/category/sunglasses', countHint: 'Dark Acetate & Optical' },
 ];

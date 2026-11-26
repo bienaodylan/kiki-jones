@@ -249,6 +249,11 @@ export function Footer() {
               </button>
             </li>
             <li>
+              <button onClick={() => navigate('/collection/kiki-jones-doupi')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
+                Kiki Jones Doupi
+              </button>
+            </li>
+            <li>
               <button onClick={() => navigate('/legal/privacy')} className="hover:text-black hover:underline underline-offset-4 cursor-pointer">
                 {tr('Confidentialité', 'Privacy Policy')}
               </button>

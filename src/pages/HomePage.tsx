@@ -576,14 +576,14 @@ export function HomePage() {
                 <div className="relative hidden md:block aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <ParallaxImage
                     src={getSectionImage(storefrontConfig, 'kiki_luxe_right', KJ_IMAGES.curveGownCampaign)}
-                    alt="Kiki Curve Evening"
+                    alt="Kiki Jones Premium Evening"
                     strength={3.5}
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
                 </div>
               </div>
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
-              <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-lg space-y-3">
+              <div className="absolute bottom-8 left-5 right-5 md:bottom-12 md:left-10 z-10 max-w-xl space-y-3">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-white/75">
                   {tr('Gala · Soirée · Resort', 'Formal · Evening · Resort')}
                 </p>
@@ -605,11 +605,11 @@ export function HomePage() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate('/category/dresses');
+                      navigate('/collection/kiki-jones-doupi');
                     }}
                     className="px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/80 text-white text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-white hover:text-black transition-colors cursor-pointer"
                   >
-                    {tr('Voir les robes', 'Shop Dresses')}
+                    {tr('Collection Kiki Jones Doupi', 'Kiki Jones Doupi')}
                   </button>
                 </div>
               </div>
