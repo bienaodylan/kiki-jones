@@ -209,9 +209,9 @@ export function HomePage() {
         const subheadline =
           lang === 'fr'
             ? storefrontConfig.heroSubheadline ||
-              'Silhouettes contemporaines pour Kiki Men, Kiki Luxe, Kiki Sculpt, Kiki Curve et Kiki Kids.'
+              'Silhouettes contemporaines pour Kiki Men, Kiki Jones Premium, Kiki Sculpt, Kiki Curve et Kiki Kids.'
             : storefrontConfig.heroSubheadline === DEFAULT_STOREFRONT_CONFIG.heroSubheadline
-              ? 'Contemporary silhouettes across Kiki Men, Kiki Luxe, Kiki Sculpt, Kiki Curve, and Kiki Kids.'
+              ? 'Contemporary silhouettes across Kiki Men, Kiki Jones Premium, Kiki Sculpt, Kiki Curve, and Kiki Kids.'
               : storefrontConfig.heroSubheadline || '';
         const primaryCta =
           lang === 'fr'
@@ -568,7 +568,7 @@ export function HomePage() {
                 <div className="relative aspect-[4/5] md:aspect-[5/6] w-full overflow-hidden bg-black">
                   <ParallaxImage
                     src={getSectionImage(storefrontConfig, 'kiki_luxe_left', KJ_IMAGES.formalFeature)}
-                    alt="Kiki Luxe"
+                    alt="Kiki Jones Premium"
                     strength={3.5}
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
@@ -588,7 +588,7 @@ export function HomePage() {
                   {tr('Gala · Soirée · Resort', 'Formal · Evening · Resort')}
                 </p>
                 <h2 className="text-3xl sm:text-5xl font-bold uppercase tracking-[-0.025em] text-white leading-[1.02]">
-                  Kiki Luxe
+                  Kiki Jones Premium
                 </h2>
                 <div className="pt-1 flex flex-wrap items-center gap-3">
                   <button
